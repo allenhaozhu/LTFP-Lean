@@ -1,0 +1,21 @@
+/-
+Umbrella file for the `LTFP.MathlibExt` namespace.
+
+This collects Mathlib-quality extension modules developed inside LTFP-Lean
+that are candidates for an upstream pull request.  Each module follows
+Mathlib coding conventions (full docstrings, namespaced declarations,
+no `sorry`).
+-/
+
+import LTFP.MathlibExt.Analysis.Smoothness
+import LTFP.MathlibExt.Analysis.Subgradient.L1
+import LTFP.MathlibExt.Analysis.InnerProductSpace.RKHS
+import LTFP.MathlibExt.Calculus.GradientFlow
+import LTFP.MathlibExt.Probability.Adversary
+import LTFP.MathlibExt.Probability.TotalVariation
+import LTFP.MathlibExt.Probability.Distance.Pinsker
+import LTFP.MathlibExt.Probability.DonskerVaradhan
+import LTFP.MathlibExt.Probability.Moments.SubExponential
+import LTFP.MathlibExt.Probability.LeCam
+import LTFP.MathlibExt.MatrixAnalysis.Lieb
+import LTFP.MathlibExt.Topology.UAT

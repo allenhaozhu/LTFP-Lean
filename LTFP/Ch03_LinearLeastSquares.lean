@@ -1,0 +1,3 @@
+import LTFP.Ch03_LinearLeastSquares.OLS
+import LTFP.Ch03_LinearLeastSquares.Ridge
+import LTFP.Ch03_LinearLeastSquares.FixedDesign

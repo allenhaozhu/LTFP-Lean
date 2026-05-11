@@ -1,0 +1,31 @@
+# macOS leaves these files everywhere:
+.DS_Store
+# Created by `lake exe cache get` if no home directory is available
+/.cache
+# Prior to v4.3.0-rc2 lake stored files in these locations.
+/build/
+/lake-packages/
+/lakefile.olean
+# After v4.3.0-rc2 lake stores its files here:
+/.lake/
+
+# Python tooling — kept locally, not published
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Internal development artifacts — not part of the public library
+/tools/
+/tasks/
+/tests/
+/doc/concepts.yaml
+/doc/dag.json
+/doc/dag.mmd
+/doc/order.md
+/doc/status.md
+/docs/mathlib-prs/
+/docs/WORKFLOW.md
+/papers/
+/CLAUDE.md
+/PROGRESS.md
