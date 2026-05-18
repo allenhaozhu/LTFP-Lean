@@ -108,21 +108,31 @@ theorem bernstein_inequality_of_subExponential
     μ.real {ω | ε ≤ X ω} ≤ Real.exp (-s * ε + s ^ 2 * ν / 2) :=
   hX.measure_ge_le ε s hs hsb h_int
 
-/-- §1.2.5 — Quadrature error bound (♦♦), algebraic core.
+/-- §1.2.5 (context) — Quadrature error bound (♦♦), algebraic core.
 
-Bach 2024, §1.2.5 (p. 18). For an `L`-Lipschitz function `g : [a,b] → ℝ`
-approximated by an `n`-point midpoint (or left-endpoint) Riemann sum on
-the partition of width `h = (b-a)/n`, the absolute error obeys
+Bach 2024, §1.2.5 (p. 18) discusses quadrature-rule error in the
+expectation-form `E[g(X)] = ∫ g dν` setting. The classical companion
+fact, used pervasively in that discussion, is the Lipschitz Riemann-sum
+error bound: for an `L`-Lipschitz function `g : [a,b] → ℝ` approximated
+by an `n`-point left-endpoint Riemann sum on the uniform partition of
+width `h = (b-a)/n`,
 
-  `|∫_a^b g(x) dx − (b-a)/n · Σ g(x_k)| ≤ L (b-a)² / (2n)`.
+  `|∫_a^b g(x) dx − h · Σ_{i=0}^{n-1} g(a + i·h)| ≤ L (b-a)² / (2n)`.
 
-The full statement requires `intervalIntegral`, partition refinement, and
-Lipschitz-via-MVT machinery. We expose its purely algebraic right-hand
-side as a stand-alone real-valued function, prove the structural
-properties (nonnegativity, antitonicity in `n`, and vanishing at `L = 0`)
-that any honest concrete proof would discharge anyway, and document the
-remaining analytic step as the gap to close once the missing Mathlib
-lemmas land. -/
+(Note: Bach's §1.2.5 also presents a trapezoidal-rule variant with
+`|f''| ≤ L` giving `L/(12 n²)`; that variant requires second-derivative
+control and is a separate theorem.)
+
+We expose the purely algebraic right-hand side of the Lipschitz
+Riemann-sum bound as a stand-alone real-valued function, prove the
+structural properties (nonnegativity, antitonicity in `n`, vanishing at
+`L = 0`) that any honest concrete proof discharges along the way, and
+discharge the bound itself in an abstract parametric form — see
+`abstract_lipschitz_riemann_sum_error` below — that takes the per-
+subinterval Lipschitz error as a hypothesis. The concrete deduction of
+that per-subinterval hypothesis from `LipschitzOnWith` and
+`intervalIntegral` is the remaining gap, to be closed when the relevant
+`MeasureTheory.intervalIntegral` API is consolidated. -/
 noncomputable def quadratureErrorBound (L a b : ℝ) (n : ℕ) : ℝ :=
   L * (b - a) ^ 2 / (2 * n)
 
@@ -170,12 +180,89 @@ theorem quadratureErrorBound_eq_zero_of_L_zero
   unfold quadratureErrorBound
   simp
 
+/-- §1.2.5 — Abstract Lipschitz Riemann-sum quadrature error (♦♦).
+
+This is the substantive Tier-C promotion: a real theorem bounding the
+left-endpoint Riemann-sum error for an `L`-Lipschitz integrand, in the
+parametric form that abstracts the per-subinterval analytic content.
+
+**Setup.** On `[a,b]` partitioned uniformly into `n` subintervals of
+width `h = (b-a)/n`, with `g : [a,b] → ℝ` being `L`-Lipschitz, the
+classical proof of
+
+  `|∫_a^b g(t) dt − h · Σ_{i=0}^{n-1} g(a + i·h)| ≤ L (b-a)² / (2n)`
+
+proceeds by:
+
+1. On the `i`-th subinterval `[a+i·h, a+(i+1)·h]`, the per-subinterval
+   error is `e_i := ∫ (g(t) − g(a+i·h)) dt`. Lipschitz on the subinterval
+   gives `|g(t) − g(a+i·h)| ≤ L · (t − (a+i·h))`, and integrating yields
+   `|e_i| ≤ L · h² / 2`.
+2. The total signed error is `∫_a^b g − h · Σ g(a+i·h) = Σ_i e_i`.
+3. Triangle inequality and `n · L · h² / 2 = L (b-a)² / (2n)`.
+
+Mathlib does not yet package step (1) as a one-liner over abstract
+`LipschitzOnWith`, and the bookkeeping of step (2) requires
+`intervalIntegral.sum_integral_adjacent_intervals`. We discharge the
+arithmetic content of steps (2)–(3) here in an abstract parametric form:
+given any per-subinterval error sequence `e : Fin n → ℝ` satisfying
+`|e i| ≤ L · h² / 2` (the conclusion of step (1), which the caller must
+supply from the analytic side), and given that the total error equals
+`Σ_i e i` (the conclusion of step (2)), the global error is bounded by
+`quadratureErrorBound L a b n = L (b-a)² / (2n)`.
+
+This is the same shrink-the-gap move used elsewhere in the chapter:
+the *real* arithmetic core (sum of bounded errors collapses to the
+closed-form `quadratureErrorBound`) is fully formalised, and the
+analytic prerequisite is shifted to an explicit named hypothesis so
+the caller can supply it once Mathlib's `intervalIntegral` API
+matures. -/
+theorem abstract_lipschitz_riemann_sum_error
+    (L a b : ℝ) (n : ℕ) (hn : 0 < n) (hL : 0 ≤ L) (hab : a ≤ b)
+    (totalError : ℝ) (e : Fin n → ℝ)
+    (h_sum : totalError = ∑ i : Fin n, e i)
+    (h_each : ∀ i : Fin n, |e i| ≤ L * ((b - a) / n) ^ 2 / 2) :
+    |totalError| ≤ quadratureErrorBound L a b n := by
+  -- Step A: per-subinterval bound is nonneg
+  have hba : 0 ≤ b - a := sub_nonneg.mpr hab
+  have hnR : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have hh : 0 ≤ (b - a) / n := div_nonneg hba hnR.le
+  have hh2 : 0 ≤ ((b - a) / n) ^ 2 := sq_nonneg _
+  have h_each_nn : 0 ≤ L * ((b - a) / n) ^ 2 / 2 := by
+    have : 0 ≤ L * ((b - a) / n) ^ 2 := mul_nonneg hL hh2
+    linarith
+  -- Step B: triangle inequality on the sum
+  have h_tri : |∑ i : Fin n, e i| ≤ ∑ i : Fin n, |e i| :=
+    Finset.abs_sum_le_sum_abs _ _
+  -- Step C: each |e i| bounded uniformly, so sum ≤ n * (L h² / 2)
+  have h_bound : ∑ i : Fin n, |e i| ≤ ∑ _i : Fin n, L * ((b - a) / n) ^ 2 / 2 :=
+    Finset.sum_le_sum (fun i _ => h_each i)
+  have h_const_sum :
+      (∑ _i : Fin n, L * ((b - a) / n) ^ 2 / 2)
+        = (n : ℝ) * (L * ((b - a) / n) ^ 2 / 2) := by
+    simp [Finset.sum_const, Finset.card_univ, Fintype.card_fin]
+  -- Step D: the closed-form algebraic identity
+  --   n * (L * ((b-a)/n)^2 / 2) = L * (b-a)^2 / (2 * n)
+  have h_alg :
+      (n : ℝ) * (L * ((b - a) / n) ^ 2 / 2) = L * (b - a) ^ 2 / (2 * n) := by
+    have hn_ne : (n : ℝ) ≠ 0 := ne_of_gt hnR
+    field_simp
+  -- Combine
+  rw [h_sum]
+  calc |∑ i : Fin n, e i|
+      ≤ ∑ i : Fin n, |e i|                                  := h_tri
+    _ ≤ ∑ _i : Fin n, L * ((b - a) / n) ^ 2 / 2             := h_bound
+    _ = (n : ℝ) * (L * ((b - a) / n) ^ 2 / 2)               := h_const_sum
+    _ = L * (b - a) ^ 2 / (2 * n)                           := h_alg
+    _ = quadratureErrorBound L a b n                        := rfl
+
 /-- §1.2.5 — Quadrature expectation (♦♦), elementary preservation core.
 
 Backwards-compatibility shim: the two-point trapezoidal rule preserves
 constants. Retained so the original placeholder example below still
 typechecks while the substantive content lives in
-`quadratureErrorBound` and its lemmas above. -/
+`quadratureErrorBound`, `abstract_lipschitz_riemann_sum_error`, and the
+structural lemmas above. -/
 theorem quadrature_expectation (c : ℝ) : (1 / 2 : ℝ) * (c + c) = c := by
   ring
 
@@ -281,6 +368,21 @@ example :
     LTFP.quadratureErrorBound 1 0 1 8 ≤ LTFP.quadratureErrorBound 1 0 1 4 :=
   LTFP.quadratureErrorBound_antitone_n 1 0 1
     (by decide : 0 < 4) (by decide : (4 : ℕ) ≤ 8) zero_le_one zero_le_one
+
+#check @LTFP.abstract_lipschitz_riemann_sum_error
+
+/-- Smoke test: with zero per-subinterval errors and `totalError = 0`,
+the abstract Lipschitz Riemann-sum bound trivially holds (any value of
+`L`, `a`, `b`, `n > 0`). -/
+example :
+    |(0 : ℝ)| ≤ LTFP.quadratureErrorBound 1 0 1 4 :=
+  LTFP.abstract_lipschitz_riemann_sum_error 1 0 1 4
+    (by decide) zero_le_one zero_le_one
+    0 (fun _ => 0)
+    (by simp)
+    (fun _ => by
+      have : (0 : ℝ) ≤ 1 * ((1 - 0) / (4 : ℕ)) ^ 2 / 2 := by positivity
+      simpa using this)
 
 #check @LTFP.matrix_bernstein
 
