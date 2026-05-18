@@ -45,6 +45,7 @@ of the logistic curve. -/
 theorem sigmoid_zero : sigmoid 0 = 1 / 2 := by
   unfold sigmoid
   rw [neg_zero, Real.exp_zero]
+  norm_num
 
 /-- §9.1 — Point symmetry about `(0, 1/2)`: `σ(-z) = 1 - σ(z)`. This is
 the algebraic identity behind the use of sigmoid as a binary-class
@@ -62,5 +63,6 @@ theorem sigmoid_neg (z : ℝ) : sigmoid (-z) = 1 - sigmoid z := by
   have hez_pos : 0 < Real.exp z := Real.exp_pos _
   rw [hez]
   field_simp
+  ring
 
 end LTFP
