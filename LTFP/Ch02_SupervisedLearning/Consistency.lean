@@ -106,6 +106,15 @@ theorem zeroOneLoss_nonneg (z y : Bool) : 0 ≤ zeroOneLoss z y := by
 theorem zeroOneLoss_of_ne {z y : Bool} (h : z ≠ y) : zeroOneLoss z y = 1 := by
   unfold zeroOneLoss; rw [if_neg h]
 
+/-- §2.5 — **Zero-one loss is bounded by `1`.** A fundamental sanity
+    check used throughout binary classification (Bach 2024, §2.2,
+    Example "0-1 loss"): combined with `zeroOneLoss_nonneg`, this
+    places `zeroOneLoss` in `[0, 1]`, justifying the standard
+    interpretation as a misclassification probability. -/
+theorem zeroOneLoss_le_one (z y : Bool) : zeroOneLoss z y ≤ 1 := by
+  unfold zeroOneLoss
+  split_ifs <;> norm_num
+
 /-- §2.5 — Zero-one loss equals `0` on a correct prediction. -/
 theorem zeroOneLoss_of_eq {z y : Bool} (h : z = y) : zeroOneLoss z y = 0 := by
   unfold zeroOneLoss; rw [if_pos h]

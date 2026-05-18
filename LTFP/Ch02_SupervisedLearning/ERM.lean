@@ -75,4 +75,40 @@ theorem empiricalRisk_mono_pointwise {ℓ : LossFunction 𝒴 𝒵} (n : ℕ)
   apply mul_le_mul_of_nonneg_left _ (inv_nonneg.mpr hn)
   exact Finset.sum_le_sum (fun i _ => h i)
 
+/-- §2.3.2 — **Empirical risk is bounded by the pointwise loss
+    supremum.** If `ℓ(f(xᵢ), yᵢ) ≤ M` on every sample point and the
+    sample is nonempty, then `R̂_n(f) ≤ M`. This is the empirical
+    counterpart of "bounded loss ⇒ bounded risk" and is the workhorse
+    of Hoeffding-style concentration arguments (Bach 2024, §2.3.2 and
+    §3.1 build on this directly). -/
+theorem empiricalRisk_le_of_loss_le {ℓ : LossFunction 𝒴 𝒵} {n : ℕ}
+    (hn : 0 < n) (S : Fin n → 𝒳 × 𝒴) (f : 𝒳 → 𝒵) {M : ℝ}
+    (h : ∀ i, ℓ (f (S i).1) (S i).2 ≤ M) :
+    empiricalRisk ℓ n S f ≤ M := by
+  unfold empiricalRisk
+  have hn_pos : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have hsum : ∑ i, ℓ (f (S i).1) (S i).2 ≤ ∑ _i : Fin n, M :=
+    Finset.sum_le_sum (fun i _ => h i)
+  have hsum_const : (∑ _i : Fin n, M) = (n : ℝ) * M := by
+    rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin]
+    ring
+  rw [hsum_const] at hsum
+  calc (n : ℝ)⁻¹ * ∑ i, ℓ (f (S i).1) (S i).2
+      ≤ (n : ℝ)⁻¹ * ((n : ℝ) * M) :=
+        mul_le_mul_of_nonneg_left hsum (inv_nonneg.mpr (le_of_lt hn_pos))
+    _ = M := by
+        rw [← mul_assoc, inv_mul_cancel₀ (ne_of_gt hn_pos), one_mul]
+
+/-- §2.3.2 — **ERMs are unique up to empirical risk.** If `fhat₁` and
+    `fhat₂` are both empirical-risk minimizers over the same `H` and
+    sample `S`, they realize the same empirical risk. The ERM
+    *minimum value* is well-defined even when the *argmin* is not
+    (Bach 2024, §2.3.2 — analogous to `bayesPredictor_unique_risk`). -/
+theorem ERM.unique_risk
+    {ℓ : LossFunction 𝒴 𝒵} {H : Set (𝒳 → 𝒵)} {n : ℕ}
+    {S : Fin n → 𝒳 × 𝒴} {fhat₁ fhat₂ : 𝒳 → 𝒵}
+    (h₁ : ERM ℓ H n S fhat₁) (h₂ : ERM ℓ H n S fhat₂) :
+    empiricalRisk ℓ n S fhat₁ = empiricalRisk ℓ n S fhat₂ :=
+  le_antisymm (h₁.2 fhat₂ h₂.1) (h₂.2 fhat₁ h₁.1)
+
 end LTFP

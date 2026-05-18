@@ -154,4 +154,29 @@ theorem excess_risk_nonneg
   have h := bayesRisk_le_populationRisk hℓ D f
   linarith
 
+/-- §2.2.2 — **Triangle-style bound for squared loss.** For any
+    intermediate point `a`, `(z − y)² ≤ 2 (z − a)² + 2 (a − y)²`.
+    This is the standard "split through an anchor" inequality used to
+    convert pointwise-loss bounds into squared-loss bounds (Bach 2024,
+    §2.2; appears repeatedly in regression-style oracle inequalities).
+    Pure algebra: expand both sides and apply `(z − a) + (a − y) = z − y`
+    with `(u + v)² ≤ 2 u² + 2 v²`. -/
+theorem squareLoss_triangle (z a y : ℝ) :
+    squareLoss z y ≤ 2 * squareLoss z a + 2 * squareLoss a y := by
+  unfold squareLoss
+  nlinarith [sq_nonneg ((z - a) - (a - y)), sq_nonneg (z - y),
+             sq_nonneg (z - a), sq_nonneg (a - y)]
+
+/-- §2.2.3 — **Bayes predictors are unique up to risk.** Any two
+    Bayes predictors `f*` and `g*` produce the same population risk.
+    The Bayes risk is well-defined regardless of which minimizer is
+    selected (Bach 2024, §2.2.3). -/
+theorem bayesPredictor_unique_risk
+    [MeasurableSpace 𝒳] [MeasurableSpace 𝒴]
+    {ℓ : LossFunction 𝒴 𝒵} {D : Measure (𝒳 × 𝒴)}
+    {fstar gstar : 𝒳 → 𝒵}
+    (hf : bayesPredictor ℓ D fstar) (hg : bayesPredictor ℓ D gstar) :
+    populationRisk ℓ D fstar = populationRisk ℓ D gstar := by
+  exact le_antisymm (hf gstar) (hg fstar)
+
 end LTFP
