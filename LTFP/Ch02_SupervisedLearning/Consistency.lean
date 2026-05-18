@@ -14,7 +14,9 @@ import Mathlib.Tactic.NormNum
 import Mathlib.Algebra.Order.Field.Basic
 import Mathlib.Algebra.Order.Ring.Pow
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import Mathlib.Algebra.BigOperators.Ring.Finset
 import Mathlib.Data.Fintype.BigOperators
+import Mathlib.Data.Fintype.Pi
 import Mathlib.Data.Finset.Card
 import Mathlib.Logic.Equiv.Basic
 
@@ -534,6 +536,305 @@ theorem nfl_finite_k_adversary
             / (k : ℝ) / (2 ^ k : ℝ)
   rw [div_div]
   rw [le_div_iff₀ hmulpos]
+  exact key
+
+/-! ### §2.5 — DGL average-over-`x` form `(1/2)(1 − 1/k)^n`
+
+    Averaging the pointwise bound `(1/2)(k − |image x|)/k` over
+    `x ∈ K^n` chosen uniformly recovers the classical Bach (2024) /
+    DGL form `(1/2)(1 − 1/k)^n`. The combinatorial heart is the
+    identity
+
+      `Avg_{x ∈ K^n} 𝟙[j ∉ image x] = (1 − 1/k)^n`
+
+    which follows from independence: for each coordinate `i ∈ Fin n`,
+    `P[x i ≠ j] = (k − 1)/k`, and the events are independent across
+    coordinates. Summing over `j ∈ K` then yields the bound on the
+    complement of the image. -/
+
+/-- §2.5 — **Boolean indicator that `j` is unsampled.** Real-valued
+    indicator of the event `∀ i, x i ≠ j`. -/
+def unsampledIndicator {n : ℕ} (x : Fin n → K) (j : K) : ℝ :=
+  if (∀ i : Fin n, x i ≠ j) then 1 else 0
+
+omit [Fintype K] in
+/-- §2.5 — **Product form of the unsampled indicator.** The indicator
+    `𝟙[∀ i, x i ≠ j]` factors as `∏ i, 𝟙[x i ≠ j]`. This is the
+    independence-across-coordinates step in the DGL average-over-`x`
+    computation. -/
+theorem unsampledIndicator_eq_prod {n : ℕ} (x : Fin n → K) (j : K) :
+    unsampledIndicator x j =
+      ∏ i : Fin n, (if x i ≠ j then (1 : ℝ) else 0) := by
+  classical
+  unfold unsampledIndicator
+  by_cases h : ∀ i : Fin n, x i ≠ j
+  · -- All factors are `1`.
+    rw [if_pos h]
+    refine (Finset.prod_eq_one (fun i _ => ?_)).symm
+    rw [if_pos (h i)]
+  · -- Some factor is `0`, hence the product is `0`.
+    rw [if_neg h]
+    push_neg at h
+    obtain ⟨i, hi⟩ := h
+    refine (Finset.prod_eq_zero (Finset.mem_univ i) ?_).symm
+    rw [if_neg (by simpa using hi)]
+
+/-- §2.5 — **Sum-of-indicators over a single coordinate.** For any
+    `j : K`, summing `𝟙[a ≠ j]` over `a : K` equals `k − 1`. -/
+theorem sum_indicator_ne [Nonempty K] {j : K} :
+    (∑ a : K, (if a ≠ j then (1 : ℝ) else 0)) =
+      ((Fintype.card K : ℝ) - 1) := by
+  classical
+  -- Apply `Finset.sum_boole`: ∑ (if p a then 1 else 0) = #{a | p a}.
+  rw [Finset.sum_boole]
+  -- Identify the filter with `univ \ {j}`.
+  have hfilter : {a ∈ (Finset.univ : Finset K) | a ≠ j}
+      = (Finset.univ : Finset K) \ {j} := by
+    ext a
+    simp [Finset.mem_sdiff, Finset.mem_filter, Finset.mem_singleton]
+  rw [hfilter]
+  -- Cardinality of `univ \ {j}` is `k - 1`.
+  have hsub : ({j} : Finset K) ⊆ (Finset.univ : Finset K) :=
+    fun _ _ => Finset.mem_univ _
+  rw [Finset.card_sdiff_of_subset hsub, Finset.card_univ, Finset.card_singleton]
+  -- Cast `k - 1` (in ℕ) to `(k : ℝ) - 1`.
+  have hk_ge : 1 ≤ Fintype.card K := Fintype.card_pos
+  push_cast [Nat.cast_sub hk_ge]
+  rfl
+
+/-- §2.5 — **Sum over `x ∈ K^n` of the unsampled-indicator factors as
+    a product.** For any fixed `j : K`,
+
+      `∑_{x ∈ K^n} ∏ i, 𝟙[x i ≠ j] = (k − 1)^n`.
+
+    Combinatorially: the events `x i ≠ j` are independent across
+    coordinates, each occurring with `k − 1` choices out of `k`. -/
+theorem sum_unsampledIndicator_eq [Nonempty K] {n : ℕ} (j : K) :
+    (∑ x : Fin n → K, unsampledIndicator x j) =
+      ((Fintype.card K : ℝ) - 1) ^ n := by
+  classical
+  -- Rewrite the indicator as a product.
+  have hrewrite : (∑ x : Fin n → K, unsampledIndicator x j) =
+      ∑ x : Fin n → K, ∏ i : Fin n, (if x i ≠ j then (1 : ℝ) else 0) := by
+    refine Finset.sum_congr rfl ?_
+    intro x _
+    exact unsampledIndicator_eq_prod x j
+  rw [hrewrite]
+  -- Apply `Finset.sum_pow'` reversed: ∑ x ∏ i = (∑ a (·))^n.
+  -- `sum_pow'` says: `(∑ a ∈ s, f a)^n = ∑ p ∈ piFinset (fun _ => s), ∏ i, f (p i)`.
+  -- We need this in reverse, with `s = univ` so piFinset = univ.
+  have hpow := (Finset.sum_pow' (Finset.univ : Finset K)
+      (fun a : K => (if a ≠ j then (1 : ℝ) else 0)) n).symm
+  -- `hpow : ∑ p ∈ piFinset (fun _ => univ), ∏ i, (if p i ≠ j then 1 else 0)
+  --        = (∑ a ∈ univ, if a ≠ j then 1 else 0)^n`
+  rw [Fintype.piFinset_univ] at hpow
+  rw [hpow]
+  rw [sum_indicator_ne]
+
+/-- §2.5 — **Average-over-`x` probability that `j` is unsampled.**
+    For uniform `x ∈ K^n`,
+
+      `Avg_x 𝟙[j ∉ image x] = (1 − 1/k)^n`.
+
+    This is the standard combinatorial identity underlying the
+    DGL/Bach `(1 − 1/k)^n` slack in the No-Free-Lunch bound. -/
+theorem prob_unsampled_in_uniform [Nonempty K] {n : ℕ} (j : K) :
+    (∑ x : Fin n → K, unsampledIndicator x j) /
+        ((Fintype.card K : ℝ) ^ n)
+      = (1 - 1 / (Fintype.card K : ℝ)) ^ n := by
+  classical
+  have hk_pos : 0 < Fintype.card K := Fintype.card_pos
+  have hk_pos_real : (0 : ℝ) < (Fintype.card K : ℝ) := by exact_mod_cast hk_pos
+  have hk_ne : (Fintype.card K : ℝ) ≠ 0 := ne_of_gt hk_pos_real
+  rw [sum_unsampledIndicator_eq]
+  -- ((k - 1)^n) / k^n = (1 - 1/k)^n via div_pow and (k-1)/k = 1 - 1/k.
+  rw [← div_pow]
+  congr 1
+  field_simp
+
+/-- §2.5 — **Sum-over-`j` form: image complement.** For any fixed
+    `x : Fin n → K`,
+
+      `∑ j : K, 𝟙[j ∉ image x] = k − |image x|`.
+
+    This is the discrete count: `k − s` points of `K` are missing from
+    the sampled image. -/
+theorem sum_unsampledIndicator_eq_complement_image {n : ℕ}
+    (x : Fin n → K) :
+    (∑ j : K, unsampledIndicator x j) =
+      ((Fintype.card K : ℝ) - (Finset.univ.image x).card) := by
+  classical
+  -- `unsampledIndicator x j = 1 ↔ j ∉ image x`.
+  have hrewrite : ∀ j : K,
+      unsampledIndicator x j = if j ∉ Finset.univ.image x then (1 : ℝ) else 0 := by
+    intro j
+    unfold unsampledIndicator
+    by_cases h : ∀ i : Fin n, x i ≠ j
+    · rw [if_pos h]
+      have hj : j ∉ Finset.univ.image x := by
+        intro hj
+        obtain ⟨i, _, heq⟩ := Finset.mem_image.mp hj
+        exact h i heq
+      rw [if_pos hj]
+    · rw [if_neg h]
+      push_neg at h
+      obtain ⟨i, hi⟩ := h
+      have hj : j ∈ Finset.univ.image x :=
+        Finset.mem_image.mpr ⟨i, Finset.mem_univ _, hi⟩
+      rw [if_neg (not_not_intro hj)]
+  rw [Finset.sum_congr rfl (fun j _ => hrewrite j)]
+  -- Apply `Finset.sum_boole`.
+  rw [Finset.sum_boole]
+  -- Identify the filter with `univ \ image x`.
+  have hsub : (Finset.univ.image x) ⊆ (Finset.univ : Finset K) :=
+    Finset.subset_univ _
+  have hfilter_eq : {j ∈ (Finset.univ : Finset K) | j ∉ Finset.univ.image x}
+      = (Finset.univ : Finset K) \ (Finset.univ.image x) := by
+    ext j
+    simp [Finset.mem_sdiff, Finset.mem_filter]
+  rw [hfilter_eq, Finset.card_sdiff_of_subset hsub, Finset.card_univ]
+  have hs_le : (Finset.univ.image x).card ≤ Fintype.card K := by
+    have : (Finset.univ.image x).card ≤ (Finset.univ : Finset K).card :=
+      Finset.card_le_card hsub
+    simpa [Finset.card_univ] using this
+  push_cast [Nat.cast_sub hs_le]
+  rfl
+
+/-- §2.5 — **`avg_complement_image`: average-over-`x` of the image
+    complement.**
+
+      `Avg_{x ∈ K^n} ((k − |image x|) / k) = k · (1 − 1/k)^n`
+
+    (more precisely, the un-normalized sum form below). This is the
+    sum-over-`j` aggregation of `prob_unsampled_in_uniform` and is the
+    quantity that multiplies the pointwise `1/(2k)` bound of
+    `nfl_finite_k_adversary` to yield `(1/2)(1 − 1/k)^n`. -/
+theorem avg_complement_image [Nonempty K] {n : ℕ} :
+    (∑ x : Fin n → K, ((Fintype.card K : ℝ) - (Finset.univ.image x).card))
+        / ((Fintype.card K : ℝ) ^ n)
+      = (Fintype.card K : ℝ) * (1 - 1 / (Fintype.card K : ℝ)) ^ n := by
+  classical
+  have hk_pos : 0 < Fintype.card K := Fintype.card_pos
+  have hk_pos_real : (0 : ℝ) < (Fintype.card K : ℝ) := by exact_mod_cast hk_pos
+  have hk_pow_pos : (0 : ℝ) < (Fintype.card K : ℝ) ^ n := pow_pos hk_pos_real n
+  have hk_pow_ne : ((Fintype.card K : ℝ) ^ n) ≠ 0 := ne_of_gt hk_pow_pos
+  -- Rewrite LHS sum using sum_unsampledIndicator_eq_complement_image (reversed).
+  have hsum_swap : (∑ x : Fin n → K,
+      ((Fintype.card K : ℝ) - (Finset.univ.image x).card))
+        = ∑ x : Fin n → K, ∑ j : K, unsampledIndicator x j := by
+    refine Finset.sum_congr rfl ?_
+    intro x _
+    exact (sum_unsampledIndicator_eq_complement_image x).symm
+  rw [hsum_swap]
+  -- Swap order of summation.
+  rw [Finset.sum_comm]
+  -- Each inner sum equals `(k-1)^n` by `sum_unsampledIndicator_eq`.
+  have hinner : ∀ j : K, (∑ x : Fin n → K, unsampledIndicator x j) =
+      ((Fintype.card K : ℝ) - 1) ^ n :=
+    fun j => sum_unsampledIndicator_eq j
+  rw [Finset.sum_congr rfl (fun j _ => hinner j)]
+  rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+  -- Now show: k * (k-1)^n / k^n = k * (1 - 1/k)^n.
+  rw [mul_div_assoc]
+  congr 1
+  rw [← div_pow]
+  congr 1
+  field_simp
+
+/-- §2.5 — **DGL average-over-`x` No-Free-Lunch bound.**
+
+    *Bach (2024) §2.5, p. 38 / DGL §7.2.* For any deterministic
+    learning algorithm `A : (Fin n → K × Bool) → (K → Bool)`, averaging
+    the misclassification risk over both the `2^k` labelings
+    `r : K → Bool` and the `k^n` sample-index patterns `x : Fin n → K`
+    satisfies
+
+      `Avg_x Avg_r R(A(sample x r), r) ≥ (1/2)(1 − 1/k)^n`.
+
+    The proof: by `nfl_finite_k_adversary`, the inner `Avg_r` bound is
+    `(1/2)(k − |image x|)/k`, pointwise in `x`; averaging this over
+    `x ∈ K^n` and applying `avg_complement_image` yields the classical
+    `(1/2)(1 − 1/k)^n` slack — the form in which the bound appears in
+    Bach (2024) p. 38 and DGL (1996) §7.2. -/
+theorem nfl_finite_k_dgl_average
+    [Nonempty K] {n : ℕ}
+    (A : (Fin n → K × Bool) → (K → Bool)) :
+    let k := Fintype.card K
+    (1 : ℝ) / 2 * (1 - 1 / (k : ℝ)) ^ n ≤
+      (∑ x : Fin n → K,
+          (∑ r : K → Bool, discreteRiskFinK (A (sampleFromLabeling x r)) r)
+            / (2 ^ k : ℝ))
+        / ((k : ℝ) ^ n) := by
+  classical
+  set k : ℕ := Fintype.card K with hk_def
+  have hk_pos : 0 < k := Fintype.card_pos
+  have hk_pos_real : (0 : ℝ) < (k : ℝ) := by exact_mod_cast hk_pos
+  have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos_real
+  have hk_pow_pos : (0 : ℝ) < (k : ℝ) ^ n := pow_pos hk_pos_real n
+  have hk_pow_ne : ((k : ℝ) ^ n) ≠ 0 := ne_of_gt hk_pow_pos
+  -- Step 1: pointwise bound from `nfl_finite_k_adversary`.
+  have hpt : ∀ x : Fin n → K,
+      (1 : ℝ) / 2 * ((k : ℝ) - (Finset.univ.image x).card) / k ≤
+        (∑ r : K → Bool,
+            discreteRiskFinK (A (sampleFromLabeling x r)) r)
+          / (2 ^ k : ℝ) := by
+    intro x
+    have := nfl_finite_k_adversary (K := K) A x
+    -- The lemma uses `let k := ...; let s := ...`, which reduces to the same expression.
+    simpa [hk_def] using this
+  -- Step 2: sum the pointwise bound over `x ∈ K^n`.
+  have hsum_le :
+      (∑ x : Fin n → K,
+          (1 : ℝ) / 2 * ((k : ℝ) - (Finset.univ.image x).card) / k)
+        ≤ ∑ x : Fin n → K,
+            (∑ r : K → Bool,
+                discreteRiskFinK (A (sampleFromLabeling x r)) r)
+              / (2 ^ k : ℝ) := by
+    refine Finset.sum_le_sum ?_
+    intro x _
+    exact hpt x
+  -- Step 3: evaluate the LHS sum using `avg_complement_image`.
+  have hlhs_sum : (∑ x : Fin n → K,
+      (1 : ℝ) / 2 * ((k : ℝ) - (Finset.univ.image x).card) / k)
+        = (1 / 2 / k) * (∑ x : Fin n → K,
+            ((k : ℝ) - (Finset.univ.image x).card)) := by
+    rw [Finset.mul_sum]
+    refine Finset.sum_congr rfl ?_
+    intro x _
+    ring
+  rw [hlhs_sum] at hsum_le
+  -- Step 4: divide both sides by `k^n` and invoke `avg_complement_image`.
+  have havg : (∑ x : Fin n → K,
+      ((k : ℝ) - (Finset.univ.image x).card)) / ((k : ℝ) ^ n)
+        = (k : ℝ) * (1 - 1 / (k : ℝ)) ^ n := by
+    simpa [hk_def] using avg_complement_image (K := K) (n := n)
+  -- Show the goal after `show` to unfold the `let`.
+  show (1 : ℝ) / 2 * (1 - 1 / (k : ℝ)) ^ n ≤
+      (∑ x : Fin n → K,
+          (∑ r : K → Bool, discreteRiskFinK (A (sampleFromLabeling x r)) r)
+            / (2 ^ k : ℝ))
+        / ((k : ℝ) ^ n)
+  -- Divide hsum_le by `k^n`.
+  have hdiv := div_le_div_of_nonneg_right hsum_le (le_of_lt hk_pow_pos)
+  -- Wait, `div_le_div_of_nonneg_right` direction goes wrong; use _of_nonneg_left.
+  -- We have LHS ≤ RHS, want LHS/k^n ≤ RHS/k^n. That's `div_le_div_of_nonneg_right`
+  -- if the divisor is `≥ 0`; actually it's `div_le_div_iff` or `div_le_div_of_le_left`.
+  -- Easier: `div_le_div_of_le_of_nonneg`. Just do it via `le_div_iff`.
+  have key : (1 / 2 / (k : ℝ)) * (∑ x : Fin n → K,
+        ((k : ℝ) - (Finset.univ.image x).card)) / ((k : ℝ) ^ n) ≤
+      (∑ x : Fin n → K,
+        (∑ r : K → Bool, discreteRiskFinK (A (sampleFromLabeling x r)) r)
+          / (2 ^ k : ℝ)) / ((k : ℝ) ^ n) := by
+    have := hsum_le
+    exact div_le_div_of_nonneg_right this (le_of_lt hk_pow_pos)
+  -- Simplify the LHS of `key`.
+  have hlhs_simp : (1 / 2 / (k : ℝ)) * (∑ x : Fin n → K,
+        ((k : ℝ) - (Finset.univ.image x).card)) / ((k : ℝ) ^ n)
+      = (1 : ℝ) / 2 * (1 - 1 / (k : ℝ)) ^ n := by
+    rw [mul_div_assoc]
+    rw [havg]
+    field_simp
+  rw [hlhs_simp] at key
   exact key
 
 end FiniteK
