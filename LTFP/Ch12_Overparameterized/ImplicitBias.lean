@@ -12,6 +12,7 @@ characterization in the full-rank regime collapses to the OLS
 estimator from Ch 3.
 -/
 import LTFP.Ch03_LinearLeastSquares.OLS
+import LTFP.MathlibExt.Calculus.GradientFlow
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
 import Mathlib.Topology.Algebra.Order.Archimedean
@@ -134,5 +135,131 @@ theorem implicitBias_subtract_y
     olsEstimator X (y₁ - y₂) = olsEstimator X y₁ - olsEstimator X y₂ := by
   unfold olsEstimator
   exact Matrix.mulVec_sub _ y₁ y₂
+
+/-- §12.4 (Bach 2024) — **NTK linearization remainder, ball form.**
+    The quadratic remainder `½‖Δθ‖²` of the linearization at `θ` is
+    bounded by `½ R²` whenever the parameter displacement `Δθ` stays in
+    a radius-`R` ball. This is the algebraic step that converts
+    "parameters move by at most `R`" (the lazy-regime hypothesis) into
+    "linearization is accurate to `O(R²)`" (the bound on the
+    generalization gap of the linearised predictor). -/
+theorem ntk_linearization_error_bound
+    (θ Δθ R : ℝ) (h : |Δθ| ≤ R) :
+    |(1/2) * (θ + Δθ)^2 - (1/2) * θ^2 - θ * Δθ| ≤ (1/2) * R^2 := by
+  rw [linearization_quadratic θ Δθ]
+  -- |½ Δθ²| = ½ Δθ² ≤ ½ R²
+  have hΔθ_sq_nonneg : 0 ≤ Δθ^2 := sq_nonneg Δθ
+  have h_abs : |(1/2 : ℝ) * Δθ^2| = (1/2) * Δθ^2 := by
+    rw [abs_of_nonneg]; positivity
+  rw [h_abs]
+  have h_R_nonneg : 0 ≤ R := le_trans (abs_nonneg Δθ) h
+  have h_sq_le : Δθ^2 ≤ R^2 := by
+    have := sq_le_sq' (by linarith [abs_le.mp h |>.1]) (abs_le.mp h).2
+    -- sq_le_sq' has signature: -b ≤ a → a ≤ b → a^2 ≤ b^2
+    exact this
+  linarith
+
+/-- §12.4 (Bach 2024) — **Parametric lazy-training bound.**
+    *Hypotheses:* the network predictor `f_m : ℝ → ℝ` at width `m` satisfies
+    a lazy-regime bound `|f_m x - f_lin x| ≤ C / √m` for every `x` in the
+    input domain, where `f_lin` is the NTK-linearized predictor and
+    `C > 0` is a width-independent constant.
+    *Conclusion:* for every error tolerance `ε > 0` there is a width `M`
+    beyond which the network predictor is within `ε` of the NTK-linearized
+    predictor uniformly in `x`. This is the quantitative form of the
+    lazy-regime convergence statement that justifies analysing the
+    linearised model in place of the network. -/
+theorem lazy_training_generalization_shape
+    {X : Type*} (f_lin : X → ℝ) (f_net : ℕ → X → ℝ) (C : ℝ)
+    (hC : 0 < C)
+    (h_lazy : ∀ m : ℕ, 0 < m → ∀ x : X,
+        |f_net m x - f_lin x| ≤ C / Real.sqrt m) :
+    ∀ ε : ℝ, 0 < ε → ∃ M : ℕ, ∀ m : ℕ, M ≤ m → 0 < m →
+      ∀ x : X, |f_net m x - f_lin x| ≤ ε := by
+  intro ε hε
+  -- Reduce to `C / √m ≤ ε`, i.e. `1 / √m ≤ ε / C`, then apply
+  -- `lazy_regime_param_movement` with `ε / C`.
+  have hε_div_C_pos : 0 < ε / C := div_pos hε hC
+  obtain ⟨M, hM⟩ := lazy_regime_param_movement (ε / C) hε_div_C_pos
+  refine ⟨max M 1, ?_⟩
+  intro m hm hm_pos x
+  have hMm : M ≤ m := le_trans (le_max_left _ _) hm
+  have h_lt : 1 / Real.sqrt m < ε / C := hM m hMm
+  have h_le : 1 / Real.sqrt m ≤ ε / C := le_of_lt h_lt
+  have h_sqrt_pos : 0 < Real.sqrt m :=
+    Real.sqrt_pos.mpr (by exact_mod_cast hm_pos)
+  -- C / √m = C * (1 / √m) ≤ C * (ε / C) = ε
+  have h_bound1 : C / Real.sqrt m ≤ ε := by
+    have h_mul : C * (1 / Real.sqrt m) ≤ C * (ε / C) :=
+      mul_le_mul_of_nonneg_left h_le (le_of_lt hC)
+    rw [mul_one_div] at h_mul
+    have h_simp : C * (ε / C) = ε := by
+      field_simp
+    rw [h_simp] at h_mul
+    exact h_mul
+  exact le_trans (h_lazy m hm_pos x) h_bound1
+
+/-- §12.4 (Bach 2024) — **Lazy training via discrete gradient flow on
+    the quadratic surrogate.**
+    The discrete gradient flow on the 1-D quadratic `½ y²` with step
+    size `η ∈ (0, 1]` exhibits geometric contraction: after `n` steps
+    starting from the initial parameter movement `Δθ₀`, the parameter
+    sits at `(1 - η)ⁿ · Δθ₀`. As `n → ∞` (with `0 < η ≤ 1`, hence
+    `0 ≤ 1 - η < 1`), this contracts to zero — i.e. the parameter
+    returns to its NTK initialisation, which is the discrete-time
+    realisation of the "lazy regime stays near init" picture.
+
+    Concretely: for any error tolerance `ε > 0` there is an iteration
+    count `N` after which the parameter is within `ε` of init. This
+    wraps the existing `gradIter_quadratic_geometric_n` anchor in
+    `MathlibExt/Calculus/GradientFlow.lean`. -/
+theorem lazy_training_via_discrete_flow
+    (η Δθ₀ : ℝ) (hη_pos : 0 < η) (hη_lt : η < 2) :
+    ∀ ε : ℝ, 0 < ε → ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
+      |LTFP.MathlibExt.Calculus.gradIter (fun y : ℝ => y ^ 2 / 2) η n Δθ₀|
+        ≤ ε := by
+  intro ε hε
+  -- For `η ∈ (0, 2)` we have `|1 - η| < 1`, so `|1 - η|ⁿ · |Δθ₀| → 0`.
+  have h_abs_lt : |1 - η| < 1 := by
+    rw [abs_lt]; constructor <;> linarith
+  -- Goal reduces to `|(1 - η)|ⁿ * |Δθ₀| ≤ ε`.
+  by_cases hΔθ₀_zero : Δθ₀ = 0
+  · -- If `Δθ₀ = 0`, every iterate is `0` (already a critical point of `½y²`).
+    refine ⟨0, ?_⟩
+    intro n _
+    have h_deriv0 : deriv (fun y : ℝ => y ^ 2 / 2) 0 = 0 := by
+      rw [LTFP.MathlibExt.Calculus.deriv_half_sq]
+    have h_iter :
+        LTFP.MathlibExt.Calculus.gradIter
+          (fun y : ℝ => y ^ 2 / 2) η n Δθ₀ = 0 := by
+      rw [hΔθ₀_zero]
+      exact LTFP.MathlibExt.Calculus.gradIter_zero_at_zero
+        (fun y : ℝ => y ^ 2 / 2) η h_deriv0 n
+    rw [h_iter, abs_zero]
+    exact le_of_lt hε
+  · -- Otherwise, pick `N` with `|1 - η|^N < ε / |Δθ₀|`.
+    have hΔθ₀_abs_pos : 0 < |Δθ₀| := abs_pos.mpr hΔθ₀_zero
+    have hε_div_pos : 0 < ε / |Δθ₀| := div_pos hε hΔθ₀_abs_pos
+    have h_abs_nonneg : 0 ≤ |1 - η| := abs_nonneg _
+    -- Use `pow_lt_one_iff_of_nonneg` / `pow_lt_of_lt_one` from Mathlib:
+    -- there exists `N` such that `|1 - η|^N < ε / |Δθ₀|`.
+    obtain ⟨N, hN⟩ := exists_pow_lt_of_lt_one hε_div_pos h_abs_lt
+    refine ⟨N, ?_⟩
+    intro n hNn
+    -- `gradIter` closed form on the quadratic.
+    rw [LTFP.MathlibExt.Calculus.gradIter_quadratic_geometric_n]
+    -- `|(1 - η)^n * Δθ₀| = |1 - η|^n * |Δθ₀|`.
+    rw [abs_mul, abs_pow]
+    -- Need: `|1 - η|^n * |Δθ₀| ≤ ε`.
+    -- From `hN : |1 - η|^N < ε / |Δθ₀|` and `N ≤ n`, monotonicity gives
+    -- `|1 - η|^n ≤ |1 - η|^N < ε / |Δθ₀|`.
+    have h_mono : |1 - η|^n ≤ |1 - η|^N :=
+      pow_le_pow_of_le_one h_abs_nonneg (le_of_lt h_abs_lt) hNn
+    have h_lt_n : |1 - η|^n < ε / |Δθ₀| := lt_of_le_of_lt h_mono hN
+    have h_lt_n_le : |1 - η|^n ≤ ε / |Δθ₀| := le_of_lt h_lt_n
+    have h_mul_le : |1 - η|^n * |Δθ₀| ≤ (ε / |Δθ₀|) * |Δθ₀| :=
+      mul_le_mul_of_nonneg_right h_lt_n_le (abs_nonneg _)
+    rw [div_mul_cancel₀ ε (ne_of_gt hΔθ₀_abs_pos)] at h_mul_le
+    exact h_mul_le
 
 end LTFP
