@@ -163,6 +163,72 @@ theorem representer_objective_le
   have hΩle : Ω ‖S.starProjection f‖ ≤ Ω ‖f‖ := hΩ hnn hnorm
   linarith [hΩle, hL.le, hL.ge]
 
+/-- §7.2 — **Representer theorem (existence form).**
+
+For any objective `J(f) = L((⟨f, eⱼ⟩)ⱼ) + Ω(‖f‖)` whose regulariser `Ω`
+is non-decreasing on `[0, ∞)`, and any candidate point `f : E`, there
+exists a point `g ∈ Submodule.span ℝ (Set.range e)` whose objective value
+is no larger than `J(f)`. In particular, if a minimizer of `J` exists,
+some minimizer lies in the finite-dimensional span of `(eⱼ)`. Taking
+`eⱼ := k(·, xⱼ)` (the kernel feature map at training input `xⱼ`) and
+`L(u₁, …, uₙ) := (1/n) ∑ᵢ ℓ(uᵢ, yᵢ)` recovers Bach (2024) §7.2's
+classical statement.
+
+The witness is `g := S.starProjection f`, the orthogonal projection of
+`f` onto the span. The proof is `representer_objective_le` applied at
+`f`. -/
+theorem representer_theorem_exists
+    (e : Fin n → E)
+    [(Submodule.span ℝ (Set.range e)).HasOrthogonalProjection]
+    (L : (Fin n → ℝ) → ℝ) (Ω : ℝ → ℝ)
+    (hΩ : ∀ ⦃a b : ℝ⦄, 0 ≤ a → a ≤ b → Ω a ≤ Ω b)
+    (f : E) :
+    ∃ g ∈ Submodule.span ℝ (Set.range e),
+      L (fun j => inner ℝ g (e j)) + Ω ‖g‖ ≤
+        L (fun j => inner ℝ f (e j)) + Ω ‖f‖ := by
+  refine ⟨(Submodule.span ℝ (Set.range e)).starProjection f,
+          starProjection_span_mem e f, ?_⟩
+  simpa using representer_objective_le e L Ω hΩ f
+
+/-- §7.2 — **Representer theorem (minimizer form).**
+
+Under the same hypotheses as `representer_theorem_exists`, if `f : E`
+is a global minimizer of the objective
+`J(g) := L((⟨g, eⱼ⟩)ⱼ) + Ω(‖g‖)` (i.e., `J f ≤ J g` for every `g`),
+then there exists a minimizer `g* ∈ Submodule.span ℝ (Set.range e)` with
+`J g* = J f`. That is, the minimum is attained inside the
+finite-dimensional span of `(eⱼ)`. This is the classical statement of
+the representer theorem: the optimum can be expanded as a finite linear
+combination of the kernel feature maps `k(·, xⱼ)`. -/
+theorem representer_theorem_minimizer
+    (e : Fin n → E)
+    [(Submodule.span ℝ (Set.range e)).HasOrthogonalProjection]
+    (L : (Fin n → ℝ) → ℝ) (Ω : ℝ → ℝ)
+    (hΩ : ∀ ⦃a b : ℝ⦄, 0 ≤ a → a ≤ b → Ω a ≤ Ω b)
+    {f : E}
+    (hf : ∀ g : E,
+        L (fun j => inner ℝ f (e j)) + Ω ‖f‖ ≤
+          L (fun j => inner ℝ g (e j)) + Ω ‖g‖) :
+    ∃ g ∈ Submodule.span ℝ (Set.range e),
+      L (fun j => inner ℝ g (e j)) + Ω ‖g‖ =
+        L (fun j => inner ℝ f (e j)) + Ω ‖f‖ := by
+  set S : Submodule ℝ E := Submodule.span ℝ (Set.range e)
+  refine ⟨S.starProjection f, starProjection_span_mem e f, ?_⟩
+  -- One direction: projection objective ≤ f objective (representer core).
+  have h_le :
+      L (fun j => inner ℝ (S.starProjection f) (e j)) +
+          Ω ‖S.starProjection f‖ ≤
+        L (fun j => inner ℝ f (e j)) + Ω ‖f‖ := by
+    simpa using representer_objective_le e L Ω hΩ f
+  -- Other direction: f is a global minimizer, so f objective ≤ projection
+  -- objective.
+  have h_ge :
+      L (fun j => inner ℝ f (e j)) + Ω ‖f‖ ≤
+        L (fun j => inner ℝ (S.starProjection f) (e j)) +
+          Ω ‖S.starProjection f‖ :=
+    hf (S.starProjection f)
+  linarith
+
 end OrthogonalProjectionCore
 
 end LTFP
