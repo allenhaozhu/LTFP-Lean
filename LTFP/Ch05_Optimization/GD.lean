@@ -134,4 +134,88 @@ theorem gd_descent_quadratic
   -- right-hand side is monotone descent (≤ f(x)).
   nlinarith [sq_nonneg x, sq_nonneg η]
 
+/-! ### Abstract L-smoothness descent lemma (Bach 2024, p. 109, eqn 5.5).
+
+In a real inner-product space, suppose `f : E → ℝ` satisfies the
+**L-smooth quadratic upper bound** (Bach 2024 §5.1, eqn 5.4)
+`f(y) ≤ f(x) + ⟨∇f(x), y − x⟩ + (L/2) ‖y − x‖²`.
+This is the property implied by `LipschitzWith L (gradient f)` and is
+the form Bach uses to derive the descent lemma in the textbook.
+
+Substituting `y = x − η · ∇f(x)` and unfolding `‖−η • ∇f(x)‖² =
+η² ‖∇f(x)‖²` yields
+`f(x − η ∇f(x)) ≤ f(x) − η (1 − L η / 2) · ‖∇f(x)‖²`,
+which is the **L-smoothness descent lemma**.
+
+The Mathlib gap noted on the algebraic anchor above is the **first**
+step of the chain (`LipschitzWith L (gradient f)` ⇒ the quadratic
+upper bound), which requires a Taylor-with-Lagrange-remainder argument
+not yet packaged in Mathlib. The **second** step of the chain — from
+the quadratic upper bound to the descent lemma — is fully formalized
+here, parametrized by the L-smooth upper bound as hypothesis. -/
+
+/-- §5.1 — Abstract L-smoothness descent lemma.
+
+If `f : E → ℝ` satisfies the L-smooth quadratic upper bound
+(Bach 2024 §5.1, eqn 5.4) and the step size `η ≥ 0` is admissible
+(`L η ≤ 2`, equivalently `1 − L η / 2 ≥ 0`), then the gradient step
+strictly decreases `f` by at least `η (1 − L η / 2) · ‖∇f(x)‖²`:
+`f(x − η ∇f(x)) ≤ f(x) − η (1 − L η / 2) · ‖∇f(x)‖²`.
+
+The hypothesis `hQ` is the L-smooth quadratic upper bound, which
+follows from `LipschitzWith L (gradient f)` via Taylor's theorem
+(Mathlib gap, see file docstring). -/
+theorem gd_descent_lemma_of_quadratic_bound
+    (f : E → ℝ) (L η : ℝ) (x : E)
+    (hQ : ∀ y : E,
+      f y ≤ f x + inner ℝ (gradient f x) (y - x) + (L / 2) * ‖y - x‖ ^ 2)
+    (_hη : 0 ≤ η) :
+    f (x - η • gradient f x)
+      ≤ f x - η * (1 - L * η / 2) * ‖gradient f x‖ ^ 2 := by
+  -- Specialize hypothesis to `y = x − η • ∇f(x)`.
+  have h := hQ (x - η • gradient f x)
+  -- Simplify `(x − η • ∇f(x)) − x = −η • ∇f(x)`.
+  have hsub : (x - η • gradient f x) - x = -(η • gradient f x) := by
+    abel
+  -- Simplify the inner product `⟨∇f(x), −η • ∇f(x)⟩ = −η · ‖∇f(x)‖²`.
+  have hinner :
+      inner ℝ (gradient f x) ((x - η • gradient f x) - x)
+        = -η * ‖gradient f x‖ ^ 2 := by
+    rw [hsub, inner_neg_right, inner_smul_right, real_inner_self_eq_norm_sq]
+    ring
+  -- Simplify `‖−η • ∇f(x)‖² = η² · ‖∇f(x)‖²`.
+  have hnorm :
+      ‖(x - η • gradient f x) - x‖ ^ 2 = η ^ 2 * ‖gradient f x‖ ^ 2 := by
+    rw [hsub, norm_neg, norm_smul, Real.norm_eq_abs, mul_pow, sq_abs]
+  -- Rewrite the right-hand side of `h` using the two simplifications.
+  rw [hinner, hnorm] at h
+  -- Algebraic rearrangement: `−η ‖g‖² + (L/2) η² ‖g‖² = −η(1 − Lη/2) ‖g‖²`.
+  have : f x + -η * ‖gradient f x‖ ^ 2 + L / 2 * (η ^ 2 * ‖gradient f x‖ ^ 2)
+      = f x - η * (1 - L * η / 2) * ‖gradient f x‖ ^ 2 := by
+    ring
+  linarith [this]
+
+/-- §5.1 — Canonical-step instance of `gd_descent_lemma_of_quadratic_bound`.
+At `η = 1/L` with `L > 0`, the descent prefactor collapses to `1/(2L)`,
+giving the classical statement
+`f(x − (1/L) ∇f(x)) ≤ f(x) − 1/(2L) · ‖∇f(x)‖²`. -/
+theorem gd_descent_lemma_canonical_step
+    (f : E → ℝ) (L : ℝ) (x : E) (hL : 0 < L)
+    (hQ : ∀ y : E,
+      f y ≤ f x + inner ℝ (gradient f x) (y - x) + (L / 2) * ‖y - x‖ ^ 2) :
+    f (x - (1 / L) • gradient f x)
+      ≤ f x - (1 / (2 * L)) * ‖gradient f x‖ ^ 2 := by
+  have hηnn : (0 : ℝ) ≤ 1 / L := by positivity
+  have hmain :=
+    gd_descent_lemma_of_quadratic_bound f L (1 / L) x hQ hηnn
+  -- `(1/L) * (1 − L · (1/L) / 2) = 1/(2L)` (canonical-step collapse).
+  have hcollapse : (1 / L) * (1 - L * (1 / L) / 2) = 1 / (2 * L) :=
+    gd_descent_canonical_step L hL
+  -- Rewrite the descent factor.
+  have hrew :
+      f x - (1 / L) * (1 - L * (1 / L) / 2) * ‖gradient f x‖ ^ 2
+        = f x - (1 / (2 * L)) * ‖gradient f x‖ ^ 2 := by
+    rw [hcollapse]
+  linarith [hmain]
+
 end LTFP
