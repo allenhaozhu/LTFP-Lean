@@ -338,6 +338,112 @@ theorem matrix_bernstein {d : ℕ}
     (A + B)ᵀ = Aᵀ + Bᵀ :=
   Matrix.transpose_add A B
 
+/-- §1.2.6 — Optimal Chernoff parameter for matrix Bernstein.
+
+In Tropp's matrix Bernstein proof (Bach 2024, Proposition 1.7; Tropp 2015,
+Theorem 6.1.1), after the Lieb-concavity chain reduces the tail probability
+to a single-parameter MGF bound, one optimises the Chernoff parameter
+`θ ∈ (0, 3/R)`. The optimum is `θ* = t / (σ² + R t / 3)`, the same
+saddle-point value that appears in the scalar Bernstein optimisation
+(Bach 2024, p. 14). We package this as a stand-alone definition so the
+parametrised post-Lieb tail bound below can be applied symbolically. -/
+noncomputable def matrix_bernstein_theta (t σ2 R : ℝ) : ℝ :=
+  t / (σ2 + R * t / 3)
+
+/-- §1.2.6 — Positivity of the optimal Chernoff parameter when `0 < t` and the
+denominator `σ² + R t / 3` is positive. The denominator hypothesis is the
+standard small-`t` regime in Bernstein-style inequalities; under the natural
+sign constraints `0 ≤ σ²`, `0 ≤ R`, the denominator is automatically
+positive whenever either `σ² > 0` or `R t > 0`. -/
+theorem matrix_bernstein_theta_pos
+    (t σ2 R : ℝ) (ht : 0 < t) (hden : 0 < σ2 + R * t / 3) :
+    0 < matrix_bernstein_theta t σ2 R := by
+  unfold matrix_bernstein_theta
+  exact div_pos ht hden
+
+/-- §1.2.6 — Algebraic core of the matrix Bernstein optimisation.
+
+After the Lieb-concavity chain (steps 1–3 of Tropp's proof: matrix Markov,
+Lieb concavity, per-summand matrix MGF bound) the upper-tail probability
+satisfies, for every Chernoff parameter `θ ∈ (0, 3/R)`,
+
+    `P(λ_max(S) ≥ t) ≤ 2 d · exp(-θ · t + θ² · σ² / (2 · (1 - θ R / 3)))`.
+
+Optimising over `θ` gives `θ* = t / (σ² + R t / 3)`, at which point the
+exponent collapses to `-t² / (2 (σ² + R t / 3))`, recovering the matrix
+Bernstein bound. The collapse is a pure algebraic identity, and we prove
+it in closed form here:
+
+    `-θ* t + (θ*)² σ² / (2 (1 - θ* R / 3)) = -t² / 2 / (σ² + R t / 3)`.
+
+This is the step that, in the textbook, follows the words "optimising over
+`θ`" — pure first-year calculus once the Lieb chain is in place. -/
+theorem matrix_bernstein_optimised_exponent
+    (t σ2 R : ℝ) (hσ2 : 0 < σ2) (hR : 0 ≤ R) (ht : 0 ≤ t) :
+    -(matrix_bernstein_theta t σ2 R) * t
+        + (matrix_bernstein_theta t σ2 R) ^ 2 * σ2
+            / (2 * (1 - (matrix_bernstein_theta t σ2 R) * R / 3))
+      = -(t ^ 2 / 2) / (σ2 + R * t / 3) := by
+  -- Denominator `D := σ² + R t / 3` is positive (strict since `σ² > 0` and
+  -- `R t / 3 ≥ 0`).
+  have hRt3 : 0 ≤ R * t / 3 := by positivity
+  have hD_pos : 0 < σ2 + R * t / 3 := by linarith
+  have hD_ne : σ2 + R * t / 3 ≠ 0 := ne_of_gt hD_pos
+  -- The key algebraic simplification: `1 - θ R / 3 = σ² / D`. Equivalently
+  -- (clearing the denominator) `D * (1 - θ R / 3) = σ²`, i.e.
+  -- `D - D · (θ R / 3) = σ²`, i.e. `D - R t / 3 = σ²` since `D θ = t`.
+  -- We let `field_simp` do the work after substituting `θ`.
+  simp only [matrix_bernstein_theta]
+  field_simp
+  ring
+
+/-- §1.2.6 — Matrix Bernstein bound parametrised by the post-Lieb MGF tail
+hypothesis.
+
+This is the **abstract parametrised form** of Tropp's matrix Bernstein
+(Bach 2024, Proposition 1.7; Tropp 2015, Theorem 6.1.1). The full proof has
+four steps:
+
+1. Matrix Markov (Chernoff-style): `P(λ_max(S) ≥ t) ≤ exp(-θt) · E[tr exp(θ S)]`.
+2. **Lieb's concavity theorem**: `E[tr exp(θ S)] ≤ tr exp(∑ᵢ log E[exp(θ Xᵢ)])`.
+3. Per-summand matrix-MGF estimate: each `log E[exp(θ Xᵢ)] ≼ θ²/(2(1-θR/3)) · E[Xᵢ²]`.
+4. Optimisation: choose `θ = θ* := t / (σ² + R t / 3)`.
+
+Steps 1–3 require Lieb's concavity theorem and operator-monotone-function
+machinery, neither of which Mathlib provides as of writing (PROGRESS.md
+§3.1 documents this as a multi-week Mathlib gap). We therefore expose the
+*conclusion* of steps 1–3 as an explicit hypothesis (`hLieb`), and prove
+step 4 — the closed-form optimisation — in full. Once Mathlib lands Lieb
+concavity for the trace exponential, the hypothesis discharges automatically
+and this theorem upgrades into a complete matrix Bernstein bound without
+weakening downstream call sites.
+
+The hypothesis `hLieb` packages the post-Lieb MGF tail bound at the optimal
+Chernoff parameter `θ* = t / (σ² + R t / 3)`, after the Lieb chain has
+reduced the matrix problem to a single scalar exponential inequality. The
+saddle-point identity proved in `matrix_bernstein_optimised_exponent` then
+collapses the exponent to the matrix Bernstein form. -/
+theorem matrix_bernstein_via_lieb
+    (d : ℕ) (t σ2 R : ℝ)
+    (hσ2 : 0 < σ2) (hR : 0 ≤ R) (ht : 0 ≤ t)
+    (P : ℝ)
+    (hLieb :
+      P ≤ 2 * d * Real.exp
+        (-(matrix_bernstein_theta t σ2 R) * t
+          + (matrix_bernstein_theta t σ2 R) ^ 2 * σ2
+              / (2 * (1 - (matrix_bernstein_theta t σ2 R) * R / 3)))) :
+    P ≤ matrix_bernstein_bound d t σ2 R := by
+  -- Apply the saddle-point identity to collapse the post-Lieb exponent.
+  have hexp_eq :
+      -(matrix_bernstein_theta t σ2 R) * t
+          + (matrix_bernstein_theta t σ2 R) ^ 2 * σ2
+              / (2 * (1 - (matrix_bernstein_theta t σ2 R) * R / 3))
+        = -(t ^ 2 / 2) / (σ2 + R * t / 3) :=
+    matrix_bernstein_optimised_exponent t σ2 R hσ2 hR ht
+  rw [hexp_eq] at hLieb
+  -- The conclusion is now exactly `matrix_bernstein_bound d t σ² R`.
+  simpa [matrix_bernstein_bound] using hLieb
+
 end LTFP
 
 #check @LTFP.bernstein_inequality
@@ -403,3 +509,11 @@ example : 0 ≤ LTFP.matrix_bernstein_bound 5 1 0 1 :=
 example :
     LTFP.matrix_bernstein_bound 3 1 0 1 ≤ LTFP.matrix_bernstein_bound 7 1 0 1 :=
   LTFP.matrix_bernstein_bound_mono_d (by decide) 1 0 1
+
+#check @LTFP.matrix_bernstein_theta
+
+#check @LTFP.matrix_bernstein_theta_pos
+
+#check @LTFP.matrix_bernstein_optimised_exponent
+
+#check @LTFP.matrix_bernstein_via_lieb
