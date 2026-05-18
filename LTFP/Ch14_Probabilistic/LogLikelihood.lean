@@ -87,4 +87,71 @@ theorem gaussianNLL_le_iff_sq_le {mu₁ mu₂ y : ℝ} :
   · intro h; linarith
   · intro h; linarith
 
+/-- §14.1 — **Maximum likelihood = minimum NLL** (Bach 2024 §14.1, p. 410).
+    For Gaussian observations with fixed `y`, the negative log-likelihood
+    as a function of the mean `μ` is minimized at `μ = y`. This is the
+    scalar shadow of the MLE identity: the maximum-likelihood estimator
+    minimizes the negative log-likelihood. -/
+theorem gaussianNLL_min_at_truth (y mu : ℝ) :
+    gaussianNLL y y ≤ gaussianNLL mu y := by
+  rw [gaussianNLL_self]
+  exact gaussianNLL_nonneg mu y
+
+/-- §14.1 — **Bernoulli NLL non-negativity at `y = 1`** (Bach 2024 §14.1,
+    eq. 14.5). For success probability `p ∈ (0, 1]`, the loss
+    `-log p` is non-negative, because `log p ≤ 0` on `(0, 1]`. -/
+theorem bernoulliNLL_nonneg_at_one {p : ℝ} (hp_pos : 0 < p) (hp_le : p ≤ 1) :
+    0 ≤ bernoulliNLL p 1 := by
+  unfold bernoulliNLL
+  have h_log_nonpos : log p ≤ 0 := log_nonpos (le_of_lt hp_pos) hp_le
+  -- `bernoulliNLL p 1 = -1 * log p - 0 * log(1-p) = -log p ≥ 0`.
+  have : -(1 : ℝ) * log p - (1 - 1) * log (1 - p) = -log p := by ring
+  rw [this]
+  linarith
+
+/-- §14.1 — **Bernoulli NLL non-negativity at `y = 0`** (Bach 2024 §14.1,
+    eq. 14.5). For success probability `p ∈ [0, 1)`, the loss
+    `-log(1 - p)` is non-negative, because `log(1 - p) ≤ 0` on `[0, 1)`. -/
+theorem bernoulliNLL_nonneg_at_zero {p : ℝ} (hp_nn : 0 ≤ p) (hp_lt : p < 1) :
+    0 ≤ bernoulliNLL p 0 := by
+  unfold bernoulliNLL
+  have h_one_sub_pos : 0 < 1 - p := by linarith
+  have h_one_sub_le : 1 - p ≤ 1 := by linarith
+  have h_log_nonpos : log (1 - p) ≤ 0 :=
+    log_nonpos (le_of_lt h_one_sub_pos) h_one_sub_le
+  -- `bernoulliNLL p 0 = -0 * log p - 1 * log(1-p) = -log(1-p) ≥ 0`.
+  have : -(0 : ℝ) * log p - (1 - 0) * log (1 - p) = -log (1 - p) := by ring
+  rw [this]
+  linarith
+
+/-- §14.1 — **Gibbs inequality (scalar shadow)** (Bach 2024 §14.1, eq. 14.4
+    in continuous form, Lemma 14.1 in the discrete form). For any
+    `p, q > 0`, `q · log(q / p) ≥ q - p`, i.e. the cross-entropy
+    contribution `−q log p` is bounded below by the entropy contribution
+    `−q log q` up to a linear correction. This is the per-coordinate
+    algebraic anchor of the KL-divergence non-negativity proof, derived
+    from `log x ≤ x − 1` (`Real.log_le_sub_one_of_pos`). -/
+theorem gibbs_scalar {p q : ℝ} (hp : 0 < p) (hq : 0 < q) :
+    q - p ≤ q * log (q / p) := by
+  -- From `log x ≤ x - 1` applied to `x = p / q ≥ 0`:
+  --   `log (p / q) ≤ p / q - 1`, hence `q * log (p / q) ≤ p - q`.
+  -- Negate both sides: `-q * log (p / q) ≥ q - p`,
+  -- and `-log (p / q) = log (q / p)`.
+  have h_div_pos : 0 < p / q := div_pos hp hq
+  have h_log_le : log (p / q) ≤ p / q - 1 := log_le_sub_one_of_pos h_div_pos
+  have hq_nn : 0 ≤ q := le_of_lt hq
+  -- Multiply both sides by `q ≥ 0`.
+  have h_scaled : q * log (p / q) ≤ q * (p / q - 1) :=
+    mul_le_mul_of_nonneg_left h_log_le hq_nn
+  -- Simplify RHS: `q * (p / q - 1) = p - q`.
+  have hq_ne : q ≠ 0 := ne_of_gt hq
+  have h_rhs : q * (p / q - 1) = p - q := by field_simp
+  rw [h_rhs] at h_scaled
+  -- Convert `log (p / q)` to `-log (q / p)`.
+  have h_log_swap : log (p / q) = -log (q / p) := by
+    rw [log_div (ne_of_gt hp) hq_ne, log_div hq_ne (ne_of_gt hp)]; ring
+  rw [h_log_swap] at h_scaled
+  -- `q * (-log (q / p)) ≤ p - q`  ⇒  `q * log (q / p) ≥ q - p`.
+  linarith
+
 end LTFP
