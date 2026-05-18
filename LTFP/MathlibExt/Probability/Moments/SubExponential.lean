@@ -8,7 +8,7 @@ import Mathlib.Probability.Moments.SubGaussian
 import Mathlib.Analysis.SpecialFunctions.Exp
 
 /-!
-# Sub-exponential random variables
+# Sub-exponential and sub-Gamma random variables
 
 Proposed Mathlib path: `Mathlib/Probability/Moments/SubExponential.lean`.
 Proposed namespace: `ProbabilityTheory` (matching
@@ -34,9 +34,25 @@ it yields the canonical two-regime **Bernstein inequality**
 
 `μ.real {ω | t ≤ X ω} ≤ exp(-min(t² / (2ν), t / (2b)))`.
 
+In addition, we package the strictly more general **sub-Gamma** MGF
+class. A random variable `X` is `(ν, b)`-**sub-Gamma** if
+
+`mgf X μ s ≤ exp (s² · ν / (2 · (1 - |s| · b)))`
+
+for every `s` with `|s| · b < 1`. This is the natural MGF class used in
+[boucheron2013concentration, §2.4] from which the Bernstein inequality
+follows directly without optimisation over an auxiliary sub-Gaussian
+parameter. Sub-Gamma is a *weaker* condition than sub-exponential (the
+Gaussian bound `exp(s²ν/2)` implies the sub-Gamma bound by
+`1/(1 - |s|·b) ≥ 1`); conversely, a `(ν, b)`-sub-Gamma variable is
+`(2ν, 2b)`-sub-exponential on the half-interval `|s|·b < 1/2`, so the
+two classes coincide up to a factor of `2` in the parameters.
+
 ## Main definitions
 
 * `ProbabilityTheory.IsSubExponential`: `X` has a `(ν, b)`-sub-exponential
+  moment-generating function under `μ`.
+* `ProbabilityTheory.IsSubGamma`: `X` has a `(ν, b)`-sub-Gamma
   moment-generating function under `μ`.
 
 ## Main statements
@@ -52,6 +68,16 @@ it yields the canonical two-regime **Bernstein inequality**
   `b = 0`.
 * `ProbabilityTheory.IsSubExponential.measure_ge_le`: the Chernoff-style
   one-sided tail bound for a sub-exponential random variable.
+* `ProbabilityTheory.IsSubGamma.const_zero`: the constant `0` random
+  variable is `(0, 0)`-sub-Gamma under any probability measure.
+* `ProbabilityTheory.IsSubGamma.mono_nu` / `mono_b`: monotonicity of the
+  sub-Gamma class in each parameter.
+* `ProbabilityTheory.IsSubExponential.toIsSubGamma`: sub-exponential
+  implies sub-Gamma with the same parameters.
+* `ProbabilityTheory.IsSubGamma.toIsSubExponential`: sub-Gamma implies
+  sub-exponential with parameters scaled by `2` on the half-interval.
+* `ProbabilityTheory.IsSubGamma.measure_ge_le`: the Bernstein tail bound
+  arising directly from the sub-Gamma MGF inequality.
 
 ## Implementation notes
 
@@ -70,12 +96,15 @@ inequality alone is taken as the working definition.
 * [wainwright2019high] Wainwright, M. J. (2019).
   *High-Dimensional Statistics: A Non-Asymptotic Viewpoint*. Cambridge
   University Press. §2.1.3.
+* [boucheron2013concentration] Boucheron, S., Lugosi, G., Massart, P.
+  (2013). *Concentration Inequalities: A Nonasymptotic Theory of
+  Independence*. Oxford University Press. §2.4.
 * [bach2024learning] Bach, F. (2024). *Learning Theory from First
   Principles*. MIT Press. §1.2.
 
 ## Tags
 
-sub-exponential, concentration, MGF, Bernstein
+sub-exponential, sub-Gamma, concentration, MGF, Bernstein
 -/
 
 namespace ProbabilityTheory
@@ -223,6 +252,226 @@ theorem measure_ge_le [IsFiniteMeasure μ]
 
 end IsSubExponential
 
+/-! ## Sub-Gamma random variables
+
+A real-valued random variable `X` on `(Ω, μ)` is `(ν, b)`-**sub-Gamma**
+if its moment-generating function satisfies the bound
+
+`mgf X μ s ≤ exp (s² · ν / (2 · (1 - |s| · b)))`
+
+for every real `s` lying in the open interval `(-1/b, 1/b)`, encoded as
+the side condition `|s| · b < 1`. Taking `b = 0` collapses the
+denominator to `2`, recovering the sub-Gaussian MGF bound.
+
+This is the standard MGF class from which Bernstein's inequality follows
+without an intermediate optimisation: applied at the Chernoff parameter
+`s = ε / (ν + b · ε)`, the sub-Gamma MGF bound yields the canonical
+two-regime tail `exp(-ε² / (2 (ν + b · ε)))`. The class is *weaker*
+than `IsSubExponential` (the constant Gaussian RHS `exp(s²ν/2)` is
+smaller than the sub-Gamma RHS); conversely a `(ν, b)`-sub-Gamma
+variable is `(2ν, 2b)`-sub-exponential on the half-interval. The two
+classes therefore coincide up to a constant factor of `2`. -/
+structure IsSubGamma (X : Ω → ℝ) (μ : Measure Ω) (ν b : ℝ) : Prop where
+  /-- The variance proxy `ν` is nonnegative. -/
+  ν_nonneg : 0 ≤ ν
+  /-- The scale parameter `b` is nonnegative. -/
+  b_nonneg : 0 ≤ b
+  /-- The sub-Gamma MGF bound holds in the small-`s` regime. -/
+  mgf_le : ∀ s : ℝ, |s| * b < 1 →
+    mgf X μ s ≤ Real.exp (s ^ 2 * ν / (2 * (1 - |s| * b)))
+
+namespace IsSubGamma
+
+variable {X : Ω → ℝ} {μ : Measure Ω} {ν b ν' b' : ℝ}
+
+/-- Any constant-zero random variable is `(0, 0)`-sub-Gamma under any
+probability measure. -/
+theorem const_zero (μ : Measure Ω) [IsProbabilityMeasure μ] :
+    IsSubGamma (fun _ : Ω => (0 : ℝ)) μ 0 0 where
+  ν_nonneg := le_rfl
+  b_nonneg := le_rfl
+  mgf_le := by
+    intro s _
+    have hmgf : mgf (fun _ : Ω => (0 : ℝ)) μ s = 1 := by simp
+    have hrhs : Real.exp (s ^ 2 * 0 / (2 * (1 - |s| * 0))) = 1 := by simp
+    rw [hmgf, hrhs]
+
+/-- Enlarging the scale parameter `b` preserves the sub-Gamma property. -/
+theorem mono_b (h : IsSubGamma X μ ν b) (hb : b ≤ b') :
+    IsSubGamma X μ ν b' where
+  ν_nonneg := h.ν_nonneg
+  b_nonneg := le_trans h.b_nonneg hb
+  mgf_le := by
+    intro s hs
+    have habs : 0 ≤ |s| := abs_nonneg s
+    -- The side condition `|s| * b' < 1` propagates to `|s| * b < 1`.
+    have hmul : |s| * b ≤ |s| * b' := mul_le_mul_of_nonneg_left hb habs
+    have hsb : |s| * b < 1 := lt_of_le_of_lt hmul hs
+    -- Compare the right-hand side of the MGF bound: enlarging `b`
+    -- shrinks the denominator `1 - |s| · b`, hence enlarges the RHS.
+    have hbound : mgf X μ s ≤ Real.exp (s ^ 2 * ν / (2 * (1 - |s| * b))) :=
+      h.mgf_le s hsb
+    -- `1 - |s| · b' ≤ 1 - |s| · b`, and both are positive.
+    have h_one_b_pos : 0 < 1 - |s| * b := by linarith
+    have h_one_b'_pos : 0 < 1 - |s| * b' := by linarith
+    have h_two_b_pos : 0 < 2 * (1 - |s| * b) := by linarith
+    have h_two_b'_pos : 0 < 2 * (1 - |s| * b') := by linarith
+    have h_denom_le : 2 * (1 - |s| * b') ≤ 2 * (1 - |s| * b) := by linarith
+    have hsq_nu_nn : 0 ≤ s ^ 2 * ν := mul_nonneg (sq_nonneg s) h.ν_nonneg
+    have h_div_le :
+        s ^ 2 * ν / (2 * (1 - |s| * b)) ≤
+          s ^ 2 * ν / (2 * (1 - |s| * b')) :=
+      div_le_div_of_nonneg_left hsq_nu_nn h_two_b'_pos h_denom_le
+    exact le_trans hbound (Real.exp_le_exp.mpr h_div_le)
+
+/-- Enlarging the variance proxy `ν` preserves the sub-Gamma property. -/
+theorem mono_nu (h : IsSubGamma X μ ν b) (hν : ν ≤ ν') :
+    IsSubGamma X μ ν' b where
+  ν_nonneg := le_trans h.ν_nonneg hν
+  b_nonneg := h.b_nonneg
+  mgf_le := by
+    intro s hs
+    have hbound := h.mgf_le s hs
+    have hsq : 0 ≤ s ^ 2 := sq_nonneg s
+    have h_denom_pos : 0 < 2 * (1 - |s| * b) := by linarith
+    have hmul : s ^ 2 * ν ≤ s ^ 2 * ν' := mul_le_mul_of_nonneg_left hν hsq
+    have h_div :
+        s ^ 2 * ν / (2 * (1 - |s| * b)) ≤
+          s ^ 2 * ν' / (2 * (1 - |s| * b)) :=
+      div_le_div_of_nonneg_right hmul h_denom_pos.le
+    exact le_trans hbound (Real.exp_le_exp.mpr h_div)
+
+/-- **Bernstein's inequality from sub-Gamma.**
+
+For a `(ν, b)`-sub-Gamma random variable `X`, every nonnegative Chernoff
+parameter `s` in the small-`s` regime `s · b < 1` gives the tail bound
+
+`μ.real {ω | ε ≤ X ω} ≤ exp(-s · ε + s² · ν / (2 (1 - s · b)))`.
+
+This is the **direct** form of Bernstein's inequality from the sub-Gamma
+MGF bound, without any optimisation step. The canonical Bernstein
+two-regime form is obtained by specialising `s := ε / (ν + b · ε)`,
+which collapses the exponent to `-ε² / (2 (ν + b · ε))`. -/
+theorem measure_ge_le [IsFiniteMeasure μ]
+    (h : IsSubGamma X μ ν b) (ε s : ℝ) (hs : 0 ≤ s) (hsb : s * b < 1)
+    (h_int : Integrable (fun ω => Real.exp (s * X ω)) μ) :
+    μ.real {ω | ε ≤ X ω} ≤
+      Real.exp (-s * ε + s ^ 2 * ν / (2 * (1 - s * b))) := by
+  -- Classical Chernoff bound from Mathlib.
+  have hChernoff : μ.real {ω | ε ≤ X ω} ≤ Real.exp (-s * ε) * mgf X μ s :=
+    measure_ge_le_exp_mul_mgf ε hs h_int
+  -- Apply the sub-Gamma MGF bound at `s ≥ 0`.
+  have habs : |s| = s := abs_of_nonneg hs
+  have hsb' : |s| * b < 1 := by rw [habs]; exact hsb
+  have hmgf :
+      mgf X μ s ≤ Real.exp (s ^ 2 * ν / (2 * (1 - |s| * b))) :=
+    h.mgf_le s hsb'
+  -- Replace `|s|` with `s` in the exponent.
+  rw [habs] at hmgf
+  -- Chain bounds and fold exponentials.
+  have hexp_pos : 0 < Real.exp (-s * ε) := Real.exp_pos _
+  have hstep :
+      Real.exp (-s * ε) * mgf X μ s ≤
+        Real.exp (-s * ε) * Real.exp (s ^ 2 * ν / (2 * (1 - s * b))) :=
+    mul_le_mul_of_nonneg_left hmgf hexp_pos.le
+  have hfold :
+      Real.exp (-s * ε) * Real.exp (s ^ 2 * ν / (2 * (1 - s * b))) =
+        Real.exp (-s * ε + s ^ 2 * ν / (2 * (1 - s * b))) := by
+    rw [← Real.exp_add]
+  calc μ.real {ω | ε ≤ X ω}
+      ≤ Real.exp (-s * ε) * mgf X μ s := hChernoff
+    _ ≤ Real.exp (-s * ε) * Real.exp (s ^ 2 * ν / (2 * (1 - s * b))) := hstep
+    _ = Real.exp (-s * ε + s ^ 2 * ν / (2 * (1 - s * b))) := hfold
+
+end IsSubGamma
+
+/-! ## Conversions between sub-exponential and sub-Gamma
+
+A `(ν, b)`-sub-exponential variable is automatically `(ν, b)`-sub-Gamma:
+the sub-exponential Gaussian RHS `exp(s²ν/2)` is bounded above by the
+sub-Gamma RHS `exp(s²ν/(2(1-|s|·b)))` since `0 < 1 - |s|·b ≤ 1` in the
+small-`s` regime.
+
+Conversely, a `(ν, b)`-sub-Gamma variable is `(2ν, 2b)`-sub-exponential
+on the half-interval `|s|·b < 1/2` (equivalently `|s|·(2b) < 1`): on
+this range `1 - |s|·b > 1/2`, so the sub-Gamma RHS is bounded by
+`exp(s²ν) = exp(s²·(2ν)/2)`. The factor of `2` is the canonical price
+paid when converting between the two classes. -/
+
+/-- Every `(ν, b)`-sub-exponential variable is `(ν, b)`-sub-Gamma. The
+sub-exponential bound `mgf X μ s ≤ exp(s²ν/2)` is stronger than the
+sub-Gamma bound `exp(s²ν/(2(1-|s|·b)))` because `1/(1-|s|·b) ≥ 1` in
+the small-`s` regime. -/
+theorem IsSubExponential.toIsSubGamma
+    {X : Ω → ℝ} {μ : Measure Ω} {ν b : ℝ}
+    (h : IsSubExponential X μ ν b) :
+    IsSubGamma X μ ν b where
+  ν_nonneg := h.ν_nonneg
+  b_nonneg := h.b_nonneg
+  mgf_le := by
+    intro s hs
+    have hsub : mgf X μ s ≤ Real.exp (s ^ 2 * ν / 2) := h.mgf_le s hs
+    -- Show `s²ν/2 ≤ s²ν/(2(1-|s|·b))`. The denominator `1 - |s|·b` is
+    -- in `(0, 1]` since `0 ≤ |s|·b < 1`.
+    have habs : 0 ≤ |s| := abs_nonneg s
+    have h_sb_nn : 0 ≤ |s| * b := mul_nonneg habs h.b_nonneg
+    have h_one_sb_pos : 0 < 1 - |s| * b := by linarith
+    have h_one_sb_le : 1 - |s| * b ≤ 1 := by linarith
+    have h_two_pos : (0 : ℝ) < 2 := by norm_num
+    have h_two_sb_pos : 0 < 2 * (1 - |s| * b) := by positivity
+    have h_two_sb_le : 2 * (1 - |s| * b) ≤ 2 := by
+      have := mul_le_mul_of_nonneg_left h_one_sb_le h_two_pos.le
+      linarith
+    have hsq_nu_nn : 0 ≤ s ^ 2 * ν := mul_nonneg (sq_nonneg s) h.ν_nonneg
+    have h_div_le :
+        s ^ 2 * ν / 2 ≤ s ^ 2 * ν / (2 * (1 - |s| * b)) :=
+      div_le_div_of_nonneg_left hsq_nu_nn h_two_sb_pos h_two_sb_le
+    exact le_trans hsub (Real.exp_le_exp.mpr h_div_le)
+
+/-- A `(ν, b)`-sub-Gamma variable is `(2ν, 2b)`-sub-exponential. The
+side condition `|s|·(2b) < 1` for sub-exponential is equivalent to
+`|s|·b < 1/2`, on which `1 - |s|·b > 1/2`, so the sub-Gamma RHS
+`exp(s²ν/(2(1-|s|·b)))` is bounded by `exp(s²·(2ν)/2)`. -/
+theorem IsSubGamma.toIsSubExponential
+    {X : Ω → ℝ} {μ : Measure Ω} {ν b : ℝ}
+    (h : IsSubGamma X μ ν b) :
+    IsSubExponential X μ (2 * ν) (2 * b) where
+  ν_nonneg := by have := h.ν_nonneg; linarith
+  b_nonneg := by have := h.b_nonneg; linarith
+  mgf_le := by
+    intro s hs
+    -- Side condition `|s| * (2 b) < 1` is `2 * (|s| * b) < 1`, hence
+    -- `|s| * b < 1/2`. We feed `|s| * b < 1` into the sub-Gamma bound.
+    have habs : 0 ≤ |s| := abs_nonneg s
+    have hsb_half : |s| * b < 1 / 2 := by
+      have : 2 * (|s| * b) < 1 := by
+        have heq : |s| * (2 * b) = 2 * (|s| * b) := by ring
+        rw [heq] at hs; exact hs
+      linarith
+    have hsb : |s| * b < 1 := by linarith
+    have hbound :
+        mgf X μ s ≤ Real.exp (s ^ 2 * ν / (2 * (1 - |s| * b))) :=
+      h.mgf_le s hsb
+    -- Compare exponents: `s²ν/(2(1-|s|·b)) ≤ s²·(2ν)/2 = s²ν`. The
+    -- comparison reduces to `1/(2(1-|s|·b)) ≤ 1`, i.e.
+    -- `1 ≤ 2(1-|s|·b)`, i.e. `|s|·b ≤ 1/2`.
+    have h_one_sb_gt_half : 1 / 2 < 1 - |s| * b := by linarith
+    have h_two_sb_gt_one : 1 < 2 * (1 - |s| * b) := by linarith
+    have h_two_sb_pos : 0 < 2 * (1 - |s| * b) := by linarith
+    have hsq_nu_nn : 0 ≤ s ^ 2 * ν := mul_nonneg (sq_nonneg s) h.ν_nonneg
+    -- The key step: `s²ν/(2(1-|s|·b)) ≤ s²ν` since the denominator is `> 1`.
+    have h_div_le_num :
+        s ^ 2 * ν / (2 * (1 - |s| * b)) ≤ s ^ 2 * ν := by
+      have : s ^ 2 * ν / (2 * (1 - |s| * b)) ≤ s ^ 2 * ν / 1 := by
+        exact div_le_div_of_nonneg_left hsq_nu_nn one_pos h_two_sb_gt_one.le
+      simpa using this
+    -- And `s²ν = s²·(2ν)/2`.
+    have h_eq : s ^ 2 * ν = s ^ 2 * (2 * ν) / 2 := by ring
+    have h_final :
+        s ^ 2 * ν / (2 * (1 - |s| * b)) ≤ s ^ 2 * (2 * ν) / 2 := by
+      rw [← h_eq]; exact h_div_le_num
+    exact le_trans hbound (Real.exp_le_exp.mpr h_final)
+
 /-! ## Examples -/
 
 section Examples
@@ -248,6 +497,26 @@ example {X : Ω → ℝ} {μ : Measure Ω} {c : NNReal}
     (h : HasSubgaussianMGF X c μ) :
     IsSubExponential X μ (c : ℝ) 0 :=
   IsSubExponential.of_hasSubgaussianMGF h
+
+/-- Example: the constant-zero random variable is sub-Gamma with
+parameters `(0, 0)` under any probability measure. -/
+example (μ : Measure Ω) [IsProbabilityMeasure μ] :
+    IsSubGamma (fun _ : Ω => (0 : ℝ)) μ 0 0 :=
+  IsSubGamma.const_zero μ
+
+/-- Example: every sub-exponential variable is automatically sub-Gamma
+with the same parameters. -/
+example {X : Ω → ℝ} {μ : Measure Ω} {ν b : ℝ}
+    (h : IsSubExponential X μ ν b) :
+    IsSubGamma X μ ν b :=
+  h.toIsSubGamma
+
+/-- Example: every sub-Gamma variable is sub-exponential after doubling
+both parameters. -/
+example {X : Ω → ℝ} {μ : Measure Ω} {ν b : ℝ}
+    (h : IsSubGamma X μ ν b) :
+    IsSubExponential X μ (2 * ν) (2 * b) :=
+  h.toIsSubExponential
 
 end Examples
 
