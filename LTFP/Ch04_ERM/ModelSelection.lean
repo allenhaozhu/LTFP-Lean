@@ -48,4 +48,16 @@ theorem penalizedEmpiricalRisk_add_pen
   unfold penalizedEmpiricalRisk
   ring
 
+/-- §4.6 — **Penalty floors the empirical risk.** Any non-negative
+    penalty `pen ≥ 0` enlarges the empirical risk into the SRM
+    objective. This is the algebraic content of "the penalty
+    discourages large classes" (Bach §4.6, p. 103) and is the
+    inequality used to lower-bound the SRM selector. -/
+theorem empiricalRisk_le_penalizedEmpiricalRisk
+    (ℓ : LossFunction 𝒴 𝒵) (n : ℕ) (S : Fin n → 𝒳 × 𝒴)
+    (f : 𝒳 → 𝒵) {pen : ℝ} (hpen : 0 ≤ pen) :
+    empiricalRisk ℓ n S f ≤ penalizedEmpiricalRisk ℓ n S f pen := by
+  unfold penalizedEmpiricalRisk
+  linarith
+
 end LTFP

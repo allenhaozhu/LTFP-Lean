@@ -156,4 +156,39 @@ theorem phiExponential_le_one_of_nonneg {u : ℝ} (hu : 0 ≤ u) :
   rw [show (1 : ℝ) = Real.exp 0 from by rw [Real.exp_zero]]
   exact Real.exp_le_exp.mpr (by linarith)
 
+/-- §4.1.4 — **Exponential surrogate majorizes the 0-1 surrogate.**
+    This is the key "calibration" inequality for AdaBoost
+    (Bach §4.1, p. 76, eq. (4.4) / Schapire-Freund 1997): if `u ≤ 0`
+    the 0-1 indicator is `1 ≤ exp(-u)`; if `u > 0` the indicator is
+    `0 < exp(-u)`. Hence minimizing the exponential Φ-risk controls
+    the 0-1 misclassification rate. -/
+theorem phiZeroOne_le_phiExponential (u : ℝ) :
+    phiZeroOne u ≤ phiExponential u := by
+  unfold phiZeroOne phiExponential
+  split_ifs with h
+  · -- u ≤ 0, so -u ≥ 0, so exp(-u) ≥ exp 0 = 1
+    have : (1 : ℝ) = Real.exp 0 := by rw [Real.exp_zero]
+    rw [this]
+    exact Real.exp_le_exp.mpr (by linarith)
+  · -- u > 0, RHS positive, LHS = 0
+    exact (Real.exp_pos _).le
+
+/-- §4.1 — **Hinge surrogate is positive exactly when `u < 1`.** This
+    pins down the *sparsity* of the SVM support: only points with
+    margin `< 1` contribute to the loss (Bach §4.1, p. 75). The two
+    directions follow from the case split of the `max`. -/
+theorem phiHinge_pos_iff_lt_one (u : ℝ) :
+    0 < phiHinge u ↔ u < 1 := by
+  unfold phiHinge
+  constructor
+  · intro h
+    by_contra hge
+    push_neg at hge
+    have : max (1 - u) 0 = 0 :=
+      max_eq_right (by linarith : (1 - u) ≤ 0)
+    linarith
+  · intro h
+    have : (1 - u) ≤ max (1 - u) 0 := le_max_left _ _
+    linarith
+
 end LTFP

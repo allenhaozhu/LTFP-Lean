@@ -11,7 +11,7 @@ The first term measures how well `f̂` matches the best `H`-predictor
 on a finite sample (depends on n); the second measures how well `H`
 approximates the true Bayes predictor (depends on H).
 -/
-import LTFP.Ch02_SupervisedLearning.Defs
+import LTFP.Ch02_SupervisedLearning.ERM
 
 namespace LTFP
 
@@ -104,5 +104,33 @@ theorem excess_risk_eq_approx_when_optimal
       approximationError ℓ D H := by
   unfold approximationError
   rw [h]
+
+/-- §4.2 — **Approximation-zero collapse.** If a hypothesis class
+    already realizes the Bayes risk (`approximationError = 0`), the
+    excess risk of any predictor in `H` reduces to its estimation
+    error alone. This is the regime targeted by universal
+    approximators (Bach §4.3, p. 89; Ch 9). -/
+theorem excess_risk_eq_estimation_of_approx_zero
+    [MeasurableSpace 𝒳] [MeasurableSpace 𝒴] [Nonempty 𝒵]
+    (ℓ : LossFunction 𝒴 𝒵) (D : Measure (𝒳 × 𝒴))
+    (H : Set (𝒳 → 𝒵)) (fhat : 𝒳 → 𝒵)
+    (h : approximationError ℓ D H = 0) :
+    populationRisk ℓ D fhat - bayesRisk ℓ D =
+      estimationError ℓ D H fhat := by
+  rw [excess_risk_decomposition ℓ D H fhat, h, add_zero]
+
+/-- §4.5 — **Generalization-gap telescoping decomposition.** Define
+    the generalization gap as `R(f) − R̂_n(f)`. The decomposition
+    `R(f̂) − R* = [R(f̂) − R̂_n(f̂)] + [R̂_n(f̂) − R*]` is the
+    starting point of every uniform-convergence argument (Bach §4.5,
+    p. 90, eq. (4.10)). -/
+theorem generalization_gap_telescope
+    [MeasurableSpace 𝒳] [MeasurableSpace 𝒴]
+    (ℓ : LossFunction 𝒴 𝒵) (D : Measure (𝒳 × 𝒴))
+    (n : ℕ) (S : Fin n → 𝒳 × 𝒴) (fhat : 𝒳 → 𝒵) :
+    populationRisk ℓ D fhat - bayesRisk ℓ D =
+      (populationRisk ℓ D fhat - empiricalRisk ℓ n S fhat) +
+        (empiricalRisk ℓ n S fhat - bayesRisk ℓ D) := by
+  ring
 
 end LTFP
