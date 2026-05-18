@@ -348,4 +348,60 @@ theorem gd_descent_lemma_const
   exact gd_descent_lemma_of_lipschitz_gradient
     (fun _ : E => c) 0 η x hLip hTaylor hη
 
+/-! ### §5.2 — Heavy-ball / momentum descent (Bach 2024, §5.2 sidebar).
+
+The **heavy-ball** iteration (Polyak 1964, also called Polyak's momentum
+method, used in Bach 2024 §5.2 and §5.6) augments gradient descent with
+a momentum term: `xₜ₊₁ = xₜ − γ · ∇f(xₜ) + β · (xₜ − xₜ₋₁)`. With
+`β = 0`, this reduces to vanilla gradient descent.
+
+We record the per-step map and the structural fact that zero momentum
+collapses heavy-ball to gradient descent. The convergence rate analysis
+for `β` tuned to the strongly-convex condition number (Polyak's optimal
+rate) is on Bach 2024 §5.2 and requires the inertial-Lyapunov chain not
+yet packaged in Mathlib. -/
+
+/-- §5.2 — **Heavy-ball / Polyak-momentum step.** From two consecutive
+iterates `(x_prev, x)`, the next iterate is
+`x − γ · ∇f(x) + β · (x − x_prev)`. The pair `(x, next)` is then fed
+back into the iteration. With `β = 0`, this is plain gradient descent. -/
+noncomputable def heavyBallStep (γ β : ℝ) (f : E → ℝ) (x_prev x : E) : E :=
+  x - γ • gradient f x + β • (x - x_prev)
+
+/-- §5.2 — **Zero-momentum collapse.** With `β = 0`, the heavy-ball
+step reduces to the vanilla gradient-descent step `gdStep γ f x`. This
+is the structural sanity check that heavy-ball generalizes GD. -/
+theorem heavyBallStep_zero_momentum (γ : ℝ) (f : E → ℝ) (x_prev x : E) :
+    heavyBallStep γ (0 : ℝ) f x_prev x = gdStep γ f x := by
+  unfold heavyBallStep gdStep
+  simp
+
+/-! ### §5.2 — Projected gradient descent (Bach 2024, §5.2, p. 124).
+
+For a closed convex constraint set `C ⊆ E` with projection operator
+`P_C : E → E`, **projected gradient descent** iterates
+`xₜ₊₁ = P_C(xₜ − γ · ∇f(xₜ))`. We register the step map parametrized by
+an abstract projection function `proj : E → E`, and prove that on the
+identity projection it reduces to vanilla gradient descent.
+
+Full convergence analysis of projected GD (Bach 2024 §5.2.3) requires
+nonexpansivity `‖P_C(x) − P_C(y)‖ ≤ ‖x − y‖` and the optimality
+condition `⟨x − P_C(x), y − P_C(x)⟩ ≤ 0` for `y ∈ C`, neither of
+which we package here. -/
+
+/-- §5.2 — **Projected gradient-descent step** with abstract projection
+`proj : E → E`. The step computes a vanilla GD update, then projects
+back onto the (implicit) constraint set: `proj (x − γ • ∇f(x))`. -/
+noncomputable def pgdStep (γ : ℝ) (proj : E → E) (f : E → ℝ) (x : E) : E :=
+  proj (gdStep γ f x)
+
+/-- §5.2 — **Identity-projection collapse.** When the projection is
+the identity (i.e., the constraint set is the whole space), projected
+GD reduces to vanilla gradient descent (Bach 2024 §5.2). This is the
+structural sanity check that `pgdStep` generalizes `gdStep`. -/
+theorem pgdStep_id (γ : ℝ) (f : E → ℝ) (x : E) :
+    pgdStep γ (fun y => y) f x = gdStep γ f x := by
+  unfold pgdStep
+  rfl
+
 end LTFP

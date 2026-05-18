@@ -37,4 +37,18 @@ theorem sgdIterate_zero_step (g : E → E) (x0 : E) (t : ℕ) :
   | succ t ih =>
     simp [sgdIterate, sgdStep, ih]
 
+/-- §5.4 — **Expected descent under unbiasedness** (Bach 2024 §5.4,
+    eqn 5.21, sample-path form). If `g : E → E` is pointwise equal to
+    the true gradient field `h` (the deterministic shadow of the
+    unbiased-estimator hypothesis `E[g(x) | x] = ∇f(x)`), then the SGD
+    update with `g` coincides with the (abstract) GD update with `h`:
+    `sgdStep γ g x = x − γ • h x`. This is the structural identity that
+    makes `E[xₜ₊₁ | xₜ] = xₜ − γ · ∇f(xₜ)` and is the entry point of
+    Bach's SGD convergence analysis. -/
+theorem sgdStep_of_unbiased
+    (γ : ℝ) (g h : E → E) (x : E) (hg : g x = h x) :
+    sgdStep γ g x = x - γ • h x := by
+  unfold sgdStep
+  rw [hg]
+
 end LTFP
