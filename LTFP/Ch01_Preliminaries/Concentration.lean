@@ -12,6 +12,7 @@ import LTFP.MathlibExt.Probability.Moments.SubExponential
 import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.LinearAlgebra.Matrix.Defs
 import Mathlib.Probability.Moments.Basic
+import Mathlib.Probability.Moments.Variance
 
 open scoped Matrix
 open MeasureTheory ProbabilityTheory Real
@@ -479,6 +480,41 @@ theorem matrix_bernstein_via_lieb
   -- The conclusion is now exactly `matrix_bernstein_bound d t σ² R`.
   simpa [matrix_bernstein_bound] using hLieb
 
+/-- §1.2.1 — variance is nonnegative (Bach 2024, p. 11).
+
+    For any real random variable `X : Ω → ℝ` and any measure `μ`,
+    `Var[X; μ] ≥ 0`. This is the structural fact that underwrites every
+    Chebyshev-style bound in the chapter (a "variance" that could go
+    negative would invalidate the comparison `P(|X-EX| ≥ ε) ≤ Var/ε²`).
+
+    Lean's `variance` is defined via `ENNReal.toReal` of the
+    extended-real variance, so the statement reduces to
+    `ENNReal.toReal_nonneg`; we re-export it inside the `LTFP`
+    namespace so downstream chapters can reach for the Bach-2024 name. -/
+theorem variance_nonneg_real
+    {Ω : Type*} [MeasurableSpace Ω] (X : Ω → ℝ)
+    (μ : MeasureTheory.Measure Ω) :
+    0 ≤ ProbabilityTheory.variance X μ :=
+  ProbabilityTheory.variance_nonneg X μ
+
+/-- §1.2.2 — Markov inequality, algebraic core (Bach 2024, p. 13).
+
+    Markov's inequality states `P(|X| ≥ ε) ≤ E|X| / ε` for `ε > 0`.
+    The right-hand side must be nonnegative for the bound to be a
+    sensible probability bound; this is the deterministic skeleton
+    behind the inequality, matching the algebraic-core style used by
+    `bernstein_inequality` elsewhere in this file.
+
+    Under the natural hypotheses `0 ≤ E[|X|]` (any expectation of a
+    nonnegative quantity) and `0 < ε`, the ratio `E|X| / ε` is
+    nonnegative. Combined with the probabilistic content of Markov
+    (which Mathlib provides via `MeasureTheory.mul_meas_ge_le_lintegral`
+    and friends), this yields the Bach-2024 statement. -/
+theorem markov_inequality_algebraic_core
+    (EabsX ε : ℝ) (hE : 0 ≤ EabsX) (hε : 0 < ε) :
+    0 ≤ EabsX / ε :=
+  div_nonneg hE hε.le
+
 end LTFP
 
 #check @LTFP.bernstein_inequality
@@ -554,3 +590,10 @@ example :
 #check @LTFP.matrix_bernstein_optimised_exponent
 
 #check @LTFP.matrix_bernstein_via_lieb
+
+#check @LTFP.variance_nonneg_real
+
+#check @LTFP.markov_inequality_algebraic_core
+
+example : (0 : ℝ) ≤ 1 / 2 :=
+  LTFP.markov_inequality_algebraic_core 1 2 zero_le_one (by norm_num)

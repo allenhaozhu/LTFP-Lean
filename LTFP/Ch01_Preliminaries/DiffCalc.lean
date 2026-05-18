@@ -28,6 +28,21 @@ theorem gradient_basics
     ∇ (fun _ : F => c) x = 0 :=
   gradient_fun_const x c
 
+/-- §1.1.5 — Cauchy–Schwarz inequality on real inner product spaces
+    (Bach 2024, p. 7, listed among the preliminary inequalities).
+
+    For all `x y` in a real inner product space `F`,
+    `|⟨x, y⟩| ≤ ‖x‖ · ‖y‖`. This is the prerequisite behind the operator-
+    norm bound `‖A x‖ ≤ ‖A‖ · ‖x‖` and the smoothness/strong-convexity
+    inequalities used throughout Chapter 5. We re-export Mathlib's
+    `abs_real_inner_le_norm` inside the `LTFP` namespace so downstream
+    chapters do not need to thread the Mathlib name. -/
+theorem cauchy_schwarz_real
+    (F : Type*) [NormedAddCommGroup F] [InnerProductSpace ℝ F]
+    (x y : F) :
+    |inner ℝ x y| ≤ ‖x‖ * ‖y‖ :=
+  abs_real_inner_le_norm x y
+
 end LTFP
 
 #check @LTFP.gradient_basics
@@ -37,3 +52,10 @@ open scoped Gradient in
 -- function on `ℝ` is zero.
 example : ∇ (fun _ : ℝ => (0 : ℝ)) (0 : ℝ) = 0 :=
   LTFP.gradient_basics ℝ 0 0
+
+#check @LTFP.cauchy_schwarz_real
+
+/-- Sanity check: on `ℝ` with its standard inner product, Cauchy-Schwarz
+    on `(1, 1)` gives `|1| ≤ 1 · 1`. -/
+example : |inner ℝ (1 : ℝ) (1 : ℝ)| ≤ ‖(1 : ℝ)‖ * ‖(1 : ℝ)‖ :=
+  LTFP.cauchy_schwarz_real ℝ 1 1

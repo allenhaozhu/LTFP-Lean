@@ -132,6 +132,38 @@ theorem svd_exists {n d : ℕ}
 theorem posDef_isUnit {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
     (hA : A.PosDef) : IsUnit A := hA.isUnit
 
+/-- §1.1.4 — over `ℝ`, the Gram matrix `Xᵀ X` is symmetric (Bach 2024,
+    p. 6). This is the textbook companion to `svd_exists`: the same
+    `Xᵀ X` that the SVD diagonalises is symmetric by inspection, which
+    is what guarantees a real eigendecomposition (the existence of the
+    `V` factor in the SVD).
+
+    Over `ℝ`, `IsHermitian` collapses to `Aᵀ = A`; this theorem extracts
+    that real-valued statement from Mathlib's complex-flavoured
+    `PosSemidef.isHermitian` for downstream chapters that prefer the
+    transpose formulation. -/
+theorem gram_matrix_isSymm {n d : ℕ}
+    (X : Matrix (Fin n) (Fin d) ℝ) :
+    (Xᵀ * X)ᵀ = Xᵀ * X := by
+  have hHerm : (Xᵀ * X).IsHermitian := (svd_exists X).isHermitian
+  -- Over ℝ, `Mᴴ = Mᵀ`, so `IsHermitian M ↔ Mᵀ = M`.
+  rw [Matrix.IsHermitian, Matrix.conjTranspose_eq_transpose_of_trivial] at hHerm
+  exact hHerm
+
+/-- §1.1.1 — trace cyclicity for real matrices (Bach 2024, p. 3).
+
+    For rectangular real matrices `A : ℝ^{m×n}` and `B : ℝ^{n×m}`,
+    `tr(A B) = tr(B A)`. Bach uses this identity throughout Chapter 1
+    to rewrite expressions like `tr(X β βᵀ Xᵀ) = βᵀ Xᵀ X β`, which is
+    the bridge between the matrix-trace and quadratic-form views of
+    the least-squares objective. We re-export Mathlib's
+    `Matrix.trace_mul_comm` inside the `LTFP` namespace so downstream
+    chapters do not need to thread the namespace. -/
+theorem trace_mul_comm_real {m n : ℕ}
+    (A : Matrix (Fin m) (Fin n) ℝ) (B : Matrix (Fin n) (Fin m) ℝ) :
+    (A * B).trace = (B * A).trace :=
+  Matrix.trace_mul_comm A B
+
 end LTFP
 
 #check @LTFP.matrix_2x2_inverse
@@ -176,3 +208,19 @@ example {m n : ℕ} :
 example {n d : ℕ} :
     ((0 : Matrix (Fin n) (Fin d) ℝ)ᵀ * (0 : Matrix (Fin n) (Fin d) ℝ)).PosSemidef :=
   LTFP.svd_exists (0 : Matrix (Fin n) (Fin d) ℝ)
+
+#check @LTFP.gram_matrix_isSymm
+
+/-- Sanity check: the Gram matrix of any rectangular real matrix is
+    symmetric (real form of `IsHermitian`). -/
+example {n d : ℕ} (X : Matrix (Fin n) (Fin d) ℝ) :
+    (Xᵀ * X)ᵀ = Xᵀ * X :=
+  LTFP.gram_matrix_isSymm X
+
+#check @LTFP.trace_mul_comm_real
+
+/-- Sanity check: trace cyclicity on `1 × 1` real matrices, where the
+    identity is just commutativity of `ℝ`. -/
+example (A B : Matrix (Fin 1) (Fin 1) ℝ) :
+    (A * B).trace = (B * A).trace :=
+  LTFP.trace_mul_comm_real A B
