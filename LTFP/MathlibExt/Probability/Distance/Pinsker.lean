@@ -269,4 +269,121 @@ example (x : ℝ) : bhBound x ≤ 1 := bh_le_one x
 
 end Examples
 
+/-! ### Hellinger / Bhattacharyya bridge to the Bretagnolle--Huber bound
+
+The classical Bretagnolle--Huber proof factors through the **Bhattacharyya
+affinity** (or equivalently the Hellinger distance):
+
+  `ρ(μ, ν)  :=  ∫ √(dμ/dτ · dν/dτ) dτ  ∈ [0, 1]`,
+  `H²(μ, ν) := ∫ (√(dμ/dτ) - √(dν/dτ))² dτ = 2 · (1 - ρ(μ, ν))`,
+
+with the two-step chain
+
+  (1) `tvDist²(μ, ν)  ≤  1 - ρ(μ, ν)²`        (Le Cam / Cauchy--Schwarz),
+  (2) `ρ(μ, ν)        ≥  Real.exp (-KL(μ‖ν) / 2)`  (Jensen on `log`).
+
+Combining (1) with the square of (2) gives
+
+  `tvDist²(μ, ν)  ≤  1 - Real.exp (-KL(μ‖ν))`,
+
+which is exactly the BH bridge consumed by
+`tvDist_le_sqrt_one_sub_exp_neg` in `Ch15_LowerBounds/Statistical.lean`.
+
+Mathlib does not yet expose `bhattacharyya` or `hellingerSquared`, so we
+parametrize the chain by a real value `ρ` standing in for the Bhattacharyya
+affinity, together with its two characteristic hypotheses:
+
+* `hρ_bound : 0 ≤ ρ ∧ ρ ≤ 1` (range of the affinity for probability measures);
+* `h_lecam : tvDist² ≤ 1 - ρ²`        (the measure-theoretic Le Cam step);
+* `h_kl_bridge : Real.exp (-KL/2) ≤ ρ` (the Jensen step on `-log`).
+
+Under these inputs the BH bridge `tvDist² ≤ 1 - exp(-KL)` is **purely
+algebraic** and is discharged below. When Mathlib lands the Hellinger /
+Bhattacharyya infrastructure, the two hypotheses become standalone
+theorems and the parametric statement collapses to the textbook
+Bretagnolle--Huber bound. -/
+
+section HellingerKLBridge
+
+variable (μ ν : Measure α)
+
+/-- **Squaring the Bhattacharyya lower bound.**
+
+If `Real.exp (-D / 2) ≤ ρ` and `0 ≤ ρ`, then squaring both sides gives
+`Real.exp (-D) ≤ ρ ^ 2`. This is the elementary monotonicity step that
+upgrades the Jensen-on-`log` bound `ρ ≥ exp(-KL/2)` to its squared form,
+ready for use against the Le Cam estimate `tvDist² ≤ 1 - ρ²`. -/
+theorem exp_neg_le_sq_of_exp_neg_half_le {D ρ : ℝ}
+    (_hρ_nonneg : 0 ≤ ρ) (h : Real.exp (-D / 2) ≤ ρ) :
+    Real.exp (-D) ≤ ρ ^ 2 := by
+  have h_exp_nonneg : 0 ≤ Real.exp (-D / 2) := (Real.exp_pos _).le
+  have h_sq : Real.exp (-D / 2) ^ 2 ≤ ρ ^ 2 :=
+    pow_le_pow_left₀ h_exp_nonneg h 2
+  have h_rewrite : Real.exp (-D / 2) ^ 2 = Real.exp (-D) := by
+    rw [sq, ← Real.exp_add]
+    congr 1
+    ring
+  rw [h_rewrite] at h_sq
+  exact h_sq
+
+/-- **Hellinger / Bhattacharyya discharge of the BH bridge.**
+
+If a real number `ρ` plays the role of the Bhattacharyya affinity between
+`μ` and `ν`, satisfying
+
+* `0 ≤ ρ` (the affinity is nonnegative),
+* `tvDist²(μ, ν) ≤ 1 - ρ²` (Le Cam / Cauchy--Schwarz step),
+* `Real.exp (-D / 2) ≤ ρ` (Jensen on `-log`, with `D` standing in for KL),
+
+then the **BH bridge** holds:
+
+  `tvDist²(μ, ν)  ≤  1 - Real.exp (-D)`.
+
+This is the algebraic chain `tvDist² ≤ 1 - ρ² ≤ 1 - exp(-D)`. -/
+theorem tvDist_sq_le_one_sub_exp_neg_of_bhattacharyya
+    {ρ D : ℝ} (hρ_nonneg : 0 ≤ ρ)
+    (h_lecam : ((tvDist μ ν).toReal) ^ 2 ≤ 1 - ρ ^ 2)
+    (h_kl_bridge : Real.exp (-D / 2) ≤ ρ) :
+    ((tvDist μ ν).toReal) ^ 2 ≤ 1 - Real.exp (-D) := by
+  have h_sq : Real.exp (-D) ≤ ρ ^ 2 :=
+    exp_neg_le_sq_of_exp_neg_half_le hρ_nonneg h_kl_bridge
+  have h_chain : 1 - ρ ^ 2 ≤ 1 - Real.exp (-D) := by linarith
+  exact h_lecam.trans h_chain
+
+/-- **Hellinger-distance variant of the BH bridge.**
+
+If the Hellinger squared distance `H²` between `μ` and `ν` satisfies
+
+* `0 ≤ H²` and `H² ≤ 2` (the natural range for probability measures),
+* `tvDist²(μ, ν) ≤ H² · (1 - H² / 4)` (Le Cam in Hellinger form),
+* `H² ≤ 2 · (1 - Real.exp (-D / 2))` (Bhattacharyya--KL on `H² = 2(1 - ρ)`),
+
+then the BH bridge `tvDist²(μ, ν) ≤ 1 - Real.exp (-D)` holds.
+
+The proof reduces to `tvDist_sq_le_one_sub_exp_neg_of_bhattacharyya` via
+the identity `ρ = 1 - H² / 2`. -/
+theorem tvDist_sq_le_one_sub_exp_neg_of_hellinger
+    {Hsq D : ℝ}
+    (_hH_nonneg : 0 ≤ Hsq) (hH_le_two : Hsq ≤ 2)
+    (h_lecam : ((tvDist μ ν).toReal) ^ 2 ≤ Hsq * (1 - Hsq / 4))
+    (h_kl_bridge : Hsq ≤ 2 * (1 - Real.exp (-D / 2))) :
+    ((tvDist μ ν).toReal) ^ 2 ≤ 1 - Real.exp (-D) := by
+  -- Set `ρ = 1 - Hsq / 2`. Then `0 ≤ ρ` (from `Hsq ≤ 2`) and the two
+  -- Hellinger hypotheses translate to the Bhattacharyya hypotheses.
+  set ρ : ℝ := 1 - Hsq / 2 with hρ_def
+  have hρ_nonneg : 0 ≤ ρ := by simp [hρ_def]; linarith
+  -- `tvDist² ≤ Hsq (1 - Hsq/4) = 1 - ρ²`. Verify the polynomial identity.
+  have h_lecam' : ((tvDist μ ν).toReal) ^ 2 ≤ 1 - ρ ^ 2 := by
+    have h_eq : Hsq * (1 - Hsq / 4) = 1 - ρ ^ 2 := by
+      simp only [hρ_def]; ring
+    rw [← h_eq]
+    exact h_lecam
+  -- `Hsq ≤ 2 (1 - e^{-D/2})` ↔ `e^{-D/2} ≤ 1 - Hsq/2 = ρ`.
+  have h_kl_bridge' : Real.exp (-D / 2) ≤ ρ := by
+    simp only [hρ_def]; linarith
+  exact tvDist_sq_le_one_sub_exp_neg_of_bhattacharyya μ ν
+    hρ_nonneg h_lecam' h_kl_bridge'
+
+end HellingerKLBridge
+
 end LTFP.MathlibExt.Probability

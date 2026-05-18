@@ -14,6 +14,7 @@ inequalities themselves are deferred.
 -/
 import LTFP.Foundations.InfoTheory
 import LTFP.MathlibExt.Probability.TotalVariation
+import LTFP.MathlibExt.Probability.Distance.Pinsker
 import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Analysis.Complex.Exponential
@@ -318,6 +319,54 @@ theorem tvDist_le_one_of_bh_bridge
     (Real.sqrt_le_one).mpr h_rhs_le_one
   exact h_BH.trans h_sqrt_le_one
 
+/-- §15.1 — **Bretagnolle--Huber via the Hellinger / Bhattacharyya bridge.**
+
+The classical proof of Bretagnolle--Huber factors through the Bhattacharyya
+affinity `ρ(μ, ν) := ∫ √(dμ/dν) dν`, with the two-step chain
+
+  `tvDist²(μ, ν)  ≤  1 - ρ(μ, ν)²`        (Le Cam / Cauchy--Schwarz),
+  `ρ(μ, ν)        ≥  Real.exp (-KL(μ‖ν)/2)` (Jensen on `-log`).
+
+Given a real value `ρ` standing in for the affinity together with these two
+inputs (parameters because Mathlib does not yet expose
+`bhattacharyya` / `hellingerSquared`), we obtain the **Bretagnolle--Huber
+inequality** directly:
+
+  `tvDist(μ, ν) ≤ Real.sqrt (1 - Real.exp (-D))`.
+
+The wrapper composes `tvDist_sq_le_one_sub_exp_neg_of_bhattacharyya`
+(which discharges the BH bridge `tvDist² ≤ 1 - exp(-D)` algebraically)
+with `tvDist_le_sqrt_one_sub_exp_neg` (which lifts the squared bound to the
+square-root form). -/
+theorem tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya
+    (μ ν : Measure α) {ρ D : ℝ} (hD : 0 ≤ D)
+    (hρ_nonneg : 0 ≤ ρ)
+    (h_lecam : ((tvDist μ ν).toReal) ^ 2 ≤ 1 - ρ ^ 2)
+    (h_kl_bridge : Real.exp (-D / 2) ≤ ρ) :
+    (tvDist μ ν).toReal ≤ Real.sqrt (1 - Real.exp (-D)) := by
+  have h_bridge : ((tvDist μ ν).toReal) ^ 2 ≤ 1 - Real.exp (-D) :=
+    LTFP.MathlibExt.Probability.tvDist_sq_le_one_sub_exp_neg_of_bhattacharyya
+      μ ν hρ_nonneg h_lecam h_kl_bridge
+  exact tvDist_le_sqrt_one_sub_exp_neg μ ν D hD h_bridge
+
+/-- §15.1 — **Bretagnolle--Huber via the Hellinger-squared bridge.**
+
+Same chain as `tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya` but stated
+in terms of the **squared Hellinger distance** `Hsq` (related to the
+Bhattacharyya affinity by `ρ = 1 - Hsq / 2`). The Le Cam step in Hellinger
+form reads `tvDist² ≤ Hsq · (1 - Hsq / 4)`, and the KL bridge becomes
+`Hsq ≤ 2 · (1 - exp(-D / 2))`. -/
+theorem tvDist_le_sqrt_one_sub_exp_neg_of_hellinger
+    (μ ν : Measure α) {Hsq D : ℝ} (hD : 0 ≤ D)
+    (hH_nonneg : 0 ≤ Hsq) (hH_le_two : Hsq ≤ 2)
+    (h_lecam : ((tvDist μ ν).toReal) ^ 2 ≤ Hsq * (1 - Hsq / 4))
+    (h_kl_bridge : Hsq ≤ 2 * (1 - Real.exp (-D / 2))) :
+    (tvDist μ ν).toReal ≤ Real.sqrt (1 - Real.exp (-D)) := by
+  have h_bridge : ((tvDist μ ν).toReal) ^ 2 ≤ 1 - Real.exp (-D) :=
+    LTFP.MathlibExt.Probability.tvDist_sq_le_one_sub_exp_neg_of_hellinger
+      μ ν hH_nonneg hH_le_two h_lecam h_kl_bridge
+  exact tvDist_le_sqrt_one_sub_exp_neg μ ν D hD h_bridge
+
 end MeasureBretagnolleHuber
 
 /-
@@ -325,20 +374,24 @@ Remaining Mathlib gap:
 
 `tvDist_le_sqrt_one_sub_exp_neg` and `tvDist_le_sqrt_divergence` are
 *abstract* in the divergence value `D`: the user supplies the
-"BH bridge" `tvDist² ≤ 1 - exp(-D)` as a hypothesis. Specializing to
-`D = (klDiv μ ν).toReal` requires proving the bridge for `klDiv`,
-which goes through the Hellinger affinity `ρ(μ,ν) := ∫ √(dμ/dν) dν`
-and the Cauchy–Schwarz / Jensen chain
-`tvDist² ≤ 1 - ρ² ≤ 1 - exp(-KL)`. Mathlib does not yet provide
-`Hellinger` or the bridge `1 - ρ² ≤ 1 - exp(-klDiv)`.
+"BH bridge" `tvDist² ≤ 1 - exp(-D)` as a hypothesis. The Hellinger /
+Bhattacharyya factorization of that bridge is now discharged in
+`tvDist_sq_le_one_sub_exp_neg_of_bhattacharyya` (and its Hellinger-form
+variant), so the only remaining input is the **measure-theoretic Le Cam
+step** `tvDist² ≤ 1 - ρ²` and the **Bhattacharyya--KL step**
+`exp(-KL/2) ≤ ρ`. Specializing to `D = (klDiv μ ν).toReal` therefore
+reduces to discharging those two integral inequalities — exactly the
+content of the classical proof. Mathlib does not yet expose
+`bhattacharyya` / `hellingerSquared`, but neither inequality is needed
+in the algebraic chain above.
 
-When upstream lands the Hellinger machinery, the abstract bridge
-hypothesis collapses to a one-liner derived from `klDiv` and the
-`tvDist_le_sqrt_one_sub_exp_neg` / `tvDist_le_sqrt_divergence`
-theorems above immediately give the classical Bretagnolle–Huber and
-loose Pinsker bounds in terms of `klDiv`. The sharper textbook
-Pinsker `tvDist ≤ √(KL/2)` factor of `1/2` needs a finer convex
-analysis than the `1 - exp(-x) ≤ x` anchor used here.
+When upstream lands the Hellinger machinery, the two abstract inputs
+collapse to one-liners derived from `klDiv`, and the wrappers
+`tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya` /
+`tvDist_le_sqrt_one_sub_exp_neg_of_hellinger` immediately give the
+classical Bretagnolle--Huber bound in terms of `klDiv`. The sharper
+textbook Pinsker `tvDist ≤ √(KL/2)` factor of `1/2` still needs a finer
+convex analysis than the `1 - exp(-x) ≤ x` anchor used here.
 -/
 
 end LTFP
