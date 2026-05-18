@@ -247,4 +247,186 @@ theorem hasOrthogonalProjection_span_range_of_complete
     FiniteDimensional.complete ℝ _
   infer_instance
 
+/-! ### Aronszajn-style typed RKHS structure
+
+The classical Moore–Aronszajn theorem says: every positive-semidefinite
+symmetric kernel `K : 𝒳 × 𝒳 → ℝ` induces a unique (up to isometric
+isomorphism) real Hilbert space `H_K` of functions `𝒳 → ℝ`, equipped
+with a **feature map** `φ : 𝒳 → H_K` and an **evaluation map**
+`eval : H_K → 𝒳 → ℝ`, satisfying the *reproducing property*
+
+  `eval f x = ⟨f, φ x⟩_{H_K}` for all `f ∈ H_K`, `x ∈ 𝒳`.
+
+The construction (completion of `span ℝ {K(·, x) : x ∈ 𝒳}` under
+`⟪K(·, x), K(·, y)⟫ := K(x, y)`) is functional-analytic in nature and
+relies on Mathlib's `UniformSpace.Completion` machinery, which is a
+documented Tier-C gap for this project.
+
+To make the existing representer theorem (in `Ch07_Kernels.Representer`)
+land against a *typed* RKHS — rather than an arbitrary ambient
+inner-product space — we expose the following lightweight structures:
+
+* `IsReproducingFeatureMap K E φ eval` : a Prop-valued predicate saying
+  that `φ : 𝒳 → E` and `eval : E → 𝒳 → ℝ` jointly witness the
+  reproducing property `eval f x = ⟨f, φ x⟩_ℝ`, and that the induced
+  kernel equals `K`.
+
+* `RKHS_of_kernel K` : a packaged record bundling an inner-product space
+  `E`, a feature map `φ`, an evaluation map `eval`, and an
+  `IsReproducingFeatureMap` proof.
+
+Stage-1 deliverable: we register the predicate, prove the symmetric and
+PSD-of-kernel corollaries that always follow from the reproducing
+property (so the predicate is *non-vacuous*: any kernel admitting such a
+realisation is automatically symmetric and PSD), and expose the typed
+representer-friendly form. We do not prove the converse (Aronszajn's
+existence/uniqueness theorem) here; that is Stage-3 territory.
+-/
+
+/-- **Reproducing-feature-map predicate.**
+
+Given a kernel `K : 𝒳 → 𝒳 → ℝ`, a real inner-product space `E`, a
+feature map `φ : 𝒳 → E`, and an evaluation map `eval : E → 𝒳 → ℝ`, we
+say the data `(E, φ, eval)` is a reproducing realisation of `K` if
+`eval` is linear in `f`, and the reproducing property holds:
+
+  `eval f x = ⟨f, φ x⟩_ℝ` and `K x y = ⟨φ x, φ y⟩_ℝ`.
+
+This is the *non-trivial content* of being an RKHS: a Hilbert space
+together with feature and evaluation maps witnessing the reproducing
+identity. -/
+structure IsReproducingFeatureMap
+    {𝒳 E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
+    (K : 𝒳 → 𝒳 → ℝ) (φ : 𝒳 → E) (eval : E → 𝒳 → ℝ) : Prop where
+  /-- Evaluation is the inner product with the feature image. -/
+  reproducing : ∀ (f : E) (x : 𝒳), eval f x = ⟪f, φ x⟫_ℝ
+  /-- The kernel is recovered from the feature map. -/
+  kernel_eq : ∀ x y : 𝒳, K x y = ⟪φ x, φ y⟫_ℝ
+
+/-- **Aronszajn-style RKHS record.**
+
+A bundled witness that a kernel `K : 𝒳 → 𝒳 → ℝ` is realised as a
+reproducing kernel inside some real inner-product space `E`. The record
+exposes the underlying space `E`, the feature map `φ`, the evaluation
+map `eval`, and the reproducing-property witness. Downstream theorems
+(e.g. the representer theorem) accept an `RKHS_of_kernel K` and only
+ever interact with `E` through inner products and projections.
+
+This is the typed RKHS *interface* that the representer theorem
+consumes; concrete instances (e.g. the linear kernel realised inside
+`EuclideanSpace ℝ (Fin d)` itself) are constructed elsewhere. The full
+Aronszajn theorem — that *every* PSD symmetric kernel admits such an
+instance — is a documented Mathlib gap. -/
+structure RKHS_of_kernel {𝒳 : Type*} (K : 𝒳 → 𝒳 → ℝ) where
+  /-- The ambient inner-product space (= `H_K` in textbook notation). -/
+  E : Type*
+  /-- Additive-group structure on `E`. -/
+  [normedAddCommGroup : NormedAddCommGroup E]
+  /-- Inner-product structure on `E` over `ℝ`. -/
+  [innerProductSpace : InnerProductSpace ℝ E]
+  /-- The feature map `𝒳 → E`. -/
+  φ : 𝒳 → E
+  /-- The evaluation map: each `f : E` is realised as a function
+  `eval f : 𝒳 → ℝ`. -/
+  eval : E → 𝒳 → ℝ
+  /-- Witness that `(E, φ, eval)` reproduces `K`. -/
+  is_repro : IsReproducingFeatureMap K φ eval
+
+namespace IsReproducingFeatureMap
+
+variable {𝒳 E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
+variable {K : 𝒳 → 𝒳 → ℝ} {φ : 𝒳 → E} {eval : E → 𝒳 → ℝ}
+
+/-- **Symmetry from reproducing property.** Any kernel realised as
+`⟨φ x, φ y⟩_ℝ` is automatically symmetric in its arguments. -/
+theorem isSymmetricKernel
+    (h : IsReproducingFeatureMap K φ eval) : IsSymmetricKernel K := by
+  intro x y
+  rw [h.kernel_eq x y, h.kernel_eq y x, real_inner_comm]
+
+/-- **PSD from reproducing property.** Any kernel realised as
+`⟨φ x, φ y⟩_ℝ` is automatically positive semidefinite: the Gram
+quadratic form equals `‖∑ᵢ αᵢ φ(xᵢ)‖² ≥ 0`. -/
+theorem isPSDKernel
+    (h : IsReproducingFeatureMap K φ eval) : IsPSDKernel K := by
+  intro n x α
+  -- Rewrite the Gram quadratic form using `K x y = ⟨φ x, φ y⟩`.
+  have hrewrite :
+      ∑ i, ∑ j, α i * α j * K (x i) (x j)
+        = ∑ i, ∑ j, α i * α j * ⟪φ (x i), φ (x j)⟫_ℝ := by
+    refine Finset.sum_congr rfl ?_
+    intro i _
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [h.kernel_eq]
+  -- The latter is `‖∑ αᵢ φ(xᵢ)‖² ≥ 0` by `linear_kernel_psd`'s argument.
+  set y : E := ∑ i, α i • φ (x i) with hy
+  have h_inner :
+      ⟪y, y⟫_ℝ = ∑ i, ∑ j, α i * α j * ⟪φ (x i), φ (x j)⟫_ℝ := by
+    have h1 : ⟪y, y⟫_ℝ = ∑ i, ⟪α i • φ (x i), y⟫_ℝ := by
+      rw [hy]; exact sum_inner (𝕜 := ℝ) Finset.univ (fun i => α i • φ (x i)) y
+    have h2 : ∀ i,
+        ⟪α i • φ (x i), y⟫_ℝ
+          = α i * ∑ j, α j * ⟪φ (x i), φ (x j)⟫_ℝ := by
+      intro i
+      have hsmul :
+          ⟪α i • φ (x i), y⟫_ℝ = α i * ⟪φ (x i), y⟫_ℝ := by
+        simpa using (real_inner_smul_left (φ (x i)) y (α i))
+      have hsum :
+          ⟪φ (x i), y⟫_ℝ = ∑ j, α j * ⟪φ (x i), φ (x j)⟫_ℝ := by
+        rw [hy, inner_sum (𝕜 := ℝ) Finset.univ (fun j => α j • φ (x j)) (φ (x i))]
+        refine Finset.sum_congr rfl ?_
+        intro j _
+        simpa using (real_inner_smul_right (φ (x i)) (φ (x j)) (α j))
+      rw [hsmul, hsum]
+    calc
+      ⟪y, y⟫_ℝ
+          = ∑ i, ⟪α i • φ (x i), y⟫_ℝ := h1
+      _   = ∑ i, α i * ∑ j, α j * ⟪φ (x i), φ (x j)⟫_ℝ := by
+              refine Finset.sum_congr rfl ?_
+              intro i _; exact h2 i
+      _   = ∑ i, ∑ j, α i * (α j * ⟪φ (x i), φ (x j)⟫_ℝ) := by
+              refine Finset.sum_congr rfl ?_
+              intro i _
+              exact Finset.mul_sum _ _ _
+      _   = ∑ i, ∑ j, α i * α j * ⟪φ (x i), φ (x j)⟫_ℝ := by
+              refine Finset.sum_congr rfl ?_
+              intro i _
+              refine Finset.sum_congr rfl ?_
+              intro j _; ring
+  have h_nonneg : 0 ≤ ⟪y, y⟫_ℝ := by
+    rw [real_inner_self_eq_norm_sq]
+    exact sq_nonneg _
+  rw [hrewrite, ← h_inner]
+  exact h_nonneg
+
+/-- **Evaluation at a feature point recovers the kernel.** For any
+reproducing realisation of `K`, evaluating `φ y` at `x` gives `K y x`.
+This is the "the feature `φ y` *is* the function `K(·, y)`" identity
+when `eval (φ y) ·` is interpreted as a function `𝒳 → ℝ`. -/
+theorem eval_feature_eq_kernel
+    (h : IsReproducingFeatureMap K φ eval) (x y : 𝒳) :
+    eval (φ y) x = K y x := by
+  rw [h.reproducing, h.kernel_eq y x]
+
+end IsReproducingFeatureMap
+
+/-- **Canonical reproducing realisation of the linear kernel.**
+
+The linear kernel `K u v := ⟨u, v⟩` on `EuclideanSpace ℝ (Fin d)` is
+canonically realised inside `EuclideanSpace ℝ (Fin d)` itself, with
+feature map `φ := id` and evaluation map `eval f x := ⟨f, x⟩`. This is
+the simplest non-trivial Aronszajn-style witness and shows the
+`RKHS_of_kernel` structure is inhabited for at least one concrete
+kernel. -/
+noncomputable def RKHS_of_kernel.linear (d : ℕ) :
+    RKHS_of_kernel
+      (fun u v : EuclideanSpace ℝ (Fin d) => ⟪u, v⟫_ℝ) where
+  E := EuclideanSpace ℝ (Fin d)
+  φ := id
+  eval f x := ⟪f, x⟫_ℝ
+  is_repro :=
+    { reproducing := by intro f x; rfl
+      kernel_eq := by intro x y; rfl }
+
 end LTFP.MathlibExt.Analysis

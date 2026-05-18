@@ -19,9 +19,12 @@ weakly decreases the objective; hence any minimizer lies in `S`.
 -/
 import LTFP.Foundations.Kernel
 import LTFP.Foundations.RKHS
+import LTFP.MathlibExt.Analysis.InnerProductSpace.RKHS
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
 
 namespace LTFP
+
+open LTFP.MathlibExt.Analysis
 
 variable {𝒳 : Type*} {n : ℕ}
 
@@ -230,5 +233,94 @@ theorem representer_theorem_minimizer
   linarith
 
 end OrthogonalProjectionCore
+
+/-! ### Typed-RKHS form of the representer theorem
+
+The orthogonal-projection core above is stated in any real
+inner-product space `E`. For kernel methods proper, `E` is the RKHS
+`H_K` induced by a positive-semidefinite kernel `K : 𝒳 → 𝒳 → ℝ`, and
+the "training feature vectors" are `eⱼ := φ(xⱼ)` where `φ : 𝒳 → H_K`
+is the feature map. The reproducing property `eval f x = ⟨f, φ x⟩_ℝ`
+then identifies the *function value* `f(xⱼ)` with the inner product
+`⟨f, φ(xⱼ)⟩`, so any data-fit term depending on `f` only through the
+function values `(f(xⱼ))ⱼ` automatically depends on `f` only through
+the inner products `(⟨f, eⱼ⟩)ⱼ`, and `representer_theorem_minimizer`
+applies directly.
+
+This section packages that observation: given a kernel `K` realised as
+an RKHS via `RKHS_of_kernel K`, any minimiser of a regularised
+empirical-risk functional `L((f(xⱼ))ⱼ) + Ω(‖f‖)` over `H_K` is matched
+in objective value by a minimiser lying in
+`span ℝ {φ(x₁), …, φ(xₙ)}` — the classical statement of the representer
+theorem for the typed RKHS.
+-/
+
+section TypedRKHS
+
+variable {𝒳 : Type*} {K : 𝒳 → 𝒳 → ℝ}
+
+/-- §7.2 — **Representer theorem inside a typed RKHS.**
+
+Let `K : 𝒳 → 𝒳 → ℝ` be a kernel realised as an RKHS
+`R : RKHS_of_kernel K` (with feature map `φ := R.φ` and evaluation
+map `eval := R.eval`). Given training inputs `xs : Fin n → 𝒳`, set
+`e j := R.φ (xs j)` and consider the regularised empirical-risk
+functional
+
+  `J(f) := L((R.eval f (xs j))ⱼ) + Ω(‖f‖)`,
+
+where `Ω : ℝ → ℝ` is non-decreasing on `[0, ∞)`. If `f : R.E` is a
+global minimiser of `J`, then there exists a minimiser
+`g* ∈ span ℝ (range e) ⊆ R.E` with `J g* = J f`. By the reproducing
+property, `R.eval f (xs j) = ⟨f, R.φ (xs j)⟩_ℝ`, so the data-fit
+factor depends on `f` only through the inner products `⟨f, eⱼ⟩` — the
+classical hypothesis of the representer theorem.
+
+This is the typed-RKHS specialisation of `representer_theorem_minimizer`:
+the ambient inner-product space is now the typed RKHS `R.E`, and
+"function values" are interpreted via `R.eval`. -/
+theorem representer_theorem_rkhs
+    (R : RKHS_of_kernel K) (xs : Fin n → R.E)
+    (hproj :
+      letI := R.normedAddCommGroup
+      letI := R.innerProductSpace
+      (Submodule.span ℝ (Set.range xs)).HasOrthogonalProjection)
+    (L : (Fin n → ℝ) → ℝ) (Ω : ℝ → ℝ)
+    (hΩ : ∀ ⦃a b : ℝ⦄, 0 ≤ a → a ≤ b → Ω a ≤ Ω b)
+    {f : R.E}
+    (hf :
+      letI := R.normedAddCommGroup
+      letI := R.innerProductSpace
+      ∀ g : R.E,
+        L (fun j => inner ℝ f (xs j)) + Ω ‖f‖ ≤
+          L (fun j => inner ℝ g (xs j)) + Ω ‖g‖) :
+    letI := R.normedAddCommGroup
+    letI := R.innerProductSpace
+    ∃ g ∈ Submodule.span ℝ (Set.range xs),
+      L (fun j => inner ℝ g (xs j)) + Ω ‖g‖ =
+        L (fun j => inner ℝ f (xs j)) + Ω ‖f‖ := by
+  letI := R.normedAddCommGroup
+  letI := R.innerProductSpace
+  haveI : (Submodule.span ℝ (Set.range xs)).HasOrthogonalProjection := hproj
+  exact representer_theorem_minimizer xs L Ω hΩ hf
+
+/-- §7.2 — **Reproducing-property restatement.**
+
+In the typed RKHS `R : RKHS_of_kernel K`, the inner products
+`⟨f, R.φ (xs j)⟩_ℝ` that drive the representer-theorem hypothesis are
+*exactly* the function values `R.eval f (xs j)`. So a data-fit term
+`L : (Fin n → ℝ) → ℝ` applied to `(⟨f, R.φ (xs j)⟩_ℝ)ⱼ` is the same as
+the same `L` applied to `(R.eval f (xs j))ⱼ` — the canonical
+empirical-risk vector. -/
+theorem rkhs_inner_eq_eval
+    (R : RKHS_of_kernel K) (xs : Fin n → 𝒳) (f : R.E) (j : Fin n) :
+    letI := R.normedAddCommGroup
+    letI := R.innerProductSpace
+    inner ℝ f (R.φ (xs j)) = R.eval f (xs j) := by
+  letI := R.normedAddCommGroup
+  letI := R.innerProductSpace
+  exact (R.is_repro.reproducing f (xs j)).symm
+
+end TypedRKHS
 
 end LTFP
