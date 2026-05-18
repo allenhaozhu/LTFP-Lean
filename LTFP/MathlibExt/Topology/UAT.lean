@@ -51,6 +51,15 @@ consume.
   represented by a width-1 NN with the constant activation `σ ≡ 1`.
 * `ramp_function_separates_points` : the ramp activation
   `x ↦ max 0 (a x + b)` separates any two distinct real points.
+* `cybenko_uat_of_separatesPoints` : a Cybenko-style universal
+  approximation statement on a compact space, parametrised by an
+  external subalgebra hypothesis: any `A : Subalgebra ℝ C(X, ℝ)` that
+  separates points is sup-norm dense in `C(X, ℝ)`. Specialising `A` to
+  the (subsequently constructed) ramp-spanned subalgebra recovers the
+  textbook UAT for single-hidden-layer networks.
+* `cybenko_uat_pointwise_of_separatesPoints` : an unbundled pointwise
+  reformulation that returns a `g : C(X, ℝ)` in `A` approximating a
+  given continuous function uniformly on `X`.
 -/
 import Mathlib.Topology.ContinuousMap.StoneWeierstrass
 import Mathlib.Topology.ContinuousMap.Algebra
@@ -179,5 +188,75 @@ theorem ramp_function_separates_points (x₁ x₂ : ℝ) (h : x₁ < x₂) :
     max_eq_right (le_of_lt h_right_pos)
   rw [h_left, h_right]
   exact ne_of_lt h_right_pos
+
+/-! ## §9.2 — Cybenko-style UAT, parametrised by the separating-subalgebra
+hypothesis
+
+The standard Cybenko/Hornik proof of the universal approximation theorem
+factors through Stone–Weierstrass on `C(X, ℝ)` for compact `X`: the
+hypothesis is that the class of NN-representable functions, viewed as a
+subalgebra of `C(X, ℝ)`, separates points. Mathlib provides the
+Stone–Weierstrass conclusion in this form
+(`exists_mem_subalgebra_near_continuousMap_of_separatesPoints`).
+
+What is missing for a complete in-Lean UAT is the construction of the
+NN-class as such a subalgebra: this requires turning the
+`singleHiddenNN` map of this module into a `ContinuousMap` (which needs
+a chosen continuous activation), proving algebraic closure under
+addition / scalar multiplication / multiplication, and verifying
+constants + point separation in `C(X, ℝ)`. The algebraic combinator
+lemmas above are the building blocks; the `ContinuousMap` wiring is the
+documented Mathlib gap (see `PROGRESS.md`, Tier C ledger).
+
+The theorem below captures the *post-wiring* statement: given any such
+subalgebra hypothesis on an externally supplied
+`A : Subalgebra ℝ C(X, ℝ)`, the Cybenko-style ε-approximation
+conclusion holds. Once a future module supplies the subalgebra and the
+point-separation witness, instantiating this theorem yields the full
+UAT.  -/
+
+open scoped ContinuousMap
+
+variable {X : Type*} [TopologicalSpace X] [CompactSpace X]
+
+/-- Cybenko-style universal approximation theorem, parametrised by an
+external separating-subalgebra hypothesis on a compact space `X`.
+
+If `A` is a subalgebra of `C(X, ℝ)` that separates points, then every
+continuous function `f : C(X, ℝ)` is within sup-norm distance `ε > 0`
+of some element of `A`.
+
+This is a direct re-presentation of Mathlib's
+`exists_mem_subalgebra_near_continuousMap_of_separatesPoints` in the
+language of universal approximation: it isolates the *content* of the
+UAT (Stone–Weierstrass density) from the *wiring* (showing that a
+specific class of NN-representable functions, e.g. ramp-spanned
+networks on a compact `K ⊂ ℝⁿ`, forms a point-separating subalgebra of
+`C(K, ℝ)`).
+
+Once a future module supplies the subalgebra and the point-separation
+witness for the chosen activation, instantiating this theorem yields
+the full Cybenko/Hornik universal approximation conclusion. -/
+theorem cybenko_uat_of_separatesPoints
+    (A : Subalgebra ℝ C(X, ℝ)) (hA : A.SeparatesPoints)
+    (f : C(X, ℝ)) {ε : ℝ} (hε : 0 < ε) :
+    ∃ g : A, ‖(g : C(X, ℝ)) - f‖ < ε :=
+  ContinuousMap.exists_mem_subalgebra_near_continuousMap_of_separatesPoints
+    A hA f ε hε
+
+/-- Pointwise reformulation of `cybenko_uat_of_separatesPoints`: given a
+separating subalgebra `A` of `C(X, ℝ)` and a continuous target
+`f : X → ℝ`, there is some `g : C(X, ℝ)` lying in `A` whose pointwise
+distance to `f` is uniformly bounded by `ε`. This is the form most
+directly usable from §9.2 of Bach (2024), where the approximant is
+written as a single-hidden-layer network. -/
+theorem cybenko_uat_pointwise_of_separatesPoints
+    (A : Subalgebra ℝ C(X, ℝ)) (hA : A.SeparatesPoints)
+    (f : X → ℝ) (hf : Continuous f) {ε : ℝ} (hε : 0 < ε) :
+    ∃ g : C(X, ℝ), g ∈ A ∧ ∀ x, ‖g x - f x‖ < ε := by
+  obtain ⟨g, hg⟩ :=
+    ContinuousMap.exists_mem_subalgebra_near_continuous_of_separatesPoints
+      A hA f hf ε hε
+  exact ⟨(g : C(X, ℝ)), g.2, hg⟩
 
 end LTFP.MathlibExt.Topology
