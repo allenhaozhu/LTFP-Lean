@@ -92,6 +92,92 @@ theorem softThreshold_at_lam (lam : ℝ) (hlam : 0 ≤ lam) :
   rw [if_pos hlam, sub_self]
   exact max_self 0
 
+/-- §8.3 — **Soft-thresholding deadzone (Bach 2024 eq. 8.13).**
+    For `|z| ≤ λ`, the soft-thresholding operator returns `0`: the
+    sub-threshold inputs are killed exactly. This is one of the three
+    defining regimes of `S_λ`. -/
+theorem softThreshold_eq_zero_of_abs_le {lam z : ℝ}
+    (_hlam : 0 ≤ lam) (hz : |z| ≤ lam) :
+    softThreshold lam z = 0 := by
+  unfold softThreshold
+  by_cases h : 0 ≤ z
+  · rw [if_pos h]
+    have habs : |z| = z := abs_of_nonneg h
+    have hzle : z ≤ lam := habs ▸ hz
+    exact max_eq_right (by linarith)
+  · rw [if_neg h]
+    push_neg at h
+    have habs : |z| = -z := abs_of_neg h
+    have hnle : -z ≤ lam := habs ▸ hz
+    exact min_eq_right (by linarith)
+
+/-- §8.3 — **Sign preservation of soft-thresholding (nonnegative branch).**
+    For nonnegative inputs, `S_λ(z) ≥ 0`. This is one half of the
+    "soft-thresholding preserves sign" property used throughout the
+    Lasso path analysis (Bach 2024 §8.3). -/
+theorem softThreshold_nonneg_of_nonneg {lam z : ℝ}
+    (hz : 0 ≤ z) :
+    0 ≤ softThreshold lam z := by
+  unfold softThreshold
+  rw [if_pos hz]
+  exact le_max_right _ _
+
+/-- §8.3 — **Sign preservation of soft-thresholding (nonpositive branch).**
+    For nonpositive inputs and `λ ≥ 0`, `S_λ(z) ≤ 0`. Companion to
+    `softThreshold_nonneg_of_nonneg`. -/
+theorem softThreshold_nonpos_of_nonpos {lam z : ℝ}
+    (hlam : 0 ≤ lam) (hz : z ≤ 0) :
+    softThreshold lam z ≤ 0 := by
+  unfold softThreshold
+  by_cases h : 0 ≤ z
+  · -- Then z = 0.
+    have hz0 : z = 0 := le_antisymm hz h
+    rw [if_pos h, hz0, zero_sub]
+    exact max_le (by linarith) (le_refl 0)
+  · rw [if_neg h]
+    exact min_le_right _ _
+
+/-- §8.3 — **Shrinkage bound for soft-thresholding (Bach 2024 §8.3).**
+    Soft-thresholding never increases magnitude: `|S_λ(z)| ≤ |z|` for
+    every `λ ≥ 0`. This is the "shrinkage" property that gives the
+    operator its name and underlies the contraction analysis of ISTA. -/
+theorem abs_softThreshold_le {lam z : ℝ} (hlam : 0 ≤ lam) :
+    |softThreshold lam z| ≤ |z| := by
+  unfold softThreshold
+  by_cases h : 0 ≤ z
+  · rw [if_pos h]
+    have habs : |z| = z := abs_of_nonneg h
+    rw [habs]
+    rcases le_or_gt lam z with hlz | hlz
+    · have hmax : max (z - lam) 0 = z - lam := max_eq_left (by linarith)
+      rw [hmax, abs_of_nonneg (by linarith : (0 : ℝ) ≤ z - lam)]
+      linarith
+    · have hmax : max (z - lam) 0 = 0 := max_eq_right (by linarith)
+      rw [hmax, abs_zero]
+      exact h
+  · rw [if_neg h]
+    push_neg at h
+    have habs : |z| = -z := abs_of_neg h
+    rw [habs]
+    rcases le_or_gt (z + lam) 0 with hzl | hzl
+    · have hmin : min (z + lam) 0 = z + lam := min_eq_left hzl
+      rw [hmin, abs_of_nonpos hzl]
+      linarith
+    · have hmin : min (z + lam) 0 = 0 := min_eq_right (le_of_lt hzl)
+      rw [hmin, abs_zero]
+      linarith
+
+/-- §8.3 — **Soft-thresholding is bounded between `0` and the input
+    (positive branch).** For `0 ≤ z` and `0 ≤ λ`, the shrunk output lies
+    in `[0, z]`. This precise interval bound is convenient for ISTA-style
+    monotone-convergence arguments (Bach 2024 §8.3, eq. 8.14). -/
+theorem softThreshold_le_self_of_nonneg {lam z : ℝ}
+    (hlam : 0 ≤ lam) (hz : 0 ≤ z) :
+    softThreshold lam z ≤ z := by
+  unfold softThreshold
+  rw [if_pos hz]
+  exact max_le (by linarith) hz
+
 /-- §8.2 — **Scalar Lasso KKT (soft-thresholding).**
 
     For the one-dimensional Lasso objective
@@ -309,5 +395,46 @@ theorem lasso_kkt_multidim
     IsMinOn (fun β => f β + lam * l1Norm β) Set.univ βhat :=
   lasso_kkt_abstract hlam hf
     ((isL1SubgradientFin_iff_isL1Subgradient).mp hv) hKKT
+
+/-! ### ℓ¹ norm: scaling and ℓ₀ / ℓ∞ comparisons -/
+
+/-- §8.3 — **Absolute homogeneity of the ℓ¹ norm.**
+    `‖c · θ‖₁ = |c| · ‖θ‖₁`, the defining homogeneity property of a
+    norm (Bach 2024 §8.3 footnote). Together with `l1Norm_add_le` and
+    `l1Norm_nonneg` this discharges the seminorm axioms. -/
+theorem l1Norm_smul (c : ℝ) (θ : Fin d → ℝ) :
+    l1Norm (fun i => c * θ i) = |c| * l1Norm θ := by
+  unfold l1Norm
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl (fun i _ => ?_)
+  rw [abs_mul]
+
+/-- §8.2/§8.3 — **ℓ∞-control bound on the ℓ¹ norm of a `k`-sparse
+    vector.** If at most `k` coordinates of `θ` are nonzero and every
+    coordinate has magnitude bounded by `M`, then `‖θ‖₁ ≤ k · M`. This
+    is the elementary inequality bridging ℓ₀ and ℓ¹ used in support
+    recovery and prediction-error analysis (Bach 2024 §8.3). -/
+theorem l1Norm_le_of_sparse {k : ℕ} {M : ℝ} {θ : Fin d → ℝ}
+    (hM : 0 ≤ M) (hsparse : (Finset.univ.filter fun i => θ i ≠ 0).card ≤ k)
+    (hbound : ∀ i, |θ i| ≤ M) :
+    l1Norm θ ≤ (k : ℝ) * M := by
+  classical
+  unfold l1Norm
+  -- Split the sum into the support and its complement; the complement is zero.
+  set S : Finset (Fin d) := Finset.univ.filter (fun i => θ i ≠ 0)
+  have hsplit : ∑ i, |θ i| = ∑ i ∈ S, |θ i| := by
+    refine (Finset.sum_subset (Finset.subset_univ S) ?_).symm
+    intro i _ hiS
+    have : θ i = 0 := by
+      by_contra h
+      exact hiS (Finset.mem_filter.mpr ⟨Finset.mem_univ i, h⟩)
+    rw [this, abs_zero]
+  rw [hsplit]
+  calc ∑ i ∈ S, |θ i|
+      ≤ ∑ _i ∈ S, M := Finset.sum_le_sum (fun i _ => hbound i)
+    _ = (S.card : ℝ) * M := by rw [Finset.sum_const, nsmul_eq_mul]
+    _ ≤ (k : ℝ) * M := by
+        have hk : (S.card : ℝ) ≤ (k : ℝ) := by exact_mod_cast hsparse
+        exact mul_le_mul_of_nonneg_right hk hM
 
 end LTFP
