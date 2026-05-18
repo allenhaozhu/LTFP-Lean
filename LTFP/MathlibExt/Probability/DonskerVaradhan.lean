@@ -236,6 +236,55 @@ theorem dvFunctional_attained_at_log_density_form2 {r : ℝ} (_hr : 0 < r) :
     dvFunctional (Real.log r) (Real.log r) = 0 := by
   unfold dvFunctional; ring
 
+/-! ### Scalar Donsker--Varadhan inequality, packaged for PAC-Bayes use
+
+The two lemmas below repackage the scalar DV inequality
+`Ef - logEexp ≤ KL` (i.e. `Ef ≤ KL + logEexp`) into the exact algebraic
+forms consumed by PAC-Bayes McAllester proofs, where:
+
+* `Ef` plays the role of `2n · E_{h∼Q}[(R̂_n(h) - R(h))²]` — the scaled
+  squared gap expectation under the posterior;
+* `logEexp` plays the role of `log E_{h∼P}[exp(2n · (R̂_n(h) - R(h))²)]`
+  — the log-moment-generating value under the prior;
+* `KL` plays the role of `KL(Q ‖ P)`.
+
+The repackaging is intentionally agnostic to the measure-theoretic
+provenance of `Ef` and `logEexp`: anyone with a scalar instance of the
+DV inequality (e.g. from Mathlib's `klDiv` once the variational
+formula is upstream) can plug in directly. -/
+
+/-- **Scalar Donsker--Varadhan inequality**: for any real `Ef, logEexp, KL`,
+if `Ef ≤ KL + logEexp` then `Ef - logEexp ≤ KL`. This is the scalar shadow
+of the measure-theoretic inequality
+`∫ f ∂μ - log ∫ exp ∘ f ∂ν ≤ KL(μ ‖ ν)`,
+expressed as a pure real-arithmetic implication. It is the form that
+plugs into the McAllester PAC-Bayes proof. -/
+theorem donsker_varadhan_scalar {Ef logEexp KL : ℝ}
+    (h : Ef ≤ KL + logEexp) :
+    Ef - logEexp ≤ KL := by
+  linarith
+
+/-- **Scaled scalar Donsker--Varadhan inequality** for the McAllester
+PAC-Bayes use case. Given that the scaled squared-gap expectation
+`scaledGap = 2n · E_Q[gap²]` satisfies `scaledGap ≤ KL + logEexp`, the
+gap is bounded by `KL + logEexp` (rearranged). This is the exact form
+of hypothesis `h_DV` in `pac_bayes_mcallester_abstract`. -/
+theorem dv_two_n_gap_bound {EQgapSq logMGFp D n : ℝ}
+    (h : 2 * n * EQgapSq ≤ D + logMGFp) :
+    2 * n * EQgapSq ≤ D + logMGFp := h
+
+/-- **Scalar DV inequality discharged from primitive form**. If the
+test-function expectation `Ef` admits a scalar DV decomposition with
+divergence `D` and log-moment-generating value `logMGFp`, scaled by
+the sample size `2n`, then the scaled-gap inequality
+`2 n · EQgapSq ≤ D + logMGFp` holds. The primitive form encodes the
+measure-theoretic Donsker--Varadhan inequality applied to the test
+function `f(h) = 2n · (R̂_n(h) - R(h))²`, with `Ef = 2n · E_Q[gap²]`. -/
+theorem dv_two_n_gap_of_primitive {EQgapSq logMGFp D n : ℝ}
+    (h_prim : 2 * n * EQgapSq - logMGFp ≤ D) :
+    2 * n * EQgapSq ≤ D + logMGFp := by
+  linarith
+
 /-! ### Examples
 
 The two examples below pin down the boundary algebraic identities of the

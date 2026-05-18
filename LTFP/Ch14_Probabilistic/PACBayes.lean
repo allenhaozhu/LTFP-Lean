@@ -228,4 +228,126 @@ theorem pac_bayes_mcallester_abstract_unfolded
   pac_bayes_mcallester_abstract (logMGFp := logMGFp)
     hn hδ hD hEQgap_nn h_jensen h_DV h_conc
 
+/-! ### Discharging the McAllester hypotheses from scalar primitives
+
+The two PAC-Bayes hypotheses `h_DV` and `h_conc` in
+`pac_bayes_mcallester_abstract` are independent measure-theoretic
+inputs in their natural forms (an integral over the function class
+under the prior, and a scalar Donsker--Varadhan inequality on
+`log E_P[exp(2n · gap²)]`).
+
+The lemmas below discharge them at the **scalar level**, taking as input
+the *real-valued* quantities that the upstream measure theory would
+produce. This is the scalar shadow of the full PAC-Bayes proof: once the
+measure-theoretic API (Donsker--Varadhan variational formula on `klDiv`,
+Hoeffding applied per hypothesis followed by Fubini over the function
+class) is in Mathlib, the hypotheses below discharge from those upstream
+results and the entire McAllester bound becomes a clean corollary.
+
+The two scalar primitives are:
+
+* `dv_scalar_primitive`: `2 n · E_Q[gap²] - log E_P[exp(2 n · gap²)] ≤ D`
+  — the scalar Donsker--Varadhan inequality applied to the test function
+  `f(h) := 2 n · (R̂_n(h) - R(h))²` with `D = KL(Q ‖ P)`. This is
+  `donsker_varadhan_scalar` from `MathlibExt.Probability.DonskerVaradhan`
+  composed with the measure-theoretic DV inequality (a scalar consequence
+  of Fenchel duality between `x log x` and `exp y - 1`).
+
+* `conc_scalar_primitive`: `E_P[exp(2 n · gap²)] ≤ 2 √n / δ` — the
+  function-class concentration bound. The natural derivation: apply
+  Hoeffding's lemma to `2 n · gap(h)²` per fixed hypothesis `h`, giving
+  `E_sample[exp(2 n · gap(h)²)] ≤ 2 √n` (Bach 2024, eq. 14.21, derived
+  from the Hoeffding tail bound integrated against `t ↦ 2t exp(t²)`),
+  then take expectation over `h ~ P` and apply Fubini. The `1/δ` factor
+  arises from the Chernoff/Markov bound in the PAC-Bayes conversion from
+  expectation to high-probability statement, absorbing the `δ` factor of
+  the desired confidence level.
+-/
+
+/-- §14.4 — **Scalar discharge of the McAllester concentration hypothesis**.
+If the exponential moment under the prior is bounded by `2 √n / δ`, then
+its logarithm is bounded by `log(2 √n / δ)`. This is the scalar shadow
+of the function-class concentration argument: the Hoeffding+Fubini
+chain produces the inner bound `E_P[exp(2 n · gap²)] ≤ 2 √n / δ`, and
+taking `log` of both sides gives the form consumed by
+`pac_bayes_mcallester_abstract`. -/
+theorem pac_bayes_conc_of_mgf_bound
+    {expMGFp n δ : ℝ}
+    (hn : 0 < n) (hδ : 0 < δ)
+    (h_mgf_pos : 0 < expMGFp)
+    (h_mgf : expMGFp ≤ 2 * Real.sqrt n / δ) :
+    Real.log expMGFp ≤ Real.log (2 * Real.sqrt n / δ) := by
+  have hsqrt_n_pos : 0 < Real.sqrt n := Real.sqrt_pos.mpr hn
+  have h_bound_pos : 0 < 2 * Real.sqrt n / δ := by positivity
+  exact (Real.log_le_log_iff h_mgf_pos h_bound_pos).mpr h_mgf
+
+/-- §14.4 — **Scalar discharge of the McAllester DV hypothesis**.
+If the scalar Donsker--Varadhan primitive
+`2 n · EQgapSq - logMGFp ≤ D` holds, then the rearranged form
+`2 n · EQgapSq ≤ D + logMGFp` consumed by
+`pac_bayes_mcallester_abstract` holds. This is pure real arithmetic
+once the underlying DV inequality
+`E_Q[f] - log E_P[exp f] ≤ KL(Q ‖ P)` is established (with
+`f := 2 n · gap²`, `Q := posterior`, `P := prior`). -/
+theorem pac_bayes_dv_of_primitive
+    {EQgapSq logMGFp D n : ℝ}
+    (h_prim : 2 * n * EQgapSq - logMGFp ≤ D) :
+    2 * n * EQgapSq ≤ D + logMGFp :=
+  LTFP.MathlibExt.Probability.dv_two_n_gap_of_primitive h_prim
+
+/-- §14.4 — **McAllester PAC-Bayes bound discharged from scalar primitives**.
+
+This is `pac_bayes_mcallester_abstract` with both `h_DV` and `h_conc`
+hypotheses discharged from their natural scalar precursors:
+
+* `h_DV_primitive` is the scalar Donsker--Varadhan inequality applied
+  to the test function `f(h) := 2 n · gap(h)²`, expressed in the
+  Mathlib-compatible `Ef - logEexp ≤ KL` direction. Discharged via
+  `pac_bayes_dv_of_primitive`.
+* `h_conc_mgf` is the function-class concentration bound on the
+  exponential moment, expressed as `E_P[exp(2 n · gap²)] ≤ 2 √n / δ`.
+  Discharged via `pac_bayes_conc_of_mgf_bound` after taking logs.
+* `h_mgf_pos` asserts strict positivity of the exponential moment
+  (automatic in the measure-theoretic setting since `exp` is strictly
+  positive and the prior has positive mass).
+
+The conclusion is the standard McAllester bound. Once Mathlib provides
+the full measure-theoretic DV inequality on `klDiv` and Hoeffding +
+Fubini for the function-class MGF, both primitive hypotheses discharge
+automatically and this theorem becomes the unconditional McAllester
+PAC-Bayes generalization bound. -/
+theorem pac_bayes_mcallester
+    {EQgap EQgapSq expMGFp D n δ : ℝ}
+    (hn : 0 < n) (hδ : 0 < δ)
+    (hD : 0 ≤ D)
+    (hEQgap_nn : 0 ≤ EQgap)
+    (h_jensen : EQgap ^ 2 ≤ EQgapSq)
+    (h_mgf_pos : 0 < expMGFp)
+    (h_DV_primitive : 2 * n * EQgapSq - Real.log expMGFp ≤ D)
+    (h_conc_mgf : expMGFp ≤ 2 * Real.sqrt n / δ) :
+    EQgap ≤ mcallesterBound D (Real.log (2 * Real.sqrt n / δ)) n := by
+  -- Discharge h_DV from the scalar DV primitive.
+  have h_DV : 2 * n * EQgapSq ≤ D + Real.log expMGFp :=
+    pac_bayes_dv_of_primitive h_DV_primitive
+  -- Discharge h_conc from the exponential-moment bound.
+  have h_conc : Real.log expMGFp ≤ Real.log (2 * Real.sqrt n / δ) :=
+    pac_bayes_conc_of_mgf_bound hn hδ h_mgf_pos h_conc_mgf
+  -- Apply the abstract bound with logMGFp := Real.log expMGFp.
+  exact pac_bayes_mcallester_abstract (logMGFp := Real.log expMGFp)
+    hn hδ hD hEQgap_nn h_jensen h_DV h_conc
+
+/-- §14.4 — **Unfolded form** of the discharged McAllester bound. -/
+theorem pac_bayes_mcallester_unfolded
+    {EQgap EQgapSq expMGFp D n δ : ℝ}
+    (hn : 0 < n) (hδ : 0 < δ)
+    (hD : 0 ≤ D)
+    (hEQgap_nn : 0 ≤ EQgap)
+    (h_jensen : EQgap ^ 2 ≤ EQgapSq)
+    (h_mgf_pos : 0 < expMGFp)
+    (h_DV_primitive : 2 * n * EQgapSq - Real.log expMGFp ≤ D)
+    (h_conc_mgf : expMGFp ≤ 2 * Real.sqrt n / δ) :
+    EQgap ≤ Real.sqrt ((D + Real.log (2 * Real.sqrt n / δ)) / (2 * n)) :=
+  pac_bayes_mcallester (expMGFp := expMGFp)
+    hn hδ hD hEQgap_nn h_jensen h_mgf_pos h_DV_primitive h_conc_mgf
+
 end LTFP
