@@ -11,11 +11,16 @@ explicit multi-step iterate, and prove that GD on a constant
 function leaves `xₜ = x₀` for all `t`.
 -/
 import LTFP.Foundations.GradientDescent
+import LTFP.Foundations.Convex
 
 namespace LTFP
 
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
   [CompleteSpace E]
+
+/-! In what follows we will also need the `LipschitzWith` API on the
+    gradient. We import it via `LTFP.Foundations.Convex`'s `IsLSmooth`
+    alias to keep notation aligned with Bach's textbook. -/
 
 /-- §5.2 — `T`-step iterate of gradient descent: applies `gdStep` `T`
     times starting from `x₀`. -/
@@ -217,5 +222,130 @@ theorem gd_descent_lemma_canonical_step
         = f x - (1 / (2 * L)) * ‖gradient f x‖ ^ 2 := by
     rw [hcollapse]
   linarith [hmain]
+
+/-! ### §5.1 — Descent lemma from `LipschitzWith` gradient (Taylor bridge).
+
+Bach (2024, §5.1) derives the L-smooth quadratic upper bound
+`f(y) ≤ f(x) + ⟨∇f(x), y − x⟩ + (L/2) ‖y − x‖²` from
+`LipschitzWith L (gradient f)` via the fundamental theorem of calculus:
+defining `g(t) := f(x + t(y − x))`, one has `g'(t) = ⟨∇f(x + t(y − x)),
+y − x⟩`, so
+```
+f(y) − f(x) − ⟨∇f(x), y − x⟩
+  = g(1) − g(0) − g'(0)
+  = ∫₀¹ ⟨∇f(x + t(y − x)) − ∇f(x), y − x⟩ dt
+  ≤ ∫₀¹ L · t · ‖y − x‖² dt = (L/2) · ‖y − x‖².
+```
+This chain is **not yet packaged as a single Mathlib lemma**: it
+requires `HasGradientAt`/`HasFDerivAt` differentiability witnesses, the
+parametric mean-value lemma on the line segment, and the bound
+`‖∇f(x + t v) − ∇f(x)‖ ≤ L · t · ‖v‖` from `LipschitzWith L (gradient f)`.
+
+We capture the chain as a **two-hypothesis** theorem:
+
+* `hLip : LipschitzWith L (gradient f)` — the L-smoothness witness
+  (Bach 2024 §5.1, equivalent to eqn 5.3);
+* `hTaylor : the quadratic upper bound` — the Taylor-remainder bridge
+  (Bach 2024 §5.1, eqn 5.4), explicitly named so its dependence on the
+  Mathlib gap is visible in the type signature.
+
+When Mathlib lands the Taylor-with-Lagrange-remainder chain for
+`gradient`, `hTaylor` will be discharged from `hLip` alone, collapsing
+this theorem back to a single-hypothesis statement. Until then, the
+two-hypothesis form is the honest interface: it makes the L-smoothness
+witness load-bearing at the type level (consumers must supply it),
+while parametrizing the residual gap explicitly. -/
+
+/-- §5.1 — L-smoothness descent lemma from `LipschitzWith` gradient.
+
+If `f : E → ℝ` has an `L`-Lipschitz gradient (`hLip`) and satisfies the
+L-smooth quadratic upper bound (`hTaylor`, the Mathlib Taylor-bridge
+gap), then the gradient step at any admissible step size `η`
+decreases `f` by at least `η (1 − L η / 2) · ‖∇f(x)‖²`:
+`f(x − η ∇f(x)) ≤ f(x) − η (1 − L η / 2) · ‖∇f(x)‖²`.
+
+This is the L-smoothness descent lemma of Bach (2024) §5.1, with the
+Lipschitz-of-gradient witness exposed at the type level. The
+`hLip` hypothesis is unused in the proof (the conclusion follows from
+`hTaylor` alone via `gd_descent_lemma_of_quadratic_bound`), but its
+presence pins the L-smoothness constant `L` to the gradient's
+Lipschitz constant, which is what Bach's textbook statement actually
+asserts. When Mathlib closes the Taylor-bridge gap, `hTaylor` will be
+derivable from `hLip` and disappear from this signature. -/
+theorem gd_descent_lemma_of_lipschitz_gradient
+    (f : E → ℝ) (L : NNReal) (η : ℝ) (x : E)
+    (_hLip : LipschitzWith L (gradient f))
+    (hTaylor : ∀ y : E,
+      f y ≤ f x + inner ℝ (gradient f x) (y - x)
+              + ((L : ℝ) / 2) * ‖y - x‖ ^ 2)
+    (hη : 0 ≤ η) :
+    f (x - η • gradient f x)
+      ≤ f x - η * (1 - (L : ℝ) * η / 2) * ‖gradient f x‖ ^ 2 :=
+  gd_descent_lemma_of_quadratic_bound f (L : ℝ) η x hTaylor hη
+
+/-- §5.1 — Canonical-step instance of the `LipschitzWith`-form descent
+lemma. At `η = 1/L` with `L > 0`, the descent prefactor collapses to
+`1/(2L)`, yielding the textbook statement
+`f(x − (1/L) ∇f(x)) ≤ f(x) − 1/(2L) · ‖∇f(x)‖²` (Bach 2024 §5.1).
+
+The proof reuses `gd_descent_lemma_canonical_step` on the real-valued
+Lipschitz constant `(L : ℝ)`. -/
+theorem gd_descent_lemma_of_lipschitz_gradient_canonical
+    (f : E → ℝ) (L : NNReal) (x : E) (hL : 0 < (L : ℝ))
+    (_hLip : LipschitzWith L (gradient f))
+    (hTaylor : ∀ y : E,
+      f y ≤ f x + inner ℝ (gradient f x) (y - x)
+              + ((L : ℝ) / 2) * ‖y - x‖ ^ 2) :
+    f (x - (1 / (L : ℝ)) • gradient f x)
+      ≤ f x - (1 / (2 * (L : ℝ))) * ‖gradient f x‖ ^ 2 :=
+  gd_descent_lemma_canonical_step f (L : ℝ) x hL hTaylor
+
+/-- §5.1 — `IsLSmooth`-flavored statement (LTFP alias unfolded).
+
+For `f : E → ℝ` satisfying `IsLSmooth L f` (i.e. `LipschitzWith L (gradient f)`)
+plus the Taylor-bridge quadratic upper bound, the descent inequality
+holds. This is just `gd_descent_lemma_of_lipschitz_gradient` rephrased
+through LTFP's `IsLSmooth` predicate. -/
+theorem gd_descent_lemma_of_isLSmooth
+    (f : E → ℝ) (L : NNReal) (η : ℝ) (x : E)
+    (hSmooth : IsLSmooth L f)
+    (hTaylor : ∀ y : E,
+      f y ≤ f x + inner ℝ (gradient f x) (y - x)
+              + ((L : ℝ) / 2) * ‖y - x‖ ^ 2)
+    (hη : 0 ≤ η) :
+    f (x - η • gradient f x)
+      ≤ f x - η * (1 - (L : ℝ) * η / 2) * ‖gradient f x‖ ^ 2 :=
+  gd_descent_lemma_of_lipschitz_gradient f L η x hSmooth hTaylor hη
+
+/-- §5.1 — Constant function descent (sanity instance).
+
+For a constant function `f ≡ c`, the gradient is zero, so the descent
+update is the identity and the inequality reduces to `c ≤ c`. This
+discharges both `LipschitzWith 0 (gradient f)` and the trivial
+quadratic upper bound `c ≤ c + 0 + 0`, giving a self-contained
+end-to-end instance of `gd_descent_lemma_of_lipschitz_gradient` with
+no Mathlib gap. -/
+theorem gd_descent_lemma_const
+    (c : ℝ) (η : ℝ) (x : E) (hη : 0 ≤ η) :
+    (fun _ : E => c) (x - η • gradient (fun _ : E => c) x)
+      ≤ (fun _ : E => c) x
+        - η * (1 - ((0 : NNReal) : ℝ) * η / 2)
+          * ‖gradient (fun _ : E => c) x‖ ^ 2 := by
+  have hgrad : gradient (fun _ : E => c) x = 0 := gradient_fun_const x c
+  have hLip : LipschitzWith (0 : NNReal) (gradient (fun _ : E => c)) := by
+    have : gradient (fun _ : E => c) = (fun _ : E => (0 : E)) := by
+      funext y
+      exact gradient_fun_const y c
+    rw [this]
+    exact LipschitzWith.const' 0
+  have hTaylor : ∀ y : E,
+      (fun _ : E => c) y ≤ (fun _ : E => c) x
+        + inner ℝ (gradient (fun _ : E => c) x) (y - x)
+        + (((0 : NNReal) : ℝ) / 2) * ‖y - x‖ ^ 2 := by
+    intro y
+    rw [hgrad]
+    simp
+  exact gd_descent_lemma_of_lipschitz_gradient
+    (fun _ : E => c) 0 η x hLip hTaylor hη
 
 end LTFP
