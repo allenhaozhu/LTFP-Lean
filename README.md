@@ -72,6 +72,13 @@ chapter directory; the top-level `LTFP.lean` re-exports every chapter
 hub plus `LTFP.Foundations` and `LTFP.MathlibExt`. So
 `import LTFP` gives you the whole library.
 
+## Errata
+
+Discrepancies, implicit hypotheses, and minor corrections noted during
+formalization are collected in [`docs/ERRATA.md`](docs/ERRATA.md). Pull
+requests welcome; periodic batches are forwarded to the textbook author
+for consideration in future editions.
+
 ## License
 
 MIT. See `LICENSE`. The vendored `LTFP/Foundations` kernel originates
