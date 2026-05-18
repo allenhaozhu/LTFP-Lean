@@ -13,6 +13,10 @@ import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.NormNum
 import Mathlib.Algebra.Order.Field.Basic
 import Mathlib.Algebra.Order.Ring.Pow
+import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import Mathlib.Data.Fintype.BigOperators
+import Mathlib.Data.Finset.Card
+import Mathlib.Logic.Equiv.Basic
 
 namespace LTFP
 
@@ -198,5 +202,340 @@ theorem nfl_max_risk_ge_half (f : Bool → Bool) :
   refine ⟨adversaryOne f, adversaryOne_isPMF f, ?_⟩
   rw [discreteRiskBool_adversaryOne]
   norm_num
+
+/-! ### §2.5 — Finite-`k` measurable adversary (DGL)
+
+    The Bool×Bool adversary above is the `k = 2` instance of the
+    Devroye–Györfi–Lugosi (DGL) no-free-lunch construction. We now
+    lift it to a *finite-`k`* adversary on an arbitrary finite type
+    `K` (think `K = Fin k` or `K ↪ 𝒳` a measurable injection into a
+    measurable space `𝒳`). For any deterministic learning algorithm
+    `A` that maps an `n`-sample on `K × Bool` to a predictor
+    `K → Bool`, averaging the misclassification risk over the
+    `2^k` "labelings" `r : K → Bool` yields a lower bound of
+    `(1/2)·(k − |image n|)/k` for any fixed sample-index pattern
+    `x : Fin n → K`. In the regime `n ≤ k`, this gives the slack
+    `(1/2)(1 − n/k)`.
+
+    The exact Bach (2024) p. 38 / DGL form `(1/2)·(1 − 1/k)^n`
+    requires averaging over `x` uniformly — i.e. the sample-index
+    is drawn uniformly from `K^n`, so the probability that point
+    `j` is unsampled equals `(1 − 1/k)^n`. That `Avg_x` step
+    multiplies our pointwise bound by the unsampling probability
+    and is a standalone corollary; we leave it as a documented
+    extension (see PROGRESS.md Tier-C).
+
+    The construction below is purely combinatorial: no
+    Mathlib `Measure` / Bochner integration is required. The
+    "labeling pmf" is the uniform pmf on `K → Bool` of mass `1/2^k`
+    per labeling, and the "sample" induced by `(x, r)` is the
+    deterministic Pi function `i ↦ (x i, r (x i))`. -/
+
+section FiniteK
+
+variable {K : Type*} [Fintype K] [DecidableEq K]
+
+/-- §2.5 — **Bit-flip involution** on labelings `K → Bool`.
+    Flips the value of a labeling at one input `j : K`. -/
+def flipBitAt (j : K) (r : K → Bool) : K → Bool :=
+  Function.update r j (!r j)
+
+omit [Fintype K] in
+/-- §2.5 — `flipBitAt j` is an involution on `K → Bool`. -/
+theorem flipBitAt_involutive (j : K) :
+    Function.Involutive (flipBitAt (K := K) j) := by
+  intro r
+  unfold flipBitAt
+  funext k
+  by_cases h : k = j
+  · subst h
+    simp
+  · rw [Function.update_of_ne h, Function.update_of_ne h]
+
+omit [Fintype K] in
+/-- §2.5 — `flipBitAt j r` differs from `r` only at `j`. -/
+theorem flipBitAt_apply_self (j : K) (r : K → Bool) :
+    flipBitAt j r j = !r j := by
+  unfold flipBitAt; exact Function.update_self ..
+
+omit [Fintype K] in
+/-- §2.5 — `flipBitAt j r` agrees with `r` away from `j`. -/
+theorem flipBitAt_apply_of_ne {j k : K} (h : k ≠ j) (r : K → Bool) :
+    flipBitAt j r k = r k := by
+  unfold flipBitAt
+  exact Function.update_of_ne h _ _
+
+/-- §2.5 — **Permutation form of `flipBitAt`.** Used to reindex
+    sums over `r : K → Bool` via `Equiv.sum_comp`. -/
+def flipBitPerm (j : K) : Equiv.Perm (K → Bool) :=
+  (flipBitAt_involutive (K := K) j).toPerm (flipBitAt j)
+
+/-- §2.5 — **Sample induced by a labeling.** Given a sample-index
+    pattern `x : Fin n → K` and a labeling `r : K → Bool`, the
+    induced training sample is `i ↦ (x i, r (x i))`. -/
+def sampleFromLabeling {n : ℕ} (x : Fin n → K) (r : K → Bool) :
+    Fin n → K × Bool := fun i => (x i, r (x i))
+
+omit [Fintype K] in
+/-- §2.5 — **Key invariance.** If `j ∉ image x`, then flipping the
+    labeling at `j` does not change the sample. -/
+theorem sampleFromLabeling_flipBitAt_of_notMem
+    {n : ℕ} (x : Fin n → K) (r : K → Bool) {j : K}
+    (hj : ∀ i : Fin n, x i ≠ j) :
+    sampleFromLabeling x (flipBitAt j r) = sampleFromLabeling x r := by
+  funext i
+  unfold sampleFromLabeling
+  congr 1
+  exact flipBitAt_apply_of_ne (hj i) r
+
+/-- §2.5 — **Indicator of misclassification** at input `j` under
+    labeling `r`, by a predictor `g : K → Bool`. Real-valued. -/
+def misclassIndicator (g : K → Bool) (r : K → Bool) (j : K) : ℝ :=
+  if g j = r j then 0 else 1
+
+omit [Fintype K] [DecidableEq K] in
+/-- §2.5 — `misclassIndicator` is nonnegative. -/
+theorem misclassIndicator_nonneg (g r : K → Bool) (j : K) :
+    0 ≤ misclassIndicator g r j := by
+  unfold misclassIndicator; split_ifs <;> norm_num
+
+omit [Fintype K] in
+/-- §2.5 — **Paired-indicator identity.** For any predictor `g`
+    (depending only on `r`), if we hold `g` fixed and replace `r j`
+    by `!r j`, the two indicators sum to exactly `1` (since `r j`
+    and `!r j` partition the two possible values of `g j`). -/
+theorem misclassIndicator_add_flipped (g : K → Bool) (r : K → Bool)
+    (j : K) :
+    misclassIndicator g r j +
+      misclassIndicator g (flipBitAt j r) j = 1 := by
+  unfold misclassIndicator
+  rw [flipBitAt_apply_self]
+  cases g j <;> cases r j <;> simp
+
+/-- §2.5 — **Average misclassification at an unsampled point.**
+
+    The heart of the DGL argument. For a deterministic algorithm
+    `A` and a fixed sample-pattern `x : Fin n → K`, if `j ∈ K`
+    does not appear in `image x`, then averaging the
+    misclassification indicator at `j` over a uniformly random
+    labeling `r ∈ {0,1}^K` yields exactly `1/2`.
+
+    Proof: pair each `r` with `flipBitAt j r`. The pair-sum of the
+    indicators equals `1` (the previous lemma), and `A`'s output
+    on the sample does not depend on `r j` since `j ∉ image x`. -/
+theorem average_misclassIndicator_unsampled
+    {n : ℕ} (A : (Fin n → K × Bool) → (K → Bool))
+    (x : Fin n → K) {j : K} (hj : ∀ i : Fin n, x i ≠ j) :
+    (∑ r : K → Bool,
+        misclassIndicator (A (sampleFromLabeling x r)) r j) =
+      (2 ^ Fintype.card K) / 2 := by
+  classical
+  -- Let `g r := A (sampleFromLabeling x r) j`; for our `j`, `g` is
+  -- invariant under `flipBitAt j` thanks to the sample-invariance.
+  set f : (K → Bool) → ℝ := fun r =>
+    misclassIndicator (A (sampleFromLabeling x r)) r j with hf
+  -- Step 1: Σ_r f r = Σ_r f (flipBitAt j r) (reindex via involution).
+  have hperm :
+      (∑ r : K → Bool, f r) = ∑ r : K → Bool, f (flipBitAt j r) := by
+    have := Equiv.sum_comp (flipBitPerm (K := K) j) f
+    -- `Equiv.sum_comp` gives `∑ r, f (perm r) = ∑ r, f r`.
+    simpa [flipBitPerm,
+      Function.Involutive.coe_toPerm (flipBitAt_involutive j)]
+      using this.symm
+  -- Step 2: combine to get `2 · Σ_r f r = Σ_r (f r + f (flipBitAt j r))`.
+  have hdouble :
+      ((∑ r : K → Bool, f r) + ∑ r : K → Bool, f r) =
+        ∑ r : K → Bool, (f r + f (flipBitAt j r)) := by
+    rw [Finset.sum_add_distrib]
+    rw [← hperm]
+  -- Step 3: each `(f r + f (flipBitAt j r)) = 1` (paired-indicator).
+  have hpair : ∀ r : K → Bool, f r + f (flipBitAt j r) = 1 := by
+    intro r
+    have hsample :
+        A (sampleFromLabeling x (flipBitAt j r)) =
+          A (sampleFromLabeling x r) := by
+      rw [sampleFromLabeling_flipBitAt_of_notMem x r hj]
+    show misclassIndicator (A (sampleFromLabeling x r)) r j +
+        misclassIndicator (A (sampleFromLabeling x (flipBitAt j r)))
+          (flipBitAt j r) j = 1
+    rw [hsample]
+    exact misclassIndicator_add_flipped _ r j
+  -- Step 4: Σ_r 1 = 2^k.
+  have hsum_one : (∑ _r : K → Bool, (1 : ℝ)) = (2 ^ Fintype.card K : ℕ) := by
+    rw [Finset.sum_const, Finset.card_univ]
+    simp [Fintype.card_bool, mul_one]
+  -- Combine.
+  have h2 : ((∑ r : K → Bool, f r) + ∑ r : K → Bool, f r) =
+      (2 ^ Fintype.card K : ℕ) := by
+    rw [hdouble]
+    have := Finset.sum_congr rfl
+      (fun r (_ : r ∈ (Finset.univ : Finset (K → Bool))) => hpair r)
+    rw [this, hsum_one]
+  -- Divide by 2.
+  have h3 : (2 : ℝ) * (∑ r : K → Bool, f r) = (2 ^ Fintype.card K : ℕ) := by
+    linarith [h2]
+  have h2pos : (0 : ℝ) < 2 := by norm_num
+  have hpush : (∑ r : K → Bool, f r) = ((2 ^ Fintype.card K : ℕ) : ℝ) / 2 := by
+    field_simp
+    linarith [h3]
+  -- Final clean-up to match goal form.
+  show (∑ r : K → Bool, f r) = (2 ^ Fintype.card K) / 2
+  rw [hpush]
+  push_cast
+  ring
+
+/-- §2.5 — **Finite-`K` discrete risk on the support.** For a
+    predictor `g : K → Bool` and labeling `r : K → Bool`, the
+    misclassification rate under the uniform distribution on `K` is
+    `(1/|K|) Σ_{j} 𝟙[g j ≠ r j]`. This is the population risk of
+    `g` against the joint distribution `(j, r j)` with `j ~ Unif(K)`. -/
+noncomputable def discreteRiskFinK (g : K → Bool) (r : K → Bool) : ℝ :=
+  (∑ j : K, misclassIndicator g r j) / (Fintype.card K : ℝ)
+
+omit [DecidableEq K] in
+/-- §2.5 — Discrete risk is nonneg. -/
+theorem discreteRiskFinK_nonneg (g r : K → Bool) :
+    0 ≤ discreteRiskFinK g r := by
+  unfold discreteRiskFinK
+  apply div_nonneg
+  · exact Finset.sum_nonneg fun j _ => misclassIndicator_nonneg _ _ _
+  · exact Nat.cast_nonneg _
+
+/-- §2.5 — **Finite-`k` measurable adversary, average-over-`r` form.**
+
+    *Bach (2024) §2.5, p. 38 / DGL §7.2.* Let `K` be a finite type
+    of cardinality `k ≥ 1` and let
+    `A : (Fin n → K × Bool) → (K → Bool)` be any deterministic
+    learning algorithm. Fix a sample-index pattern
+    `x : Fin n → K` and let `s` be the cardinality of `x`'s image.
+    Then averaging the misclassification risk of `A`'s output over
+    the `2^k` labelings `r : K → Bool` satisfies
+
+      `Avg_r R(A(sample x r), r) ≥ (1/2) · (k − s) / k`.
+
+    In particular when `n ≤ k`, since `s ≤ n`, the bound becomes
+    `(1/2) · (1 − n/k)`, recovering the DGL bound at the boundary
+    where the sample size equals the support size. The exact
+    `(1/2) · (1 − 1/k)^n` of Bach (2024) is obtained by also
+    averaging over `x` uniformly in `K^n` (deferred — see
+    `nfl_finite_k_measurable_average_over_x` Tier-C entry). -/
+theorem nfl_finite_k_adversary
+    [Nonempty K] {n : ℕ}
+    (A : (Fin n → K × Bool) → (K → Bool)) (x : Fin n → K) :
+    let k := Fintype.card K
+    let s := (Finset.univ.image x).card
+    (1 : ℝ) / 2 * ((k : ℝ) - s) / k ≤
+      (∑ r : K → Bool, discreteRiskFinK (A (sampleFromLabeling x r)) r)
+        / (2 ^ k : ℝ) := by
+  classical
+  set k : ℕ := Fintype.card K with hk_def
+  set s : ℕ := (Finset.univ.image x).card with hs_def
+  -- `k ≥ 1`.
+  have hk_pos : 0 < k := Fintype.card_pos
+  have hk_pos_real : (0 : ℝ) < (k : ℝ) := by exact_mod_cast hk_pos
+  -- Image cardinality bound: `s ≤ k`.
+  have hs_le_k : s ≤ k := by
+    have : (Finset.univ.image x).card ≤ (Finset.univ : Finset K).card :=
+      Finset.card_le_card (Finset.subset_univ _)
+    simpa [hk_def, Finset.card_univ] using this
+  -- Expand `discreteRiskFinK` and `swap sums` (j outside, r inside).
+  have hexpand :
+      (∑ r : K → Bool, discreteRiskFinK (A (sampleFromLabeling x r)) r)
+        = (∑ r : K → Bool, (∑ j : K,
+            misclassIndicator (A (sampleFromLabeling x r)) r j))
+            / (k : ℝ) := by
+    unfold discreteRiskFinK
+    rw [← Finset.sum_div]
+  rw [hexpand]
+  -- Swap order of summation.
+  rw [Finset.sum_comm]
+  -- Now: `(∑ j, ∑ r, ind) / k / 2^k ≥ (1/2)(k-s)/k`.
+  -- Split `j ∈ K` into `j ∈ image x` and `j ∉ image x`.
+  set imx : Finset K := Finset.univ.image x with himx_def
+  set notImx : Finset K := Finset.univ \ imx with hnotImx_def
+  -- Sum splits.
+  have himx_sub : imx ⊆ (Finset.univ : Finset K) := Finset.subset_univ _
+  have hsplit :
+      (∑ j : K, ∑ r : K → Bool,
+          misclassIndicator (A (sampleFromLabeling x r)) r j)
+        = (∑ j ∈ imx, ∑ r : K → Bool,
+            misclassIndicator (A (sampleFromLabeling x r)) r j)
+          + (∑ j ∈ notImx, ∑ r : K → Bool,
+              misclassIndicator (A (sampleFromLabeling x r)) r j) := by
+    rw [hnotImx_def, ← Finset.sum_sdiff himx_sub, add_comm]
+  rw [hsplit]
+  -- For `j ∈ notImx`, the average is `2^k / 2`.
+  have hnot_eq : ∀ j ∈ notImx, (∑ r : K → Bool,
+      misclassIndicator (A (sampleFromLabeling x r)) r j)
+        = ((2 ^ k : ℕ) : ℝ) / 2 := by
+    intro j hj
+    have hj_notMem : j ∉ imx := by
+      rw [hnotImx_def, Finset.mem_sdiff] at hj
+      exact hj.2
+    have hj_unsampled : ∀ i : Fin n, x i ≠ j := by
+      intro i heq
+      apply hj_notMem
+      rw [himx_def]
+      refine Finset.mem_image.mpr ⟨i, Finset.mem_univ _, heq⟩
+    have := average_misclassIndicator_unsampled A x hj_unsampled
+    rw [this]
+    push_cast
+    ring
+  have hnot_sum :
+      (∑ j ∈ notImx, ∑ r : K → Bool,
+          misclassIndicator (A (sampleFromLabeling x r)) r j)
+        = notImx.card * (((2 ^ k : ℕ) : ℝ) / 2) := by
+    rw [Finset.sum_congr rfl hnot_eq, Finset.sum_const, nsmul_eq_mul]
+  -- For `j ∈ imx`, the indicator-sum is nonneg.
+  have him_nonneg : 0 ≤ (∑ j ∈ imx, ∑ r : K → Bool,
+      misclassIndicator (A (sampleFromLabeling x r)) r j) := by
+    apply Finset.sum_nonneg
+    intros j _
+    apply Finset.sum_nonneg
+    intros r _
+    exact misclassIndicator_nonneg _ _ _
+  rw [hnot_sum]
+  -- Cardinality of `notImx = k - s`.
+  have hcard_notImx : notImx.card = k - s := by
+    rw [hnotImx_def, Finset.card_sdiff_of_subset himx_sub]
+    simp [Finset.card_univ, hk_def, himx_def, hs_def]
+  rw [hcard_notImx]
+  -- Now show:
+  --   (k-s) ≤ Sum-im + (k-s)*(2^k/2) implies
+  --   (1/2)(k-s)/k ≤ (Sum-im + (k-s)*(2^k/2)) / k / 2^k
+  have h2k_pos : (0 : ℝ) < (2 ^ k : ℝ) := by positivity
+  have h2k_pos_nat : (0 : ℝ) < ((2 ^ k : ℕ) : ℝ) := by
+    have h : (0 : ℕ) < 2 ^ k := by positivity
+    exact_mod_cast h
+  -- The bound goal becomes a clean algebraic inequality.
+  have key :
+      (1 : ℝ) / 2 * ((k : ℝ) - s) / k * (k * (2 ^ k : ℝ)) ≤
+        ((∑ j ∈ imx, ∑ r : K → Bool,
+            misclassIndicator (A (sampleFromLabeling x r)) r j)
+          + ((k - s : ℕ) : ℝ) * (((2 ^ k : ℕ) : ℝ) / 2)) := by
+    have hk_minus_s_real : ((k - s : ℕ) : ℝ) = ((k : ℝ) - (s : ℝ)) :=
+      Nat.cast_sub hs_le_k
+    rw [hk_minus_s_real]
+    have hcast : ((2 ^ k : ℕ) : ℝ) = (2 ^ k : ℝ) := by push_cast; rfl
+    rw [hcast]
+    have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos_real
+    have hlhs : (1 : ℝ) / 2 * ((k : ℝ) - s) / k * (k * (2 ^ k : ℝ))
+        = ((k : ℝ) - s) * ((2 ^ k : ℝ) / 2) := by
+      field_simp
+    rw [hlhs]
+    linarith [him_nonneg]
+  -- Convert `key` to the goal via division.
+  have hmulpos : (0 : ℝ) < k * (2 ^ k : ℝ) := mul_pos hk_pos_real h2k_pos
+  -- The two `let`s in the goal reduce by `show`.
+  show (1 : ℝ) / 2 * ((k : ℝ) - s) / k ≤
+      ((∑ j ∈ imx, ∑ r : K → Bool,
+            misclassIndicator (A (sampleFromLabeling x r)) r j)
+          + ((k - s : ℕ) : ℝ) * (((2 ^ k : ℕ) : ℝ) / 2))
+            / (k : ℝ) / (2 ^ k : ℝ)
+  rw [div_div]
+  rw [le_div_iff₀ hmulpos]
+  exact key
+
+end FiniteK
 
 end LTFP
