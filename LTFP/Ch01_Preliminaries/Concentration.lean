@@ -8,6 +8,7 @@ placeholders for follow-up tickets.
 import LTFP.Foundations.Hoeffding
 import LTFP.Foundations.McDiarmid
 import LTFP.Foundations.MaximalInequality
+import LTFP.MathlibExt.Probability.Moments.SubExponential
 import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.LinearAlgebra.Matrix.Defs
 import Mathlib.Probability.Moments.Basic
@@ -65,6 +66,47 @@ theorem bernstein_inequality_of_mgf
     μ.real {ω | ε ≤ X ω} ≤ Real.exp (-t * ε) * Real.exp B := by
   refine (ProbabilityTheory.measure_ge_le_exp_mul_mgf ε ht h_int).trans ?_
   exact mul_le_mul_of_nonneg_left hMGF (Real.exp_pos _).le
+
+/-- §1.2.3 — Bernstein's inequality (♦), abstract sub-exponential form.
+
+Bach 2024, Proposition 1.4 (p. 14) packaged at the level of an abstract
+`(ν, b)`-sub-exponential random variable.
+
+Given `X : Ω → ℝ` satisfying `IsSubExponential X μ ν b` (the local class
+defined in `LTFP.MathlibExt.Probability.Moments.SubExponential`), every
+nonnegative Chernoff parameter `s` in the small-`s` regime `s · b < 1`
+together with integrability of `exp (s · X)` yields the one-sided tail
+bound
+
+`μ.real {ω | ε ≤ X ω} ≤ exp(-s · ε + s² · ν / 2)`.
+
+This is the Bernstein inequality in its parametric, pre-optimisation
+form. It is the exact composition of
+`ProbabilityTheory.IsSubExponential.measure_ge_le` from MathlibExt
+(which discharges the MGF bound from the sub-exponential class) with
+`bernstein_inequality_of_mgf` (the Chernoff-style conditional form above),
+and we re-export it inside the `LTFP` namespace under the Bernstein name
+so the downstream chapter modules pick it up without having to thread the
+MathlibExt namespace.
+
+The two canonical regimes covered by optimising `s ∈ [0, 1/b)` are:
+
+* sub-Gaussian regime (`0 ≤ ε ≤ ν / b`, take `s = ε / ν`)
+  → `μ.real {ω | ε ≤ X ω} ≤ exp(-ε² / (2ν))`;
+* exponential regime (`ε ≥ ν / b`, take `s ↑ 1 / b`)
+  → `μ.real {ω | ε ≤ X ω} ≤ exp(-ε / (2b))`.
+
+Both follow by specialising the inequality below; we leave the explicit
+optimisation to the caller since the right regime depends on data. -/
+theorem bernstein_inequality_of_subExponential
+    {Ω : Type*} [MeasurableSpace Ω] {μ : MeasureTheory.Measure Ω}
+    [MeasureTheory.IsFiniteMeasure μ]
+    {X : Ω → ℝ} {ν b ε s : ℝ}
+    (hX : ProbabilityTheory.IsSubExponential X μ ν b)
+    (hs : 0 ≤ s) (hsb : s * b < 1)
+    (h_int : MeasureTheory.Integrable (fun ω => Real.exp (s * X ω)) μ) :
+    μ.real {ω | ε ≤ X ω} ≤ Real.exp (-s * ε + s ^ 2 * ν / 2) :=
+  hX.measure_ge_le ε s hs hsb h_int
 
 /-- §1.2.5 — Quadrature error bound (♦♦), algebraic core.
 
@@ -214,6 +256,8 @@ end LTFP
 #check @LTFP.bernstein_inequality
 
 #check @LTFP.bernstein_inequality_of_mgf
+
+#check @LTFP.bernstein_inequality_of_subExponential
 
 example : (0 : ℝ) ≤ (1 : ℝ) ^ 2 / (2 * (0 : ℝ) + 2 * (1 : ℝ) * (1 : ℝ) / 3) :=
   LTFP.bernstein_inequality 1 0 1 (le_refl _) one_pos zero_le_one
