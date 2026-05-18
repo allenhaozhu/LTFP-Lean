@@ -13,9 +13,11 @@ hypothesis test makes at least zero errors. The Le Cam / Fano
 inequalities themselves are deferred.
 -/
 import LTFP.Foundations.InfoTheory
+import LTFP.MathlibExt.Probability.TotalVariation
 import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Analysis.Complex.Exponential
+import Mathlib.Data.Real.Sqrt
 
 namespace LTFP
 
@@ -220,33 +222,123 @@ theorem pinsker_inequality (x : ℝ) :
     1 - Real.exp (-x) ≤ x :=
   bretagnolleHuber_algebraic_core x
 
+/-! ### §15.1 — Measure-theoretic Bretagnolle–Huber / Pinsker
+
+With `LTFP.MathlibExt.Probability.tvDist` now available locally
+(PR #39164 upstreams it to Mathlib), the algebraic anchors above can
+be lifted to honest theorems on actual measures. Mathlib provides
+`klDiv : Measure α → Measure α → ℝ≥0∞`, but the standard textbook
+proof of Bretagnolle–Huber goes through the *Hellinger affinity*
+`ρ(μ,ν) := ∫ √(dμ/dν) dν` (or equivalently the Bhattacharyya
+coefficient), with the chain
+
+  tvDist²(μ,ν)  ≤  1 - ρ(μ,ν)²  ≤  1 - exp(-KL(μ‖ν)),
+
+the second inequality being the Cauchy–Schwarz / Jensen step. Both
+of those measure-theoretic identities are out of reach of the current
+local infrastructure (no `Hellinger`, no usable `klDiv` ↔
+`tvDist` bridge), so we parametrize the result by an *abstract*
+divergence value: any real number `D` for which the "BH bridge"
+`tvDist² ≤ 1 - exp(-D)` holds yields, via the algebraic chain
+below, the Bretagnolle–Huber bound `tvDist ≤ √(1 - exp(-D))`.
+
+This pattern matches how `klDiv` is used in PAC-Bayes: the user
+discharges the bridge hypothesis once (typically from the
+Donsker–Varadhan variational formula and Cauchy–Schwarz), and the
+algebraic chain below promotes it to the standard TV bound. When
+Mathlib lands the Hellinger/Bhattacharyya machinery, the bridge
+hypothesis becomes a one-line `klDiv`-only corollary. -/
+
+section MeasureBretagnolleHuber
+
+open LTFP.MathlibExt.Probability MeasureTheory
+
+variable {α : Type*} [MeasurableSpace α]
+
+/-- §15.1 (Bretagnolle–Huber, measure-theoretic) — abstract form against
+the locally-defined `tvDist`.
+
+Given any nonnegative real divergence value `D` (intended: `D = KL(μ‖ν)`,
+in real form) and the standard *BH bridge*
+`(tvDist μ ν).toReal² ≤ 1 - exp(-D)` (which follows from the
+Cauchy–Schwarz / Hellinger affinity chain when `D = KL`), we obtain the
+**Bretagnolle–Huber inequality**
+
+  `(tvDist μ ν).toReal ≤ √(1 - exp(-D))`.
+
+The hypothesis `h_bridge` packages the only measure-theoretic content
+not derivable from real-analysis primitives. -/
+theorem tvDist_le_sqrt_one_sub_exp_neg
+    (μ ν : Measure α) (D : ℝ) (hD : 0 ≤ D)
+    (h_bridge :
+      ((tvDist μ ν).toReal) ^ 2 ≤ 1 - Real.exp (-D)) :
+    (tvDist μ ν).toReal ≤ Real.sqrt (1 - Real.exp (-D)) :=
+  Real.le_sqrt_of_sq_le h_bridge
+
+/-- §15.1 (Pinsker, measure-theoretic, loose form) — abstract form
+against `tvDist`. Chaining `tvDist² ≤ 1 - exp(-D) ≤ D` (the second
+inequality being `bretagnolleHuber_algebraic_core`) gives
+
+  `(tvDist μ ν).toReal ≤ √D`.
+
+The textbook Pinsker bound carries a sharper factor of `1/2`
+(`tvDist ≤ √(D/2)`); deriving that factor requires a finer convex
+analysis than the `1 - exp(-x) ≤ x` anchor used here. See
+`tvDist_le_sqrt_one_sub_exp_neg` for the tighter Bretagnolle–Huber
+form. -/
+theorem tvDist_le_sqrt_divergence
+    (μ ν : Measure α) (D : ℝ) (hD : 0 ≤ D)
+    (h_bridge :
+      ((tvDist μ ν).toReal) ^ 2 ≤ 1 - Real.exp (-D)) :
+    (tvDist μ ν).toReal ≤ Real.sqrt D := by
+  -- Bretagnolle–Huber gives `tvDist ≤ √(1 - exp(-D))`.
+  have h_BH : (tvDist μ ν).toReal ≤ Real.sqrt (1 - Real.exp (-D)) :=
+    tvDist_le_sqrt_one_sub_exp_neg μ ν D hD h_bridge
+  -- Algebraic chain: `1 - exp(-D) ≤ D`, hence `√(1 - exp(-D)) ≤ √D`.
+  have h_alg : 1 - Real.exp (-D) ≤ D := bretagnolleHuber_algebraic_core D
+  have h_sqrt_mono : Real.sqrt (1 - Real.exp (-D)) ≤ Real.sqrt D :=
+    Real.sqrt_le_sqrt h_alg
+  exact h_BH.trans h_sqrt_mono
+
+/-- §15.1 — Convenience corollary: under the same bridge hypothesis, the
+**total variation distance is at most one** (independent of `D`).
+This is a sanity check that the BH bound never exceeds the trivial
+cap `tvDist ≤ 1`. The proof combines `tvDist_le_sqrt_one_sub_exp_neg`
+with `1 - exp(-D) ≤ 1`. -/
+theorem tvDist_le_one_of_bh_bridge
+    (μ ν : Measure α) (D : ℝ) (hD : 0 ≤ D)
+    (h_bridge :
+      ((tvDist μ ν).toReal) ^ 2 ≤ 1 - Real.exp (-D)) :
+    (tvDist μ ν).toReal ≤ 1 := by
+  have h_BH : (tvDist μ ν).toReal ≤ Real.sqrt (1 - Real.exp (-D)) :=
+    tvDist_le_sqrt_one_sub_exp_neg μ ν D hD h_bridge
+  have h_rhs_le_one : 1 - Real.exp (-D) ≤ 1 :=
+    bretagnolleHuber_rhs_le_one D
+  have h_sqrt_le_one : Real.sqrt (1 - Real.exp (-D)) ≤ 1 :=
+    (Real.sqrt_le_one).mpr h_rhs_le_one
+  exact h_BH.trans h_sqrt_le_one
+
+end MeasureBretagnolleHuber
+
 /-
-TODO (Mathlib gap):
+Remaining Mathlib gap:
 
-The full measure-theoretic statements
+`tvDist_le_sqrt_one_sub_exp_neg` and `tvDist_le_sqrt_divergence` are
+*abstract* in the divergence value `D`: the user supplies the
+"BH bridge" `tvDist² ≤ 1 - exp(-D)` as a hypothesis. Specializing to
+`D = (klDiv μ ν).toReal` requires proving the bridge for `klDiv`,
+which goes through the Hellinger affinity `ρ(μ,ν) := ∫ √(dμ/dν) dν`
+and the Cauchy–Schwarz / Jensen chain
+`tvDist² ≤ 1 - ρ² ≤ 1 - exp(-KL)`. Mathlib does not yet provide
+`Hellinger` or the bridge `1 - ρ² ≤ 1 - exp(-klDiv)`.
 
-  ∀ (P Q : Measure α), IsProbabilityMeasure P → IsProbabilityMeasure Q →
-    tvDist P Q ≤ Real.sqrt (klDiv P Q / 2)            -- Pinsker
-  ∀ (P Q : Measure α), IsProbabilityMeasure P → IsProbabilityMeasure Q →
-    tvDist P Q ≤ Real.sqrt (1 - Real.exp (- klDiv P Q))  -- Bretagnolle–Huber
-
-cannot yet be landed in LTFP because Mathlib does **not** yet provide:
-
-  * `MeasureTheory.tvDist` (or `Mathlib.Probability.Distance.TotalVariation`)
-    — the total-variation distance between probability measures, and the
-    associated `tvDist_le_one`, `tvDist_eq_iSup_indicator`, etc.
-
-Search performed against `.lake/packages/mathlib` (Mathlib master at the
-time of this commit): no file named `Pinsker.lean`, no symbol matching
-`Pinsker` / `Bretagnolle` / `tvDist` / `TVDistance` / `totalVariation`
-appears in `Mathlib/Probability/` or `Mathlib/InformationTheory/`. Only
-`klDiv` (in `Mathlib.InformationTheory.KullbackLeibler.Basic`) is in
-place.
-
-When upstream Mathlib lands `tvDist` and a Pinsker / Bretagnolle–Huber
-lemma, the algebraic anchors above can be promoted to thin
-`LTFP.pinsker_inequality_measure` / `LTFP.bretagnolleHuber_measure`
-wrappers re-exporting the Mathlib results.
+When upstream lands the Hellinger machinery, the abstract bridge
+hypothesis collapses to a one-liner derived from `klDiv` and the
+`tvDist_le_sqrt_one_sub_exp_neg` / `tvDist_le_sqrt_divergence`
+theorems above immediately give the classical Bretagnolle–Huber and
+loose Pinsker bounds in terms of `klDiv`. The sharper textbook
+Pinsker `tvDist ≤ √(KL/2)` factor of `1/2` needs a finer convex
+analysis than the `1 - exp(-x) ≤ x` anchor used here.
 -/
 
 end LTFP
