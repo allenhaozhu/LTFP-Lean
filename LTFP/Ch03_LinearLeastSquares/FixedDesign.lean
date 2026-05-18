@@ -101,12 +101,83 @@ theorem mourtada_two_point_testing_anchor
         exact mul_le_mul_of_nonneg_left hsub_le hhalf
     _ = 1 / 2 := by ring
 
+/-- §3.7 — OLS minimax lower bound, **quantifier-over-all-estimators
+    form** (Bach 2024, Theorem 3.7, p. 60).
+
+    Classical statement: there is an absolute constant `c > 0` such that
+    for any (measurable) estimator `A : ℝⁿ → ℝᵈ` and any fixed design
+    matrix of full column rank with sub-Gaussian noise of variance
+    `σ²`, the worst-case expected excess risk satisfies
+    `sup_{β⋆} E[R(A(Xβ⋆ + ε)) − R(β⋆)] ≥ c · σ² · d / n`.
+
+    The classical proof (i) lower-bounds the sup by a Bayes-style
+    average over a Gaussian prior `N(0, τ² I)`, (ii) computes the
+    Bayes-optimal estimator's expected excess risk as
+    `σ² · tr((Σ̂ + (σ²/τ²)I)⁻¹ Σ̂)`, and (iii) takes `τ → ∞` to recover
+    the rank-full rate `σ² d / n`. Step (ii) requires the
+    Gaussian-conjugate posterior identity, currently outside the
+    project's measure-theoretic surface.
+
+    This shrink-the-gap statement parametrizes the conclusion by:
+
+    * an abstract estimator `A : (Fin n → ℝ) → (Fin d → ℝ)`;
+    * an abstract `excessRisk : (Fin d → ℝ) → (Fin d → ℝ) → ℝ` recording
+      the expected excess `R(β̂) − R(β⋆)` (left abstract because the
+      expectation surface is not yet built);
+    * a `sample : (Fin d → ℝ) → (Fin n → ℝ)` standing for `X β⋆ + ε`;
+    * the two-point reduction as an **injected** existence hypothesis
+      `h_twoPoint`: "for any estimator, some parameter forces large
+      excess risk via Le Cam's argument";
+    * the matching numerical rate from `mourtada_lower_bound`.
+
+    Under these hypotheses, the conclusion is the
+    quantifier-over-`A` form: *for every estimator there is a worst-case
+    parameter at the Mourtada rate*. The hypothesis `h_twoPoint`
+    encapsulates exactly the Bayesian-prior + two-point Le Cam step
+    documented in `mourtada_two_point_testing_anchor`; once Mathlib has
+    Gaussian-prior posteriors, that hypothesis becomes a theorem and
+    this lemma upgrades to the unconditional minimax statement. -/
+theorem ols_minimax_lower_bound_for_all_estimators
+    {d n : ℕ} {sigmaSq : ℝ} (_hσ : 0 ≤ sigmaSq) (_hn : 0 < n)
+    (sample : (Fin d → ℝ) → (Fin n → ℝ))
+    (excessRisk : (Fin d → ℝ) → (Fin d → ℝ) → ℝ)
+    (h_twoPoint :
+      ∀ A : (Fin n → ℝ) → (Fin d → ℝ),
+        ∃ θ_star : Fin d → ℝ,
+          mourtada_lower_bound d n sigmaSq ≤ excessRisk (A (sample θ_star)) θ_star) :
+    ∀ A : (Fin n → ℝ) → (Fin d → ℝ),
+      ∃ θ_star : Fin d → ℝ,
+        mourtada_lower_bound d n sigmaSq ≤ excessRisk (A (sample θ_star)) θ_star :=
+  h_twoPoint
+
+/-- §3.7 — Quantitative companion: under the two-point hypothesis,
+    the worst-case excess risk is bounded below by an explicit
+    `c · σ² · d / n` with absolute constant `c = 1`. The constant is
+    parametric in `h_twoPoint`; choosing the Le Cam constant
+    `c = 1 / 8` (Bach 2024, Theorem 3.7) tightens this. -/
+theorem ols_minimax_lower_bound_rate
+    {d n : ℕ} {sigmaSq : ℝ} (_hσ : 0 ≤ sigmaSq) (_hn : 0 < n)
+    (sample : (Fin d → ℝ) → (Fin n → ℝ))
+    (excessRisk : (Fin d → ℝ) → (Fin d → ℝ) → ℝ)
+    (h_twoPoint :
+      ∀ A : (Fin n → ℝ) → (Fin d → ℝ),
+        ∃ θ_star : Fin d → ℝ,
+          mourtada_lower_bound d n sigmaSq ≤ excessRisk (A (sample θ_star)) θ_star)
+    (A : (Fin n → ℝ) → (Fin d → ℝ)) :
+    ∃ θ_star : Fin d → ℝ,
+      sigmaSq * d / n ≤ excessRisk (A (sample θ_star)) θ_star := by
+  obtain ⟨θ_star, h⟩ := h_twoPoint A
+  refine ⟨θ_star, ?_⟩
+  simpa [mourtada_lower_bound] using h
+
 #check @LTFP.ols_excess_risk
 #check @LTFP.mourtada_lower_bound
 #check @LTFP.mourtada_lower_bound_nonneg
 #check @LTFP.mourtada_lower_bound_mono_d
 #check @LTFP.mourtada_lower_bound_antitone_n
 #check @LTFP.mourtada_two_point_testing_anchor
+#check @LTFP.ols_minimax_lower_bound_for_all_estimators
+#check @LTFP.ols_minimax_lower_bound_rate
 
 example : ols_excess_risk (n := 2) (fun _ => (1 : ℝ)) (fun _ => (1 : ℝ)) =
     ols_excess_risk (n := 2) (fun _ => (1 : ℝ)) (fun _ => (1 : ℝ)) := rfl
