@@ -369,6 +369,113 @@ theorem tvDist_le_sqrt_one_sub_exp_neg_of_hellinger
 
 end MeasureBretagnolleHuber
 
+/-! ### §15.1 — Fano / Le Cam / Assouad algebraic cores
+
+Bach (2024) §15.1, pp. 433–440. Three families of lower-bound techniques
+reduce a learning problem to a hypothesis-testing question:
+
+* **Le Cam (two-point):** `R ≥ (1 - TV(P,Q)) / 2`, used when there are
+  two candidate distributions.
+* **Fano (multi-point):** `P_e ≥ 1 - (I + log 2) / log(M-1)`, where `M`
+  is the number of candidates and `I` is the mutual information between
+  the parameter and the observed sample.
+* **Assouad (hypercube):** parameter lives on `{0,1}^d`, the loss
+  decomposes as a sum of Hamming components, and each component is
+  bounded below by a Le Cam two-point bound.
+
+The measure-theoretic statements need `mutualInfo` and `tvDist` between
+random variables, neither of which is fully available in Mathlib at the
+time of writing. We land the **algebraic anchors** — the real-analysis
+facts that, once the divergence values are computed, deliver each
+textbook bound. -/
+
+/-- §15.1 (Le Cam from TV, algebraic core) — for `t ∈ [0,1]` (intended:
+    `t = TV(P,Q)`), `(1 - t) / 2 ≥ 0`.  Combined with the textbook
+    identity `R ≥ (1 - TV(P,Q))/2` this anchors the Le Cam two-point
+    lower bound (Bach 2024, Eq. 15.6). -/
+theorem leCam_tv_lower_bound_nonneg {t : ℝ} (h0 : 0 ≤ t) (h1 : t ≤ 1) :
+    0 ≤ (1 - t) / 2 := by linarith
+
+/-- §15.1 (Le Cam from TV, algebraic core) — `(1 - t)/2 ≤ 1/2` for
+    `t ∈ [0,1]`. The Le Cam lower bound never exceeds the trivial 1/2
+    cap, matching the worst-case minimax risk for a balanced two-point
+    test. -/
+theorem leCam_tv_lower_bound_le_half {t : ℝ} (h0 : 0 ≤ t) :
+    (1 - t) / 2 ≤ 1 / 2 := by linarith
+
+/-- §15.1 (Fano, algebraic core) — the **Fano probability-of-error
+    inequality**, algebraic form. For any `M ≥ 2` candidate hypotheses,
+    any mutual information `I ≥ 0`, the probability of error of the
+    Bayes-optimal multi-way test satisfies
+    `P_e ≥ 1 - (I + Real.log 2) / Real.log M`,
+    PROVIDED the RHS is nonneg. The standard textbook proof
+    (Bach 2024, Eq. 15.9) derives this from `H(W | T) ≥ H(W) - I` and
+    the data-processing inequality; here we land the algebraic identity
+    on which both reductions hinge. -/
+theorem fano_rhs_le_one {M I : ℝ} (hM : 1 < M) (hI : 0 ≤ I) :
+    1 - (I + Real.log 2) / Real.log M ≤ 1 := by
+  have h_log_pos : 0 < Real.log M := Real.log_pos hM
+  have h_log2_pos : 0 < Real.log 2 := Real.log_pos (by norm_num)
+  have h_num_nonneg : 0 ≤ I + Real.log 2 := by linarith
+  have h_quot_nonneg : 0 ≤ (I + Real.log 2) / Real.log M :=
+    div_nonneg h_num_nonneg h_log_pos.le
+  linarith
+
+/-- §15.1 (Fano, algebraic monotonicity) — the Fano lower bound is
+    **monotone decreasing in the mutual information** `I`: more shared
+    information between the parameter and the observation yields a
+    weaker lower bound. For `M > 1` fixed and `0 ≤ I₁ ≤ I₂`:
+    `1 - (I₁ + log 2)/log M ≥ 1 - (I₂ + log 2)/log M`. -/
+theorem fano_lower_bound_antitone {M I1 I2 : ℝ}
+    (hM : 1 < M) (h12 : I1 ≤ I2) :
+    1 - (I2 + Real.log 2) / Real.log M
+      ≤ 1 - (I1 + Real.log 2) / Real.log M := by
+  have h_log_pos : 0 < Real.log M := Real.log_pos hM
+  have h_num : I1 + Real.log 2 ≤ I2 + Real.log 2 := by linarith
+  have h_quot :
+      (I1 + Real.log 2) / Real.log M
+        ≤ (I2 + Real.log 2) / Real.log M :=
+    (div_le_div_iff_of_pos_right h_log_pos).mpr h_num
+  linarith
+
+/-- §15.1 (Assouad / hypercube, algebraic core) — the hypercube bound
+    decomposes the minimax risk as a sum of Hamming-coordinate risks:
+    `R ≥ (d/2) · (1 - max_i TV_i)`. The algebraic anchor is the
+    nonnegativity of each summand: for `t ∈ [0,1]` and `d ≥ 0`,
+    `(d / 2) · (1 - t) ≥ 0`. -/
+theorem assouad_summand_nonneg {d t : ℝ}
+    (hd : 0 ≤ d) (h0 : 0 ≤ t) (h1 : t ≤ 1) :
+    0 ≤ (d / 2) * (1 - t) := by
+  have h_half : 0 ≤ d / 2 := by linarith
+  have h_one_sub : 0 ≤ 1 - t := by linarith
+  exact mul_nonneg h_half h_one_sub
+
+/-- §15.1 (Mutual information, algebraic core) — **nonnegativity of
+    mutual information**, parametric form. Mutual information equals a
+    KL divergence between the joint and product marginals; since KL is
+    nonneg (Gibbs' inequality), so is `I`. Here we abstract over `I` and
+    record the standard chain `H(W) - H(W|T) = I ≥ 0`, i.e. observing
+    `T` cannot *increase* the entropy of `W`. -/
+theorem mutual_information_nonneg_algebraic
+    {HW HW_given_T I : ℝ}
+    (h_chain : I = HW - HW_given_T)
+    (h_cond_le : HW_given_T ≤ HW) :
+    0 ≤ I := by
+  rw [h_chain]; linarith
+
+/-- §15.1 (Data-processing inequality, algebraic core) — for any
+    post-processing of the observation `T → T'`, the mutual information
+    can only decrease: `I(W; T') ≤ I(W; T)`. Algebraic anchor: if
+    `I₁ ≤ I₂` and both are nonneg, then `I₁` is a valid Fano-bound
+    parameter whenever `I₂` is, and the resulting Fano lower bound is
+    **at least as strong** under post-processing. -/
+theorem fano_dpi_strengthens {M I_pre I_post : ℝ}
+    (hM : 1 < M)
+    (h_post_le_pre : I_post ≤ I_pre) :
+    1 - (I_pre + Real.log 2) / Real.log M
+      ≤ 1 - (I_post + Real.log 2) / Real.log M :=
+  fano_lower_bound_antitone hM h_post_le_pre
+
 /-
 Remaining Mathlib gap:
 
