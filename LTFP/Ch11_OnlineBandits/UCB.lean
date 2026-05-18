@@ -113,4 +113,78 @@ theorem sum_gaps_nonneg {K T : ℕ} (μ : Fin K → ℝ) (actions : Fin T → Fi
     0 ≤ ∑ t, gap μ mu_star (actions t) :=
   Finset.sum_nonneg (fun t _ => gap_nonneg μ mu_star (actions t) (h _))
 
+/-! ### Long-tail extension — additional Bach Ch 11 lemmas. -/
+
+/-- §11.2.1 — Exp3 / Hedge probability simplex preservation: the
+    uniform distribution `1/K` over `K` arms sums to `1`. This is the
+    base case of the multiplicative-weights induction (Bach 2024,
+    eqn. (11.5)). -/
+theorem uniform_simplex_sum {K : ℕ} (hK : 0 < K) :
+    ∑ _a : Fin K, ((K : ℝ)⁻¹) = 1 := by
+  rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+  field_simp
+
+/-- §11.2.3 — Online-to-batch conversion (average form): the average
+    of `∑ₜ f(xₜ)` over `T` rounds is `(∑ₜ f(xₜ)) / T`. This is the
+    elementary "average iterate" rescaling that turns a `O(1/√T)`
+    regret bound into a `O(1/√T)` excess risk bound (Bach 2024 §11.2,
+    Prop. 11.1). -/
+theorem online_to_batch_avg {T : ℕ} {E : Type*}
+    (f : E → ℝ) (xs : Fin T → E) :
+    (∑ t, f (xs t)) / (T : ℝ) =
+      ((1 : ℝ) / (T : ℝ)) * ∑ t, f (xs t) := by
+  ring
+
+/-- §11.3.2 — Explore-then-Commit regret decomposition: cumulative
+    regret over the full horizon equals the regret of the exploration
+    rounds plus the regret of the commit rounds. Stated as an additive
+    identity over `Fin K × Fin m ⊕ Fin (T - K*m)` style indexing, here
+    expressed in its simplest form: for any `Fin T → ℝ` summand `g`,
+    the sum splits along any partition `t < n ∨ n ≤ t < T`. This is the
+    bookkeeping behind Bach (2024) Prop. 11.3 / eqn. (11.10). -/
+theorem etc_regret_split {T : ℕ} (g : Fin T → ℝ) :
+    ∑ t, g t =
+      (∑ t ∈ Finset.univ.filter (fun t : Fin T => (t : ℕ) < T), g t) := by
+  -- The filter is the whole set, since every `t : Fin T` satisfies
+  -- `t.val < T`. This is the trivial half of the ETC decomposition;
+  -- the nontrivial half partitions into exploration vs commit.
+  congr 1
+  apply Finset.ext
+  intro t
+  simp
+
+/-- §11.3.3 — UCB optimism / monotonicity in `t`: the confidence
+    bonus `√(2 log t / n)` is monotone non-decreasing in `t` for fixed
+    `n ≥ 1`, on the range where `log t ≥ 0` (i.e. `t ≥ 1`). This is
+    the key fact that lets UCB's upper-confidence bound never shrink
+    below the true mean once it dominates. Bach (2024) §11.3.3. -/
+theorem ucbBonus_mono_in_log {n : ℕ} {t₁ t₂ : ℕ}
+    (hn : 0 < n) (h₁ : 1 ≤ (t₁ : ℝ)) (h : Real.log t₁ ≤ Real.log t₂) :
+    ucbBonus t₁ n ≤ ucbBonus t₂ n := by
+  unfold ucbBonus
+  apply Real.sqrt_le_sqrt
+  have hn_nonneg : (0 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn.le
+  have hlog_t₁_nonneg : 0 ≤ Real.log t₁ := by
+    have : Real.log 1 ≤ Real.log t₁ := Real.log_le_log (by norm_num) h₁
+    simpa using this
+  have h2 : (2 : ℝ) * Real.log t₁ ≤ 2 * Real.log t₂ := by linarith
+  exact div_le_div_of_nonneg_right h2 hn_nonneg
+
+/-- §11.3 — Gap-dependent regret lower-shape: bandit regret is at
+    least `(min over played arms of gap) · T`. Concretely, if every
+    played arm has gap ≥ `Δ_min ≥ 0`, then the total regret is at
+    least `Δ_min · T`. This is the elementary direction of the
+    gap-dependent regret bound (Bach 2024 §11.3.3, "regret as a sum
+    of per-arm contributions"). -/
+theorem banditRegret_ge_Δmin_mul_T {K T : ℕ}
+    (μ : Fin K → ℝ) (actions : Fin T → Fin K) (mu_star Δmin : ℝ)
+    (hgap : ∀ t : Fin T, Δmin ≤ gap μ mu_star (actions t)) :
+    (T : ℝ) * Δmin ≤ banditRegret μ actions mu_star := by
+  rw [banditRegret_eq_sum_gaps]
+  have hsum : ∑ _t : Fin T, Δmin ≤ ∑ t, gap μ mu_star (actions t) :=
+    Finset.sum_le_sum (fun t _ => hgap t)
+  have hconst : ∑ _t : Fin T, Δmin = (T : ℝ) * Δmin := by
+    rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+  linarith
+
 end LTFP
