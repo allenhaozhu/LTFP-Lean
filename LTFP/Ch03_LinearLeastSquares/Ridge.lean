@@ -90,4 +90,39 @@ theorem ridgeEstimator_sub (X : Matrix (Fin n) (Fin d) ℝ)
   unfold ridgeEstimator
   exact Matrix.mulVec_sub _ y₁ y₂
 
+/-- §3.6 — Ridge reduces to OLS at zero penalty (Bach 2024 §3.6, p. 56,
+    companion result).
+
+    The ridge estimator `β̂_λ = (XᵀX + n λ I)⁻¹ Xᵀ y` specializes to
+    `β̂ = (XᵀX)⁻¹ Xᵀ y = olsEstimator X y` at `λ = 0`, since
+    `n · 0 · I = 0` and the regularized Gram matrix collapses to `XᵀX`.
+    This is the canonical sanity check at the boundary of the ridge path
+    and confirms that ridge is a *regularization* of OLS, not a different
+    estimator. -/
+theorem ridgeEstimator_zero_lam (X : Matrix (Fin n) (Fin d) ℝ)
+    (y : Fin n → ℝ) :
+    ridgeEstimator X y 0 = olsEstimator X y := by
+  unfold ridgeEstimator olsEstimator
+  simp
+
+/-- §3.6 — Ridge closed-form ⇒ regularized normal-equation residual is
+    zero (companion result).
+
+    Rewriting `ridge_closed_form`: under invertibility of `XᵀX + n λ I`,
+    the regularized residual `Xᵀ y − (XᵀX + n λ I) β̂_λ` vanishes. This
+    is the ridge analogue of `ols_residual_orthogonal`: the response is
+    decomposed against the *regularized* column space spanned by the
+    rows of `XᵀX + n λ I`. -/
+theorem ridge_regularized_residual_zero {n d : ℕ}
+    (X : Matrix (Fin n) (Fin d) ℝ) (y : Fin n → ℝ) (lam : ℝ)
+    (hX : IsUnit
+          (Xᵀ * X + (n * lam) • (1 : Matrix (Fin d) (Fin d) ℝ)).det) :
+    Xᵀ *ᵥ y -
+      (Xᵀ * X + (n * lam) • (1 : Matrix (Fin d) (Fin d) ℝ))
+        *ᵥ ridgeEstimator X y lam = 0 := by
+  rw [ridge_closed_form X y lam hX, sub_self]
+
 end LTFP
+
+#check @LTFP.ridgeEstimator_zero_lam
+#check @LTFP.ridge_regularized_residual_zero
