@@ -80,4 +80,69 @@ theorem localAvg_neg_Y (Y : Fin n → ℝ) (w : LocalWeights 𝒳 n) (x : 𝒳) 
   show w x i * (-Y i) = -(w x i * Y i)
   ring
 
+/-- §6.2 — Zero weights yield the zero predictor: a vacuous boundary
+    case used implicitly in bias-variance decompositions (the
+    "predict-zero" reference estimator). Bach (2024) §6.2, p. 158. -/
+theorem localAvg_zero_weights (Y : Fin n → ℝ) (x : 𝒳) :
+    localAvg Y (fun _ _ => (0 : ℝ)) x = 0 := by
+  unfold localAvg
+  simp
+
+/-- §6.2.2 — A training point `xᵢ` always lies in its own partition
+    cell, so the unnormalized partition weight evaluated at `xᵢ` and
+    index `i` equals one. This is the "self-membership" identity used
+    when proving partition estimators interpolate training inputs
+    of singleton cells. Bach (2024) §6.2, p. 160 (histogram rule). -/
+theorem partitionWeights_self (P : 𝒳 → ℕ) (xs : Fin n → 𝒳) (i : Fin n) :
+    partitionWeights P xs (xs i) i = 1 := by
+  unfold partitionWeights
+  simp
+
+/-- §6.2.2 — Partition weights are bounded above by `1`: useful when
+    deriving uniform variance bounds for histogram-style estimators.
+    Bach (2024) §6.2, p. 160. -/
+theorem partitionWeights_le_one
+    (P : 𝒳 → ℕ) (xs : Fin n → 𝒳) (x : 𝒳) (i : Fin n) :
+    partitionWeights P xs x i ≤ 1 := by
+  unfold partitionWeights
+  split_ifs with h
+  · exact le_refl 1
+  · exact zero_le_one
+
+/-- §6.2.3 — Nearest-neighbour weights sum to one at every query.
+    This is the "convex-combination" property: 1-NN is itself a valid
+    local-averaging predictor with normalized weights, a prerequisite
+    for the consistency analysis. Bach (2024) §6.2, p. 161. -/
+theorem nnWeights_sum_one (witness : 𝒳 → Fin n) (x : 𝒳) :
+    ∑ i, nnWeights witness x i = 1 := by
+  unfold nnWeights
+  rw [Finset.sum_eq_single (witness x)]
+  · simp
+  · intro i _ hi
+    rw [if_neg (fun h => hi h.symm)]
+  · intro h
+    exact (h (Finset.mem_univ _)).elim
+
+/-- §6.2 — If the weights at `x` are nonnegative and sum to one, the
+    local-averaging predictor is bounded above by the maximum label.
+    Together with `localAvg_const_of_sum_one`, this is the standard
+    "no-extrapolation" property of convex-combination predictors
+    (k-NN, Nadaraya-Watson, partition estimators). Bach (2024) §6.2,
+    p. 159. -/
+theorem localAvg_le_max
+    (Y : Fin n → ℝ) (w : LocalWeights 𝒳 n) (x : 𝒳)
+    (M : ℝ) (hY : ∀ i, Y i ≤ M)
+    (hw : ∀ i, 0 ≤ w x i) (hsum : ∑ i, w x i = 1) :
+    localAvg Y w x ≤ M := by
+  unfold localAvg
+  have hbound : ∑ i, w x i * Y i ≤ ∑ i, w x i * M := by
+    apply Finset.sum_le_sum
+    intro i _
+    exact mul_le_mul_of_nonneg_left (hY i) (hw i)
+  calc ∑ i, w x i * Y i
+      ≤ ∑ i, w x i * M := hbound
+    _ = (∑ i, w x i) * M := by rw [Finset.sum_mul]
+    _ = 1 * M := by rw [hsum]
+    _ = M := one_mul M
+
 end LTFP
