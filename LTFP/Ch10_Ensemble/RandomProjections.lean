@@ -59,4 +59,55 @@ theorem baggingPredictor_index_anchor {𝒳 : Type*} {B : ℕ}
     (p : Fin B → 𝒳 → ℝ) (x : 𝒳) :
     baggingPredictor p x = baggingPredictor p x := rfl
 
+/-- §10.1.2 — Bagging is additive in the predictor family: the
+    average of pointwise sums is the sum of averages. This is the
+    algebraic core of the variance-reduction analysis: bagging
+    commutes with the linear structure of the predictor space, so
+    we can analyze fluctuations around the mean independently of
+    the mean. -/
+theorem baggingPredictor_add {𝒳 : Type*} {B : ℕ}
+    (p q : Fin B → 𝒳 → ℝ) (x : 𝒳) :
+    baggingPredictor (fun b => p b + q b) x =
+      baggingPredictor p x + baggingPredictor q x := by
+  unfold baggingPredictor
+  simp only [Pi.add_apply, Finset.sum_add_distrib, mul_add]
+
+/-- §10.1.2 — Bagging is homogeneous in the predictor family: scaling
+    every base predictor by `c` scales the bagged predictor by `c`. -/
+theorem baggingPredictor_smul {𝒳 : Type*} {B : ℕ}
+    (c : ℝ) (p : Fin B → 𝒳 → ℝ) (x : 𝒳) :
+    baggingPredictor (fun b => c • p b) x = c • baggingPredictor p x := by
+  unfold baggingPredictor
+  simp only [Pi.smul_apply, smul_eq_mul, ← Finset.mul_sum]
+  ring
+
+/-- §10.1.3 — Random-forest predictor as an explicit convex
+    combination of `B` tree predictors with nonneg weights summing
+    to one. Bach (2024) §10.1.3 (random forests as ensembles of
+    decision trees). -/
+noncomputable def randomForestPredictor {𝒳 : Type*} {B : ℕ}
+    (trees : Fin B → 𝒳 → ℝ) (w : Fin B → ℝ) (x : 𝒳) : ℝ :=
+  ∑ b, w b * trees b x
+
+/-- §10.1.3 — A random-forest predictor over a constant family of
+    trees `T ≡ c` collapses to `c` whenever the weights sum to `1`.
+    This is the convex-combination invariant: any convex average of
+    a constant is that constant. -/
+theorem randomForestPredictor_const_of_sum_eq_one
+    {𝒳 : Type*} {B : ℕ} (w : Fin B → ℝ) (c : ℝ) (x : 𝒳)
+    (hw : ∑ b, w b = 1) :
+    randomForestPredictor (𝒳 := 𝒳) (fun _ _ => c) w x = c := by
+  unfold randomForestPredictor
+  rw [← Finset.sum_mul, hw, one_mul]
+
+/-- §10.1.3 — Uniform-weight random forest reduces to the bagging
+    predictor (`1/B` average). Connects §10.1.2 (bagging) to §10.1.3
+    (random forests). -/
+theorem randomForestPredictor_uniform {𝒳 : Type*} {B : ℕ}
+    (trees : Fin B → 𝒳 → ℝ) (x : 𝒳) :
+    randomForestPredictor trees (fun _ => (B : ℝ)⁻¹) x =
+      baggingPredictor trees x := by
+  unfold randomForestPredictor baggingPredictor
+  rw [← Finset.mul_sum]
+
 end LTFP
