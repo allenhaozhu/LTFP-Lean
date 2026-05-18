@@ -199,6 +199,72 @@ theorem lazy_training_generalization_shape
     exact h_mul
   exact le_trans (h_lazy m hm_pos x) h_bound1
 
+/-- §12.1 (Bach 2024) — **Interpolation regime characterisation.**
+    Bach (2024) §12.1, p. 344. In the overparameterised regime, a
+    predictor `β` is said to *interpolate* the training data
+    `(X, y)` when the predicted vector `X β` agrees with `y`, i.e.
+    the residual `y - X β` is the zero vector. This lemma is the
+    bare algebraic equivalence between the two formulations of
+    "zero training error" used throughout §12.1. -/
+theorem interpolation_iff_zero_residual
+    (X : Matrix (Fin n) (Fin d) ℝ) (β : Fin d → ℝ) (y : Fin n → ℝ) :
+    X *ᵥ β = y ↔ y - X *ᵥ β = 0 := by
+  constructor
+  · intro h; rw [h]; exact sub_self y
+  · intro h; exact (sub_eq_zero.mp h).symm
+
+/-- §12.1 (Bach 2024) — **Pseudo-inverse predictor identity at the
+    fit.** Bach (2024) §12.1, p. 346. When `XᵀX` is invertible, the
+    OLS / min-norm predictor recovers the column-space projection of
+    `y`: applying the hat matrix `Π = X(XᵀX)⁻¹Xᵀ` to `X β̂(y)` yields
+    `X β̂(y)` itself (i.e. `X β̂(y)` is fixed by the projector). This is
+    the predictor-side fixed-point identity used in §12.1's analysis
+    of the implicit bias of gradient descent. -/
+theorem min_norm_predictor_is_projection
+    (X : Matrix (Fin n) (Fin d) ℝ) (y : Fin n → ℝ)
+    (hX : IsUnit (Xᵀ * X).det) :
+    (X * (Xᵀ * X)⁻¹ * Xᵀ) *ᵥ (X *ᵥ olsEstimator X y) = X *ᵥ olsEstimator X y :=
+  ols_is_projection X (olsEstimator X y) hX
+
+/-- §12.4 (Bach 2024) — **NTK kernel diagonal PSD anchor.**
+    Bach (2024) §12.4, p. 359. The neural tangent kernel `k(x, x')`
+    is built from an inner product of feature gradients, so the
+    diagonal entries `k(x, x)` are non-negative — they equal a squared
+    norm. We capture the algebraic core on the scalar prototype
+    `k(x, x') = x · x'`: the diagonal `k(x, x) = x²` is non-negative.
+    This is the PSD-on-the-diagonal step that anchors the full kernel
+    PSD property (which requires RKHS infrastructure not yet in
+    Mathlib). -/
+theorem ntk_kernel_diagonal_nonneg (x : ℝ) : 0 ≤ x * x := mul_self_nonneg x
+
+/-- §12.2 (Bach 2024) — **Bias-variance baseline for the zero
+    predictor.** Bach (2024) §12.2, p. 351. Under the squared loss,
+    the risk of the trivial predictor `β = 0` reduces to the second
+    moment of the label `y`. We capture the pointwise algebraic
+    identity: for every label realisation `y`, `(y - 0)² = y²`. This
+    is the baseline against which the bias and variance of the
+    min-norm interpolator are compared in the double-descent
+    decomposition. -/
+theorem zero_predictor_risk_eq_label_sq (y : ℝ) : (y - 0)^2 = y^2 := by ring
+
+/-- §12.2 (Bach 2024) — **Double-descent shape lemma.**
+    Bach (2024) §12.2, p. 351, eq. (12.6). Past the interpolation
+    threshold, the noise-amplification term in the excess risk of the
+    min-norm interpolator scales like `σ² · d / (d - n)` (or its
+    dual): as the overparameterisation gap `d - n` grows, the
+    multiplier `1 / (d - n)` shrinks, driving the second descent.
+    We capture the order-theoretic core: for any positive gap `k`,
+    the reciprocal `1 / (k + 1)` is strictly smaller than `1 / k`,
+    so increasing the gap by one strictly decreases this excess-risk
+    multiplier. The full statement (with proper expectation and
+    noise model) is the documented gap. -/
+theorem double_descent_decreasing_in_gap (k : ℕ) (hk : 1 ≤ k) :
+    (1 : ℝ) / ((k : ℝ) + 1) < 1 / (k : ℝ) := by
+  have hk_pos : (0 : ℝ) < (k : ℝ) := by exact_mod_cast hk
+  have hk1_pos : (0 : ℝ) < (k : ℝ) + 1 := by linarith
+  have hk_lt : (k : ℝ) < (k : ℝ) + 1 := by linarith
+  exact one_div_lt_one_div_of_lt hk_pos hk_lt
+
 /-- §12.4 (Bach 2024) — **Lazy training via discrete gradient flow on
     the quadratic surrogate.**
     The discrete gradient flow on the 1-D quadratic `½ y²` with step
