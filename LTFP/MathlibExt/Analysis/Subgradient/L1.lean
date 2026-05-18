@@ -206,6 +206,106 @@ theorem isL1Subgradient_componentwise {n : ℕ} {v g : Fin n → ℝ} :
     · rw [hvi]
       exact (isAbsSubgradient_zero_iff).mpr hgi
 
+/-! ### Multidimensional ℓ¹ subdifferential
+
+The coordinate-wise predicate `IsL1Subgradient` matches the *global*
+subgradient of the ℓ¹ norm `‖β‖₁ = ∑ᵢ |βᵢ|` on `Fin d → ℝ`. We package
+this characterization under a swapped-argument alias
+`IsL1SubgradientFin v β` (subgradient-then-point ordering, matching the
+convex-analysis convention `v ∈ ∂‖·‖₁(β)`) and supply the equivalence
+with the global definition `∀ y, ‖y‖₁ ≥ ‖β‖₁ + ⟨v, y − β⟩`. -/
+
+/-- A vector `v : Fin d → ℝ` is an *`ℓ¹` subgradient* of `β : Fin d → ℝ`
+in the coordinate-wise sense: `v i ∈ ∂|·|(β i)` for every `i`. This is
+the textbook subdifferential of `‖·‖₁` (Boyd–Vandenberghe §3.1.5;
+Hiriart-Urruty–Lemaréchal Vol. I, §VI.3). Argument order mirrors the
+convex-analysis convention `v ∈ ∂‖·‖₁(β)`. -/
+def IsL1SubgradientFin {d : ℕ} (v β : Fin d → ℝ) : Prop :=
+  ∀ i : Fin d, IsAbsSubgradient (β i) (v i)
+
+/-- Coordinate-wise characterization of multidim ℓ¹ subgradients:
+`v ∈ ∂‖·‖₁(β)` iff each `v i` is a scalar subgradient of `|·|` at
+`β i`. This is definitional by `IsL1SubgradientFin`; we record the
+restatement for clarity at the call site. -/
+theorem isL1SubgradientFin_iff_coords {d : ℕ} {v β : Fin d → ℝ} :
+    IsL1SubgradientFin v β ↔ ∀ i : Fin d, IsAbsSubgradient (β i) (v i) :=
+  Iff.rfl
+
+/-- Bridge between the coordinate-wise predicate and the existing
+`IsL1Subgradient` (point-then-subgradient ordering): the two predicates
+are equivalent up to argument swap. -/
+theorem isL1SubgradientFin_iff_isL1Subgradient
+    {d : ℕ} {v β : Fin d → ℝ} :
+    IsL1SubgradientFin v β ↔ IsL1Subgradient β v :=
+  Iff.rfl
+
+/-- **Global ℓ¹ subdifferential characterization.** A vector `v` is an
+`ℓ¹` subgradient of `β` (in the coordinate-wise sense
+`IsL1SubgradientFin v β`) if and only if it witnesses the global
+subgradient inequality for the ℓ¹ norm:
+`∑ᵢ |yᵢ| ≥ ∑ᵢ |βᵢ| + ⟨v, y − β⟩` for every `y : Fin d → ℝ`. -/
+theorem isL1SubgradientFin_l1Norm {d : ℕ} {v β : Fin d → ℝ} :
+    IsL1SubgradientFin v β ↔
+      ∀ y : Fin d → ℝ,
+        (∑ i, |y i|) ≥ (∑ i, |β i|) + ∑ i, v i * (y i - β i) := by
+  constructor
+  · intro h y
+    -- Sum the coordinate-wise subgradient inequalities.
+    have hcoord : ∀ i ∈ (Finset.univ : Finset (Fin d)),
+        |β i| + v i * (y i - β i) ≤ |y i| := by
+      intro i _
+      have hi : IsAbsSubgradient (β i) (v i) := h i
+      exact hi (y i)
+    have hsum :
+        ∑ i, (|β i| + v i * (y i - β i)) ≤ ∑ i, |y i| :=
+      Finset.sum_le_sum hcoord
+    have hsplit :
+        ∑ i, (|β i| + v i * (y i - β i))
+          = (∑ i, |β i|) + ∑ i, v i * (y i - β i) :=
+      Finset.sum_add_distrib
+    linarith
+  · intro h i y
+    -- Probe the global inequality at the canonical "single-coordinate
+    -- perturbation" `y i := y, y j := β j` for `j ≠ i`. The sums
+    -- collapse and leave precisely the scalar subgradient inequality at
+    -- coordinate `i`.
+    classical
+    set z : Fin d → ℝ := Function.update β i y with hz_def
+    have hglob := h z
+    -- All coordinates except `i` cancel pairwise; coordinate `i`
+    -- carries `|y|` on the LHS and `|β i| + v i * (y - β i)` on the RHS.
+    have hsum_abs : ∑ j, |z j| = |y| + ∑ j ∈ Finset.univ.erase i, |β j| := by
+      have hi_mem : i ∈ (Finset.univ : Finset (Fin d)) := Finset.mem_univ i
+      rw [← Finset.sum_erase_add _ _ hi_mem]
+      have hzi : z i = y := by simp [hz_def, Function.update_self]
+      rw [hzi]
+      have hzj : ∀ j ∈ Finset.univ.erase i, |z j| = |β j| := by
+        intro j hj
+        have hji : j ≠ i := (Finset.mem_erase.mp hj).1
+        simp [hz_def, Function.update_of_ne hji]
+      rw [Finset.sum_congr rfl hzj]
+      ring
+    have hsum_abs_beta :
+        ∑ j, |β j| = |β i| + ∑ j ∈ Finset.univ.erase i, |β j| := by
+      have hi_mem : i ∈ (Finset.univ : Finset (Fin d)) := Finset.mem_univ i
+      rw [← Finset.sum_erase_add _ _ hi_mem]
+      ring
+    have hsum_lin :
+        ∑ j, v j * (z j - β j) = v i * (y - β i) := by
+      have hi_mem : i ∈ (Finset.univ : Finset (Fin d)) := Finset.mem_univ i
+      rw [← Finset.sum_erase_add _ _ hi_mem]
+      have hzi : z i = y := by simp [hz_def, Function.update_self]
+      have hzj : ∀ j ∈ Finset.univ.erase i, v j * (z j - β j) = 0 := by
+        intro j hj
+        have hji : j ≠ i := (Finset.mem_erase.mp hj).1
+        have hzj_eq : z j = β j := by
+          simp [hz_def, Function.update_of_ne hji]
+        rw [hzj_eq, sub_self, mul_zero]
+      rw [Finset.sum_congr rfl hzj, Finset.sum_const_zero, zero_add, hzi]
+    rw [hsum_abs, hsum_abs_beta, hsum_lin] at hglob
+    -- After cancellation the constant tail `∑_{j≠i} |β j|` drops out.
+    linarith
+
 /-! ### Examples
 
 The following examples demonstrate the three regimes of the scalar

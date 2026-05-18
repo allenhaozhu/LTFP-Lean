@@ -286,4 +286,28 @@ theorem lasso_kkt_abstract
     exact this
   linarith
 
+open LTFP.MathlibExt.Analysis in
+/-- §8.2 — **Multidimensional Lasso KKT sufficiency.**
+
+    Specialization of `lasso_kkt_abstract` to the textbook
+    multidimensional ℓ¹ subdifferential. Given a subgradient `w` of `f`
+    at `β̂` and a *global* ℓ¹ subgradient `v` of `β̂`
+    (`IsL1SubgradientFin v β̂`), the KKT certificate `wᵢ + λ · vᵢ = 0`
+    suffices for `β̂` to be a global minimizer of `F(β) = f(β) + λ‖β‖₁`.
+
+    This is the full statement of Bach (2024) §8.2, eq. 8.10, without
+    the generic-coordinate-subgradient hypothesis: the ℓ¹
+    subdifferential is now packaged as the bona fide
+    `v ∈ ∂‖·‖₁(β̂)` predicate from
+    `LTFP.MathlibExt.Analysis.Subgradient.L1`. -/
+theorem lasso_kkt_multidim
+    {f : (Fin d → ℝ) → ℝ} {βhat w v : Fin d → ℝ} {lam : ℝ}
+    (hlam : 0 ≤ lam)
+    (hf : ∀ β, f β ≥ f βhat + ∑ i, w i * (β i - βhat i))
+    (hv : IsL1SubgradientFin v βhat)
+    (hKKT : ∀ i, w i + lam * v i = 0) :
+    IsMinOn (fun β => f β + lam * l1Norm β) Set.univ βhat :=
+  lasso_kkt_abstract hlam hf
+    ((isL1SubgradientFin_iff_isL1Subgradient).mp hv) hKKT
+
 end LTFP
