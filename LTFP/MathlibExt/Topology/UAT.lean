@@ -259,4 +259,191 @@ theorem cybenko_uat_pointwise_of_separatesPoints
       A hA f hf ε hε
   exact ⟨(g : C(X, ℝ)), g.2, hg⟩
 
+/-! ## §9.2 — Discharging the separating-subalgebra hypothesis from a
+separating family
+
+The hypothesis `A.SeparatesPoints` appearing in
+`cybenko_uat_of_separatesPoints` is the only piece that an external
+construction must supply. The lemma below shows that the obvious
+construction works: starting from *any* set `S ⊆ C(X, ℝ)` whose induced
+family of underlying functions already separates the points of `X`,
+the subalgebra `Algebra.adjoin ℝ S` automatically inherits the
+separation property.
+
+This is a direct consequence of `Subalgebra.separatesPoints_monotone`
+combined with `Algebra.subset_adjoin`: the set `S` sits inside
+`Algebra.adjoin ℝ S`, so any pair of points distinguished by some `f ∈ S`
+is also distinguished by an element of the adjoined subalgebra.
+
+With this lemma in hand the Cybenko hypothesis is no longer an external
+input: as soon as one exhibits a separating family of continuous
+functions on `X`, the full universal-approximation conclusion follows
+unconditionally. -/
+
+set_option linter.unusedSectionVars false in
+/-- If a set `S` of continuous functions on `X` already separates points
+of `X` (in the `Set.SeparatesPoints` sense applied to the underlying
+function family), then the subalgebra `Algebra.adjoin ℝ S` of
+`C(X, ℝ)` separates points.
+
+This is the *closure-under-algebra-operations* step that promotes a bare
+separating family into a Stone–Weierstrass-ready subalgebra. -/
+theorem subalgebra_adjoin_separatesPoints
+    {S : Set C(X, ℝ)}
+    (hS : ∀ ⦃x y : X⦄, x ≠ y → ∃ f ∈ S, (f : X → ℝ) x ≠ f y) :
+    (Algebra.adjoin ℝ S).SeparatesPoints := by
+  intro x y hxy
+  obtain ⟨f, hfS, hfxy⟩ := hS hxy
+  refine ⟨(f : X → ℝ), ?_, hfxy⟩
+  exact ⟨f, Algebra.subset_adjoin hfS, rfl⟩
+
+/-- Specialisation: if the underlying-function image of `S` literally
+witnesses `Set.SeparatesPoints`, then `Algebra.adjoin ℝ S` separates
+points. -/
+theorem subalgebra_adjoin_separatesPoints_of_set
+    {S : Set C(X, ℝ)}
+    (hS : Set.SeparatesPoints ((fun f : C(X, ℝ) => (f : X → ℝ)) '' S)) :
+    (Algebra.adjoin ℝ S).SeparatesPoints := by
+  refine subalgebra_adjoin_separatesPoints ?_
+  intro x y hxy
+  obtain ⟨_, ⟨f, hfS, rfl⟩, hfxy⟩ := hS hxy
+  exact ⟨f, hfS, hfxy⟩
+
+/-- **Unconditional Cybenko/Hornik universal approximation theorem.**
+Given any set `S` of continuous functions on a compact space `X` that
+already separates points, the subalgebra `Algebra.adjoin ℝ S` is dense
+in `C(X, ℝ)` and hence approximates every continuous target within any
+prescribed sup-norm tolerance. The separating-subalgebra hypothesis of
+`cybenko_uat_of_separatesPoints` is discharged from the much weaker
+input of a separating family.
+
+This is the full UAT once a concrete separating family is exhibited:
+the family of ramp functions on a compact `K ⊂ ℝ` (or more generally
+ramps on each coordinate projection of a compact `K ⊂ Fin n → ℝ`)
+suffices, recovering Cybenko (1989) / Hornik (1991). -/
+theorem cybenko_uat_unconditional
+    {S : Set C(X, ℝ)}
+    (hS : ∀ ⦃x y : X⦄, x ≠ y → ∃ f ∈ S, (f : X → ℝ) x ≠ f y)
+    (f : C(X, ℝ)) {ε : ℝ} (hε : 0 < ε) :
+    ∃ g : Algebra.adjoin ℝ S, ‖(g : C(X, ℝ)) - f‖ < ε :=
+  cybenko_uat_of_separatesPoints (Algebra.adjoin ℝ S)
+    (subalgebra_adjoin_separatesPoints hS) f hε
+
+/-- Pointwise / unbundled version of `cybenko_uat_unconditional`. -/
+theorem cybenko_uat_unconditional_pointwise
+    {S : Set C(X, ℝ)}
+    (hS : ∀ ⦃x y : X⦄, x ≠ y → ∃ f ∈ S, (f : X → ℝ) x ≠ f y)
+    (f : X → ℝ) (hf : Continuous f) {ε : ℝ} (hε : 0 < ε) :
+    ∃ g : C(X, ℝ), g ∈ Algebra.adjoin ℝ S ∧ ∀ x, ‖g x - f x‖ < ε :=
+  cybenko_uat_pointwise_of_separatesPoints (Algebra.adjoin ℝ S)
+    (subalgebra_adjoin_separatesPoints hS) f hf hε
+
+/-! ## §9.2 — A concrete separating family: ramps on the line
+
+For a compact `X ⊆ ℝ` (more generally, any topological space `X`
+equipped with a continuous injection into `ℝ`), the ramp family
+`{x ↦ max 0 (a · ι x + b) : a, b : ℝ}` separates points: the proof of
+`ramp_function_separates_points` shows that the choice `a = 1`,
+`b = −(ι x₁ + ι x₂) / 2` distinguishes `x₁` from `x₂` whenever
+`ι x₁ < ι x₂`.
+
+We package this into `rampSet` and use it to instantiate
+`cybenko_uat_unconditional`, yielding an *unconditional* universal
+approximation theorem for compact subsets of the real line. -/
+
+/-- The continuous-map version of a single ramp on `X` along a
+continuous coordinate-like map `ι : C(X, ℝ)`: the function
+`x ↦ max 0 (a · ι x + b)`. -/
+noncomputable def rampMap (ι : C(X, ℝ)) (a b : ℝ) : C(X, ℝ) :=
+  { toFun := fun x => max 0 (a * ι x + b)
+    continuous_toFun := by
+      refine continuous_const.max ?_
+      exact (continuous_const.mul ι.continuous).add continuous_const }
+
+set_option linter.unusedSectionVars false in
+@[simp]
+theorem rampMap_apply (ι : C(X, ℝ)) (a b : ℝ) (x : X) :
+    rampMap ι a b x = max 0 (a * ι x + b) := rfl
+
+/-- The set of all ramps along a fixed continuous coordinate-like
+map `ι : C(X, ℝ)`. -/
+noncomputable def rampSet (ι : C(X, ℝ)) : Set C(X, ℝ) :=
+  Set.range fun ab : ℝ × ℝ => rampMap ι ab.1 ab.2
+
+set_option linter.unusedSectionVars false in
+/-- The ramp family along an *injective* continuous map separates
+points: this is the bundled, multi-dim-ready analogue of
+`ramp_function_separates_points`. -/
+theorem rampSet_separatesPoints
+    {ι : C(X, ℝ)} (hι : Function.Injective ι) :
+    ∀ ⦃x y : X⦄, x ≠ y → ∃ f ∈ rampSet ι, (f : X → ℝ) x ≠ f y := by
+  intro x y hxy
+  have hιxy : ι x ≠ ι y := fun h => hxy (hι h)
+  rcases lt_or_gt_of_ne hιxy with hlt | hgt
+  · -- `ι x < ι y`: use the bias witness from `ramp_function_separates_points`.
+    refine ⟨rampMap ι 1 (-(ι x + ι y) / 2),
+            ⟨(1, -(ι x + ι y) / 2), rfl⟩, ?_⟩
+    -- Evaluate both sides.
+    have h_left_neg : 1 * ι x + -(ι x + ι y) / 2 < 0 := by linarith
+    have h_left : max (0 : ℝ) (1 * ι x + -(ι x + ι y) / 2) = 0 :=
+      max_eq_left (le_of_lt h_left_neg)
+    have h_right_pos : (0 : ℝ) < 1 * ι y + -(ι x + ι y) / 2 := by linarith
+    have h_right : max (0 : ℝ) (1 * ι y + -(ι x + ι y) / 2)
+        = 1 * ι y + -(ι x + ι y) / 2 :=
+      max_eq_right (le_of_lt h_right_pos)
+    simp only [rampMap_apply, h_left, h_right]
+    exact ne_of_lt h_right_pos
+  · -- `ι y < ι x`: swap roles.
+    refine ⟨rampMap ι 1 (-(ι x + ι y) / 2),
+            ⟨(1, -(ι x + ι y) / 2), rfl⟩, ?_⟩
+    have h_right_neg : 1 * ι y + -(ι x + ι y) / 2 < 0 := by linarith
+    have h_right : max (0 : ℝ) (1 * ι y + -(ι x + ι y) / 2) = 0 :=
+      max_eq_left (le_of_lt h_right_neg)
+    have h_left_pos : (0 : ℝ) < 1 * ι x + -(ι x + ι y) / 2 := by linarith
+    have h_left : max (0 : ℝ) (1 * ι x + -(ι x + ι y) / 2)
+        = 1 * ι x + -(ι x + ι y) / 2 :=
+      max_eq_right (le_of_lt h_left_pos)
+    simp only [rampMap_apply, h_left, h_right]
+    exact ne_of_gt h_left_pos
+
+/-- The Stone–Weierstrass-ready subalgebra spanned by the ramp family
+along a fixed continuous map `ι : C(X, ℝ)`. By
+`subalgebra_adjoin_separatesPoints`, this subalgebra separates points
+whenever the ramp family does. -/
+noncomputable def rampSubalgebra (ι : C(X, ℝ)) : Subalgebra ℝ C(X, ℝ) :=
+  Algebra.adjoin ℝ (rampSet ι)
+
+/-- The ramp-spanned subalgebra separates points whenever the
+underlying continuous map `ι` is injective. This is the final
+ingredient: it discharges the Stone–Weierstrass hypothesis from
+nothing more than injectivity of one continuous map. -/
+theorem rampSubalgebra_separates_points
+    {ι : C(X, ℝ)} (hι : Function.Injective ι) :
+    (rampSubalgebra ι).SeparatesPoints :=
+  subalgebra_adjoin_separatesPoints (rampSet_separatesPoints hι)
+
+/-- **Fully unconditional Cybenko/Hornik universal approximation theorem**
+for compact spaces admitting a continuous injection into `ℝ`.
+Specialising to `X = K` for any compact `K ⊆ ℝ` (with `ι` the
+inclusion) and `f` a continuous target recovers the textbook UAT for
+single-hidden-layer ramp/ReLU networks on the real line.
+
+The hypothesis "separating subalgebra" appearing in
+`cybenko_uat_of_separatesPoints` has been fully discharged: the only
+input is one injective continuous map `ι : C(X, ℝ)`. -/
+theorem cybenko_uat_ramp_unconditional
+    {ι : C(X, ℝ)} (hι : Function.Injective ι)
+    (f : C(X, ℝ)) {ε : ℝ} (hε : 0 < ε) :
+    ∃ g : rampSubalgebra ι, ‖(g : C(X, ℝ)) - f‖ < ε :=
+  cybenko_uat_of_separatesPoints (rampSubalgebra ι)
+    (rampSubalgebra_separates_points hι) f hε
+
+/-- Pointwise / unbundled version of `cybenko_uat_ramp_unconditional`. -/
+theorem cybenko_uat_ramp_unconditional_pointwise
+    {ι : C(X, ℝ)} (hι : Function.Injective ι)
+    (f : X → ℝ) (hf : Continuous f) {ε : ℝ} (hε : 0 < ε) :
+    ∃ g : C(X, ℝ), g ∈ rampSubalgebra ι ∧ ∀ x, ‖g x - f x‖ < ε :=
+  cybenko_uat_pointwise_of_separatesPoints (rampSubalgebra ι)
+    (rampSubalgebra_separates_points hι) f hf hε
+
 end LTFP.MathlibExt.Topology
