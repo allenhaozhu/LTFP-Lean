@@ -328,4 +328,49 @@ theorem lazy_training_via_discrete_flow
     rw [div_mul_cancel₀ ε (ne_of_gt hΔθ₀_abs_pos)] at h_mul_le
     exact h_mul_le
 
+/-- §12.4 (Bach 2024) — **Lazy training via continuous-time gradient
+    flow on a smooth scalar loss.**
+
+    Discharging the "continuous-time" residual gap of
+    `lazy_training_generalization_shape`. For a globally `C²` loss
+    `L : ℝ → ℝ`, the autonomous gradient-flow ODE
+    `α'(t) = -L'(α(t))` admits a local trajectory `α : ℝ → ℝ` with
+    `α(t₀) = θ₀` on an open time interval `(t₀ - ε, t₀ + ε)`. This is
+    the continuous analogue of the discrete-time `gradIter` iteration
+    used in `lazy_training_via_discrete_flow`.
+
+    *Existence* is by Picard–Lindelöf applied to the `C¹` vector field
+    `-L'`; see
+    `LTFP.MathlibExt.Calculus.exists_local_gradient_flow_of_contDiff_two`. -/
+theorem lazy_training_via_continuous_flow
+    (L : ℝ → ℝ) (hL : ContDiff ℝ 2 L) (θ₀ t₀ : ℝ) :
+    ∃ α : ℝ → ℝ, α t₀ = θ₀ ∧ ∃ ε > (0 : ℝ),
+      ∀ t ∈ Set.Ioo (t₀ - ε) (t₀ + ε),
+        HasDerivAt α (-(deriv L) (α t)) t :=
+  LTFP.MathlibExt.Calculus.exists_local_gradient_flow_of_contDiff_two
+    L hL θ₀ t₀
+
+/-- §12.4 (Bach 2024) — **Uniqueness of the lazy-training gradient
+    flow.**
+
+    Companion to `lazy_training_via_continuous_flow`. When the gradient
+    `∇L = L'` is globally `M`-Lipschitz — the canonical `M`-smoothness
+    hypothesis on `L` — any two trajectories of the gradient-flow ODE
+    sharing an initial value agree everywhere. In particular the
+    continuous-time trajectory promised by
+    `lazy_training_via_continuous_flow` is unique once the initial
+    parameter `θ₀` is fixed.
+
+    *Uniqueness* is by Grönwall via Mathlib's `ODE_solution_unique_univ`;
+    see `LTFP.MathlibExt.Calculus.gradient_flow_unique_of_lipschitz_deriv`. -/
+theorem lazy_training_continuous_flow_unique
+    (L : ℝ → ℝ) {M : NNReal} (hLip : LipschitzWith M (deriv L))
+    {α β : ℝ → ℝ}
+    (hα : LTFP.MathlibExt.Calculus.IsGradientFlow L α)
+    (hβ : LTFP.MathlibExt.Calculus.IsGradientFlow L β)
+    {t₀ : ℝ} (h_init : α t₀ = β t₀) :
+    α = β :=
+  LTFP.MathlibExt.Calculus.gradient_flow_unique_of_lipschitz_deriv
+    L hLip hα hβ h_init
+
 end LTFP

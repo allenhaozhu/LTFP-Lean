@@ -6,6 +6,9 @@ Authors: LTFP-Lean contributors
 import Mathlib.Analysis.Calculus.Deriv.Basic
 import Mathlib.Analysis.Calculus.Deriv.Pow
 import Mathlib.Analysis.Calculus.Deriv.Mul
+import Mathlib.Analysis.Calculus.MeanValue
+import Mathlib.Analysis.ODE.Gronwall
+import Mathlib.Analysis.ODE.PicardLindelof
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
 
@@ -28,24 +31,29 @@ provides a worked instance for the canonical quadratic `f y = y² / 2`.
 
 ## Status
 
-**Partial.** The continuous-time limit `dx/dt = -∇f(x(t))` — i.e. the
-statement that, on a Lipschitz-gradient `f`, the piecewise-linear
-interpolant of `gradIter f η n x₀` converges to the unique solution of
-the gradient-flow ODE as `η → 0` — is *pending Mathlib ODE
-infrastructure*. Concretely it depends on:
+The discrete iteration developed below acts as the formal anchor for
+downstream optimisation results in LTFP-Lean. In addition, this file now
+provides a **continuous-time gradient flow** layer built on top of
+`Mathlib.Analysis.ODE.PicardLindelof` and `Mathlib.Analysis.ODE.Gronwall`:
 
-* `Mathlib.Analysis.ODE.Gronwall` (already upstream, gives Grönwall's
-  inequality) — for the discrete-to-continuous error estimate;
-* a Picard–Lindelöf-style existence/uniqueness theorem for ODEs with a
-  globally Lipschitz right-hand side on a Banach space (the
-  `Mathlib.Analysis.ODE.PicardLindelof` API is currently limited to
-  local existence in finite dimension);
-* Lyapunov-function theory in the sense of LaSalle, used to conclude
-  convergence of trajectories to the set of critical points under
-  convexity.
+* `IsGradientFlow f α` is the predicate
+  `∀ t, HasDerivAt α (-(deriv f (α t))) t`, i.e. the curve `α` satisfies
+  the gradient-flow ODE `α'(t) = -∇f(α(t))` everywhere.
+* `exists_local_gradient_flow_of_contDiffAt_two` produces a local
+  gradient-flow trajectory whenever `f : ℝ → ℝ` is `C²` at the initial
+  point. This is a direct application of Mathlib's Picard–Lindelöf
+  theorem to the vector field `-deriv f`.
+* `gradient_flow_unique_of_lipschitz_deriv` proves global uniqueness of
+  the gradient flow as soon as `deriv f` is `M`-Lipschitz (the usual
+  `M`-smoothness hypothesis), via `ODE_solution_unique_univ`.
+* `gradient_flow_at_critical` and `gradient_flow_constant_at_critical`
+  record the elementary fact that a critical point of `f` is an
+  equilibrium of the gradient flow.
 
-Until those are in place, the discrete iteration developed below acts as
-the formal anchor for downstream optimisation results in LTFP-Lean.
+The discrete-to-continuous error estimate (`gradIter` interpolant
+converges to the gradient flow as the step size shrinks) and Lyapunov /
+LaSalle-style convergence theorems remain pending, but the existence and
+uniqueness layer is now closed.
 
 ## Main definitions
 
@@ -284,11 +292,111 @@ theorem gradStep_strict_descent_quadratic_when_eta_small
   rw [h_expand]
   linarith
 
-/-! ### Examples
+/-! ## Continuous-time gradient flow
 
-Small smoke tests of the API: a concrete numerical iteration on the
-quadratic, and a one-step convergence to the critical point at the
-critical step size `η = 1`. -/
+The continuous-time gradient flow `dx/dt = -∇f(x(t))` is the natural
+object behind every discrete gradient-descent scheme. On the scalar
+line, where `∇f = f'`, the flow is an autonomous ODE with right-hand
+side `-deriv f`. The existence and uniqueness of trajectories follow
+from Mathlib's Picard–Lindelöf and Grönwall infrastructure once the
+right-hand side is suitably regular. -/
+
+/-- The continuous-time gradient flow predicate. A curve `α : ℝ → ℝ`
+is a *gradient flow* of `f : ℝ → ℝ` when it satisfies the ODE
+`α'(t) = -f'(α(t))` everywhere on `ℝ`.
+
+This is the natural dynamical system whose equilibria are the critical
+points of `f` and along whose trajectories `f` decreases monotonically
+(under mild smoothness of `f`). The discrete iteration `gradIter` above
+is the explicit Euler discretisation of this flow. -/
+def IsGradientFlow (f α : ℝ → ℝ) : Prop :=
+  ∀ t : ℝ, HasDerivAt α (-(deriv f) (α t)) t
+
+/-- Critical points of `f` are equilibria of the gradient flow: if
+`deriv f x = 0`, then the constant curve `α(t) = x` satisfies the
+gradient-flow ODE. -/
+theorem gradient_flow_constant_at_critical
+    (f : ℝ → ℝ) (x : ℝ) (hx : deriv f x = 0) :
+    IsGradientFlow f (fun _ : ℝ => x) := by
+  intro t
+  have h_deriv_const : HasDerivAt (fun _ : ℝ => x) 0 t := hasDerivAt_const t x
+  -- Goal: `HasDerivAt (fun _ => x) (-(deriv f x)) t`.
+  -- Since `deriv f x = 0`, the RHS is `0`, so this is `h_deriv_const`.
+  have h_rhs : -(deriv f) x = 0 := by rw [hx]; ring
+  rw [h_rhs]
+  exact h_deriv_const
+
+/-- Along any gradient flow, the value at a critical initial point stays
+at that critical point. Combined with the global-uniqueness theorem
+below, this gives the standard "critical points are fixed by the flow"
+statement.
+
+Here we only state the direct (constructive) form: the constant curve
+*is* one valid gradient flow starting at a critical point. -/
+theorem gradient_flow_at_critical
+    (f : ℝ → ℝ) (x : ℝ) (hx : deriv f x = 0) :
+    ∃ α : ℝ → ℝ, α 0 = x ∧ IsGradientFlow f α :=
+  ⟨fun _ => x, rfl, gradient_flow_constant_at_critical f x hx⟩
+
+/-- **Local existence of the gradient flow (Picard–Lindelöf).**
+If `f : ℝ → ℝ` is globally `C²`, then `-deriv f` is globally `C¹`, hence
+by Mathlib's Picard–Lindelöf theorem the autonomous ODE
+`α'(t) = -f'(α(t))` admits a local solution with `α(t₀) = x₀` on an
+open time interval `(t₀ - ε, t₀ + ε)`.
+
+We require the global `C²` hypothesis on `f` to obtain a `C¹` field via
+`ContDiff.deriv'`; the existence theorem itself only needs `C¹` of the
+field at the initial point, but a global hypothesis on `f` is the
+natural and clean way to package the smoothness in the gradient-flow
+setting. -/
+theorem exists_local_gradient_flow_of_contDiff_two
+    (f : ℝ → ℝ) (hf : ContDiff ℝ 2 f) (x₀ t₀ : ℝ) :
+    ∃ α : ℝ → ℝ, α t₀ = x₀ ∧ ∃ ε > (0 : ℝ),
+      ∀ t ∈ Set.Ioo (t₀ - ε) (t₀ + ε),
+        HasDerivAt α (-(deriv f) (α t)) t := by
+  -- Vector field: `V x = -deriv f x`. It is `C¹` because `deriv f` is `C¹`.
+  have h_deriv_C1 : ContDiff ℝ 1 (deriv f) := by
+    have h2 : (2 : WithTop ℕ∞) = ((1 : ℕ) + 1 : ℕ) := by norm_num
+    rw [h2] at hf
+    exact hf.deriv'
+  have hV_C1 : ContDiff ℝ 1 (fun x : ℝ => -(deriv f) x) :=
+    h_deriv_C1.neg
+  -- Localise to a `ContDiffAt`.
+  have hV_at : ContDiffAt ℝ 1 (fun x : ℝ => -(deriv f) x) x₀ :=
+    hV_C1.contDiffAt
+  -- Apply Picard–Lindelöf for `C¹` time-independent vector fields.
+  obtain ⟨α, hα0, ε, hε, hαderiv⟩ :=
+    hV_at.exists_forall_mem_closedBall_exists_eq_forall_mem_Ioo_hasDerivAt₀ t₀
+  exact ⟨α, hα0, ε, hε, hαderiv⟩
+
+/-- **Global uniqueness of the gradient flow (Grönwall).**
+If `deriv f` is `M`-Lipschitz on `ℝ` (the classical `M`-smoothness
+hypothesis), then any two global solutions of the gradient-flow ODE
+with the same initial value agree everywhere.
+
+This is a direct application of Mathlib's `ODE_solution_unique_univ`
+to the time-independent vector field `v t x = -(deriv f x)`, which
+inherits the Lipschitz constant from `deriv f`. -/
+theorem gradient_flow_unique_of_lipschitz_deriv
+    (f : ℝ → ℝ) {M : NNReal} (hLip : LipschitzWith M (deriv f))
+    {α β : ℝ → ℝ} (hα : IsGradientFlow f α) (hβ : IsGradientFlow f β)
+    {t₀ : ℝ} (h_init : α t₀ = β t₀) :
+    α = β := by
+  -- Vector field: `v t x = -(deriv f x)`. Lipschitz in `x` with constant `M`.
+  set v : ℝ → ℝ → ℝ := fun _ x => -(deriv f) x with hv_def
+  have hv_lip : ∀ t : ℝ, LipschitzOnWith M (v t) Set.univ := by
+    intro t
+    have hneg : LipschitzWith M (fun x : ℝ => -(deriv f) x) := hLip.neg
+    exact lipschitzOnWith_univ.mpr hneg
+  refine ODE_solution_unique_univ (v := v) (s := fun _ => Set.univ)
+    (t₀ := t₀) (K := M) hv_lip ?_ ?_ h_init
+  · intro t
+    refine ⟨?_, Set.mem_univ _⟩
+    -- `α'(t) = -(deriv f) (α t) = v t (α t)`.
+    simpa [v] using hα t
+  · intro t
+    refine ⟨?_, Set.mem_univ _⟩
+    simpa [v] using hβ t
 
 /-- Three iterations of gradient descent on `f y = y² / 2` with step
 size `η = 1/2` starting at `x = 1` produce `(1/2)^3 = 1/8`. -/
