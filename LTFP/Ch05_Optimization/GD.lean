@@ -12,6 +12,12 @@ function leaves `xₜ = x₀` for all `t`.
 -/
 import LTFP.Foundations.GradientDescent
 import LTFP.Foundations.Convex
+import Mathlib.Analysis.Calculus.Deriv.MeanValue
+import Mathlib.Analysis.Calculus.Deriv.Pow
+import Mathlib.Analysis.Calculus.Deriv.Comp
+import Mathlib.Analysis.Calculus.Deriv.Mul
+
+open InnerProductSpace
 
 namespace LTFP
 
@@ -256,22 +262,179 @@ two-hypothesis form is the honest interface: it makes the L-smoothness
 witness load-bearing at the type level (consumers must supply it),
 while parametrizing the residual gap explicitly. -/
 
+/-- §5.1 — **L-smooth quadratic upper bound from `LipschitzWith` gradient.**
+
+If `f : E → ℝ` is everywhere differentiable with `gradient f` as its
+gradient (`hDiff`) and the gradient is `L`-Lipschitz (`hLip`), then `f`
+satisfies the L-smooth quadratic upper bound (Bach 2024 §5.1, eqn 5.4):
+`f(y) ≤ f(x) + ⟨∇f(x), y − x⟩ + (L/2) ‖y − x‖²`.
+
+**Proof sketch (Bach 2024 §5.1, "auxiliary function" version).** Define
+the one-variable function
+`g(t) := f(x + t·v) − f(x) − t·⟨∇f(x), v⟩ − (L/2)·t²·‖v‖²`
+where `v := y − x`. Then:
+
+* `g(0) = 0`.
+* `g'(t) = ⟨∇f(x + t·v), v⟩ − ⟨∇f(x), v⟩ − L·t·‖v‖²`.
+* For `t ∈ [0, 1]`, by Cauchy–Schwarz and Lipschitz of the gradient,
+  `⟨∇f(x + t·v) − ∇f(x), v⟩ ≤ ‖∇f(x + t·v) − ∇f(x)‖ · ‖v‖
+   ≤ L · ‖t · v‖ · ‖v‖ = L · t · ‖v‖²`.
+  Hence `g'(t) ≤ 0` on `[0, 1]`.
+* By `antitoneOn_of_deriv_nonpos` on `Icc 0 1`, `g` is antitone there,
+  so `g(1) ≤ g(0) = 0`, which is exactly the quadratic upper bound. -/
+theorem lSmooth_quadratic_upper_bound
+    (f : E → ℝ) (L : NNReal) (x y : E)
+    (hDiff : ∀ z : E, HasGradientAt f (gradient f z) z)
+    (hLip : LipschitzWith L (gradient f)) :
+    f y ≤ f x + inner ℝ (gradient f x) (y - x)
+            + ((L : ℝ) / 2) * ‖y - x‖ ^ 2 := by
+  -- Set `v := y - x` and define the auxiliary function `g : ℝ → ℝ`.
+  set v : E := y - x with hv_def
+  set g : ℝ → ℝ := fun t =>
+    f (x + t • v) - f x - t * inner ℝ (gradient f x) v
+      - ((L : ℝ) / 2) * t ^ 2 * ‖v‖ ^ 2 with hg_def
+  -- Helper: derivative of `t ↦ f(x + t • v)` is `⟨∇f(x + t • v), v⟩`.
+  have hcurve_deriv : ∀ t : ℝ,
+      HasDerivAt (fun s : ℝ => f (x + s • v))
+        (inner ℝ (gradient f (x + t • v)) v) t := by
+    intro t
+    have hgrad := hDiff (x + t • v)
+    have hfderiv : HasFDerivAt f (toDual ℝ E (gradient f (x + t • v)))
+        (x + t • v) := hgrad.hasFDerivAt
+    -- Inner curve `s ↦ x + s • v` has derivative `v` at every point.
+    have hline : HasDerivAt (fun s : ℝ => x + s • v) v t := by
+      have : HasDerivAt (fun s : ℝ => s • v) v t := by
+        simpa using (hasDerivAt_id t).smul_const v
+      simpa using this.const_add x
+    have hcomp := hfderiv.comp_hasDerivAt t hline
+    -- Reduce `(toDual ℝ E (gradient f (x + t • v))) v` to `⟨gradient f (...), v⟩`.
+    have happ :
+        (toDual ℝ E (gradient f (x + t • v))) v
+          = inner ℝ (gradient f (x + t • v)) v := rfl
+    simpa [happ] using hcomp
+  -- Derivative of `g` at `t`: a clean closed form.
+  have hg_deriv : ∀ t : ℝ,
+      HasDerivAt g
+        (inner ℝ (gradient f (x + t • v)) v
+          - inner ℝ (gradient f x) v - (L : ℝ) * t * ‖v‖ ^ 2) t := by
+    intro t
+    -- Component derivatives.
+    have h1 : HasDerivAt (fun s : ℝ => f (x + s • v) - f x)
+        (inner ℝ (gradient f (x + t • v)) v) t := by
+      have := (hcurve_deriv t).sub_const (f x)
+      simpa using this
+    have h2 : HasDerivAt (fun s : ℝ => s * inner ℝ (gradient f x) v)
+        (inner ℝ (gradient f x) v) t := by
+      simpa using (hasDerivAt_id t).mul_const (inner ℝ (gradient f x) v)
+    have h3 : HasDerivAt (fun s : ℝ => ((L : ℝ) / 2) * s ^ 2 * ‖v‖ ^ 2)
+        ((L : ℝ) * t * ‖v‖ ^ 2) t := by
+      have hsq : HasDerivAt (fun s : ℝ => s ^ 2) (2 * t) t := by
+        simpa using (hasDerivAt_pow 2 t)
+      have hL2 :
+          HasDerivAt (fun s : ℝ => ((L : ℝ) / 2) * s ^ 2)
+            (((L : ℝ) / 2) * (2 * t)) t :=
+        hsq.const_mul ((L : ℝ) / 2)
+      have := hL2.mul_const (‖v‖ ^ 2)
+      have hrw : ((L : ℝ) / 2) * (2 * t) * ‖v‖ ^ 2
+          = (L : ℝ) * t * ‖v‖ ^ 2 := by ring
+      simpa [hrw] using this
+    have hcombo := ((h1.sub h2).sub h3)
+    -- `hcombo` already has the right shape modulo definitional unfolding of `g`.
+    simpa [g] using hcombo
+  -- Cauchy–Schwarz + Lipschitz bound: for `0 ≤ t`, the derivative of `g` is ≤ 0.
+  have hg_deriv_nonpos : ∀ t : ℝ, 0 ≤ t →
+      inner ℝ (gradient f (x + t • v)) v
+        - inner ℝ (gradient f x) v - (L : ℝ) * t * ‖v‖ ^ 2 ≤ 0 := by
+    intro t ht
+    -- ⟨∇f(x+t·v) − ∇f(x), v⟩ ≤ ‖∇f(x+t·v) − ∇f(x)‖ · ‖v‖.
+    have hCS : inner ℝ (gradient f (x + t • v) - gradient f x) v
+        ≤ ‖gradient f (x + t • v) - gradient f x‖ * ‖v‖ :=
+      real_inner_le_norm _ _
+    -- Lipschitz: ‖∇f(x+t·v) − ∇f(x)‖ ≤ L · ‖t · v‖ = L · t · ‖v‖ (since t ≥ 0).
+    have hLip_bound :
+        ‖gradient f (x + t • v) - gradient f x‖ ≤ (L : ℝ) * (t * ‖v‖) := by
+      have h := hLip.norm_sub_le (x + t • v) x
+      have hxsub : (x + t • v) - x = t • v := by abel
+      rw [hxsub, norm_smul, Real.norm_eq_abs, abs_of_nonneg ht] at h
+      linarith [h]
+    have hvnn : 0 ≤ ‖v‖ := norm_nonneg _
+    -- Combine: ⟨…, v⟩ ≤ L · t · ‖v‖²
+    have hbound :
+        inner ℝ (gradient f (x + t • v) - gradient f x) v
+          ≤ (L : ℝ) * t * ‖v‖ ^ 2 := by
+      calc inner ℝ (gradient f (x + t • v) - gradient f x) v
+          ≤ ‖gradient f (x + t • v) - gradient f x‖ * ‖v‖ := hCS
+        _ ≤ ((L : ℝ) * (t * ‖v‖)) * ‖v‖ := by
+            exact mul_le_mul_of_nonneg_right hLip_bound hvnn
+        _ = (L : ℝ) * t * ‖v‖ ^ 2 := by ring
+    -- Rewrite the LHS using linearity of inner product.
+    have hsplit :
+        inner ℝ (gradient f (x + t • v) - gradient f x) v
+          = inner ℝ (gradient f (x + t • v)) v - inner ℝ (gradient f x) v := by
+      rw [inner_sub_left]
+    linarith [hbound, hsplit ▸ hbound]
+  -- Antitone on `Icc 0 1`: g(1) ≤ g(0) = 0.
+  have hg_antitone : AntitoneOn g (Set.Icc (0 : ℝ) 1) := by
+    apply antitoneOn_of_hasDerivWithinAt_nonpos (D := Set.Icc (0 : ℝ) 1)
+      (convex_Icc 0 1) (f := g)
+    · -- ContinuousOn g (Icc 0 1)
+      exact fun t _ => (hg_deriv t).continuousAt.continuousWithinAt
+    · -- HasDerivWithinAt on the interior
+      intro t ht
+      exact (hg_deriv t).hasDerivWithinAt
+    · -- Derivative non-positive on the interior `Ioo 0 1`.
+      intro t ht
+      have htmem : t ∈ Set.Ioo (0 : ℝ) 1 := by
+        rwa [interior_Icc] at ht
+      exact hg_deriv_nonpos t (le_of_lt htmem.1)
+  -- Conclude: g(1) ≤ g(0) = 0.
+  have hg_1_le_0 : g 1 ≤ g 0 :=
+    hg_antitone (by norm_num : (0 : ℝ) ∈ Set.Icc 0 1)
+      (by norm_num : (1 : ℝ) ∈ Set.Icc 0 1) (by norm_num : (0 : ℝ) ≤ 1)
+  -- Compute g(0) = 0 and unpack g(1).
+  have hg_0 : g 0 = 0 := by simp [g]
+  have hg_1 : g 1 = f y - f x - inner ℝ (gradient f x) v - ((L : ℝ) / 2) * ‖v‖ ^ 2 := by
+    simp [g, hv_def]
+  rw [hg_0] at hg_1_le_0
+  -- Final algebraic rearrangement: g(1) ≤ 0 unpacks to the quadratic upper bound.
+  have hgoal : f y - f x - inner ℝ (gradient f x) v - ((L : ℝ) / 2) * ‖v‖ ^ 2 ≤ 0 := by
+    rw [← hg_1]; exact hg_1_le_0
+  -- Recall v = y - x; rearrange `f y - … ≤ 0` to `f y ≤ … + …`.
+  linarith [hgoal]
+
 /-- §5.1 — L-smoothness descent lemma from `LipschitzWith` gradient.
 
-If `f : E → ℝ` has an `L`-Lipschitz gradient (`hLip`) and satisfies the
-L-smooth quadratic upper bound (`hTaylor`, the Mathlib Taylor-bridge
-gap), then the gradient step at any admissible step size `η`
-decreases `f` by at least `η (1 − L η / 2) · ‖∇f(x)‖²`:
+If `f : E → ℝ` is everywhere differentiable (`hDiff`) and has an
+`L`-Lipschitz gradient (`hLip`), then for any admissible step size
+`η ≥ 0` the gradient step decreases `f` by at least
+`η (1 − L η / 2) · ‖∇f(x)‖²`:
 `f(x − η ∇f(x)) ≤ f(x) − η (1 − L η / 2) · ‖∇f(x)‖²`.
 
-This is the L-smoothness descent lemma of Bach (2024) §5.1, with the
-Lipschitz-of-gradient witness exposed at the type level. The
-`hLip` hypothesis is unused in the proof (the conclusion follows from
-`hTaylor` alone via `gd_descent_lemma_of_quadratic_bound`), but its
-presence pins the L-smoothness constant `L` to the gradient's
-Lipschitz constant, which is what Bach's textbook statement actually
-asserts. When Mathlib closes the Taylor-bridge gap, `hTaylor` will be
-derivable from `hLip` and disappear from this signature. -/
+This is the **one-hypothesis** form of Bach (2024) §5.1's descent
+lemma: the Taylor-bridge `hTaylor` of `gd_descent_lemma_of_lipschitz_gradient`
+is now discharged automatically via `lSmooth_quadratic_upper_bound`. -/
+theorem gd_descent_lemma_of_lipschitz_gradient_diff
+    (f : E → ℝ) (L : NNReal) (η : ℝ) (x : E)
+    (hDiff : ∀ z : E, HasGradientAt f (gradient f z) z)
+    (hLip : LipschitzWith L (gradient f))
+    (hη : 0 ≤ η) :
+    f (x - η • gradient f x)
+      ≤ f x - η * (1 - (L : ℝ) * η / 2) * ‖gradient f x‖ ^ 2 := by
+  have hTaylor : ∀ y : E,
+      f y ≤ f x + inner ℝ (gradient f x) (y - x)
+              + ((L : ℝ) / 2) * ‖y - x‖ ^ 2 := fun y =>
+    lSmooth_quadratic_upper_bound f L x y hDiff hLip
+  exact gd_descent_lemma_of_quadratic_bound f (L : ℝ) η x hTaylor hη
+
+/-- §5.1 — L-smoothness descent lemma from `LipschitzWith` gradient
+(two-hypothesis form, preserved for backwards compatibility).
+
+If `f : E → ℝ` has an `L`-Lipschitz gradient (`hLip`) and satisfies the
+L-smooth quadratic upper bound (`hTaylor`), then the gradient step at
+any admissible step size `η` decreases `f` by at least
+`η (1 − L η / 2) · ‖∇f(x)‖²`. The differentiability-free version of
+`gd_descent_lemma_of_lipschitz_gradient_diff`, suitable when `hTaylor`
+is established by other means. -/
 theorem gd_descent_lemma_of_lipschitz_gradient
     (f : E → ℝ) (L : NNReal) (η : ℝ) (x : E)
     (_hLip : LipschitzWith L (gradient f))
