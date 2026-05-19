@@ -390,6 +390,25 @@ theorem tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya_def
     (LTFP.MathlibExt.Probability.bhattacharyya_nonneg μ ν)
     h_lecam h_kl_bridge
 
+/-- §15.1 — **Bretagnolle--Huber, Le Cam step discharged.**
+
+Same as `tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya_def`, but the
+Le Cam estimate `tvDist² ≤ 1 - bhattacharyya²` is now discharged
+unconditionally via `tvDist_sq_le_one_sub_bhattacharyya_sq` in
+`LTFP/MathlibExt/Probability/Distance/Bhattacharyya.lean`. Only the
+Jensen step `exp(-D/2) ≤ bhattacharyya` remains as a hypothesis input;
+once that lands upstream (or the Jensen step is discharged locally),
+the wrapper collapses to the textbook Bretagnolle--Huber bound. -/
+theorem tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya_kl
+    (μ ν : Measure α) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+    {D : ℝ} (hD : 0 ≤ D)
+    (h_kl_bridge : Real.exp (-D / 2) ≤
+      LTFP.MathlibExt.Probability.bhattacharyya μ ν) :
+    (tvDist μ ν).toReal ≤ Real.sqrt (1 - Real.exp (-D)) :=
+  tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya_def μ ν hD
+    (LTFP.MathlibExt.Probability.tvDist_sq_le_one_sub_bhattacharyya_sq μ ν)
+    h_kl_bridge
+
 end MeasureBretagnolleHuber
 
 /-! ### §15.1 — Fano / Le Cam / Assouad algebraic cores
