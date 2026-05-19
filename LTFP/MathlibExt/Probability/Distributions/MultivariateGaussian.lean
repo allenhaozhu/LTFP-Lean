@@ -64,8 +64,10 @@ and is enough to derive the closed-form scalar Bayes risk used by
 * `multivariateGaussianPDF d μ S x` — pointwise probability density of
   the `d`-dimensional Gaussian on `Fin d → ℝ` with mean `μ` and
   covariance `S`, as a real number.
-* `gaussianBayesRiskScalar σSq d λ` — the canonical Ŝ = I Bayes
-  shrinkage risk `σ² · d / (1 + λ)`.
+* `gaussianBayesRiskScalar σSq d n λ` — the canonical Ŝ = I Bayes
+  shrinkage risk `σ² · d / (n · (1 + λ))`. The explicit `n` factor
+  carries the OLS sample-size normalization so that the `λ → 0⁺`
+  limit matches the Mourtada lower-bound rate `σ² · d / n`.
 
 ## Main results
 
@@ -75,11 +77,12 @@ and is enough to derive the closed-form scalar Bayes risk used by
 * `gaussianBayesRiskScalar_eq` — the scalar identity that backs the
   closed-form Bayes risk under `prior ~ N(0, τ²·I)`,
   `noise ~ N(0, σ²·I)`, namely
-  `gaussianBayesRiskScalar σ² d (σ²/τ²) = σ² · d / (1 + σ²/τ²)`.
+  `gaussianBayesRiskScalar σ² d n (σ²/τ²) = σ² · d / (n · (1 + σ²/τ²))`.
 * `gaussianBayesRiskScalar_tendsto_atTop` — as `τ² → ∞`
-  (equivalently `λ → 0⁺`), the scalar Bayes risk tends to `σ² · d`.
-  This matches the asymptotic step in
-  `LTFP.bayes_trace_limit`.
+  (equivalently `λ → 0⁺`), the scalar Bayes risk tends to
+  `σ² · d / n`. This matches the asymptotic step in
+  `LTFP.bayes_trace_limit`, which carries the same `/ n` factor
+  as `LTFP.mourtada_lower_bound`.
 
 ## Downstream
 
@@ -292,79 +295,110 @@ lemma scalar_posterior_mean_shrinkage
 
 /-- The canonical **scalar Bayes shrinkage risk** under prior
 `β ~ N(0, τ²·I)` and noise `ε ~ N(0, σ²·I)` for a `d`-dimensional
-problem with `Ŝ = I`:
+problem with sample size `n` and `Ŝ = I`:
 
-`R_Bayes(σ², d, λ) = σ² · d / (1 + λ)`,
+`R_Bayes(σ², d, n, λ) = σ² · d / (n · (1 + λ))`,
 
-where `λ := σ² / τ²` is the shrinkage parameter. This is the
-quantity that appears in the Mourtada minimax lower-bound argument
-(Bach 2024, §3.7) as the Bayes-average risk of the posterior-mean
-estimator. -/
+where `λ := σ² / τ²` is the shrinkage parameter. The explicit `n`
+factor carries the OLS sample-size normalization so that the limit
+as `λ → 0⁺` matches `LTFP.mourtada_lower_bound d n σ² = σ² · d / n`
+(Bach 2024, §3.7). -/
 noncomputable def gaussianBayesRiskScalar
-    (σSq : ℝ) (d : ℕ) (lam : ℝ) : ℝ :=
-  σSq * d / (1 + lam)
+    (σSq : ℝ) (d : ℕ) (n : ℕ) (lam : ℝ) : ℝ :=
+  σSq * d / (n * (1 + lam))
 
 /-- The Bayes risk is nonneg whenever `σ² ≥ 0` and `λ ≥ 0`. -/
 lemma gaussianBayesRiskScalar_nonneg
-    {σSq : ℝ} (d : ℕ) {lam : ℝ}
+    {σSq : ℝ} (d : ℕ) (n : ℕ) {lam : ℝ}
     (hσ : 0 ≤ σSq) (hlam : 0 ≤ lam) :
-    0 ≤ gaussianBayesRiskScalar σSq d lam := by
+    0 ≤ gaussianBayesRiskScalar σSq d n lam := by
   unfold gaussianBayesRiskScalar
   have h1 : (0 : ℝ) < 1 + lam := by linarith
-  exact div_nonneg (mul_nonneg hσ (Nat.cast_nonneg _)) (le_of_lt h1)
+  have hn_nn : (0 : ℝ) ≤ (n : ℝ) := Nat.cast_nonneg _
+  have h1' : (0 : ℝ) ≤ 1 + lam := le_of_lt h1
+  have hden_nn : (0 : ℝ) ≤ (n : ℝ) * (1 + lam) := mul_nonneg hn_nn h1'
+  exact div_nonneg (mul_nonneg hσ (Nat.cast_nonneg _)) hden_nn
 
 /-- **Closed-form Bayes risk at `Ŝ = I`.** The defining identity for
 the scalar Bayes shrinkage risk: under the parametrization
-`λ = σSq / τSq`, the Bayes risk equals `σ² · d / (1 + λ)`. -/
+`λ = σSq / τSq`, the Bayes risk equals `σ² · d / (n · (1 + λ))`.
+The explicit `n` factor matches the Mourtada lower-bound rate. -/
 lemma gaussianBayesRiskScalar_eq
-    (σSq : ℝ) (d : ℕ) (lam : ℝ) :
-    gaussianBayesRiskScalar σSq d lam = σSq * d / (1 + lam) := rfl
+    (σSq : ℝ) (d : ℕ) (n : ℕ) (lam : ℝ) :
+    gaussianBayesRiskScalar σSq d n lam = σSq * d / (n * (1 + lam)) := rfl
 
-/-- Monotonicity in `λ`: smaller shrinkage gives larger Bayes risk. -/
+/-- Monotonicity in `λ`: smaller shrinkage gives larger Bayes risk
+(for `n > 0`, so the `n` factor in the denominator is strictly
+positive). -/
 lemma gaussianBayesRiskScalar_antitone_lam
-    {σSq : ℝ} (d : ℕ) {lam₁ lam₂ : ℝ}
-    (hσ : 0 ≤ σSq) (hlam : 0 ≤ lam₁) (hle : lam₁ ≤ lam₂) :
-    gaussianBayesRiskScalar σSq d lam₂ ≤
-      gaussianBayesRiskScalar σSq d lam₁ := by
+    {σSq : ℝ} (d : ℕ) {n : ℕ} {lam₁ lam₂ : ℝ}
+    (hσ : 0 ≤ σSq) (hn : 0 < n)
+    (hlam : 0 ≤ lam₁) (hle : lam₁ ≤ lam₂) :
+    gaussianBayesRiskScalar σSq d n lam₂ ≤
+      gaussianBayesRiskScalar σSq d n lam₁ := by
   unfold gaussianBayesRiskScalar
+  have hn' : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
   have h1 : (0 : ℝ) < 1 + lam₁ := by linarith
   have h2 : (0 : ℝ) < 1 + lam₂ := by linarith [hle]
   have h12 : 1 + lam₁ ≤ 1 + lam₂ := by linarith
+  have hden1 : (0 : ℝ) < (n : ℝ) * (1 + lam₁) := mul_pos hn' h1
+  have hden12 : (n : ℝ) * (1 + lam₁) ≤ (n : ℝ) * (1 + lam₂) :=
+    mul_le_mul_of_nonneg_left h12 (le_of_lt hn')
   have hnum : 0 ≤ σSq * (d : ℝ) := mul_nonneg hσ (Nat.cast_nonneg _)
-  exact div_le_div_of_nonneg_left hnum h1 h12
+  exact div_le_div_of_nonneg_left hnum hden1 hden12
 
-/-- The Bayes risk at `λ = 0` (no shrinkage) equals `σ² · d`. -/
+/-- The Bayes risk at `λ = 0` (no shrinkage) equals `σ² · d / n`. -/
 @[simp]
 lemma gaussianBayesRiskScalar_zero
-    (σSq : ℝ) (d : ℕ) :
-    gaussianBayesRiskScalar σSq d 0 = σSq * d := by
+    (σSq : ℝ) (d : ℕ) (n : ℕ) :
+    gaussianBayesRiskScalar σSq d n 0 = σSq * d / n := by
   unfold gaussianBayesRiskScalar
   simp
 
 /-- **Asymptotic identity.** As `τ → ∞` (i.e., the natural-number
 sequence `λ_N := 1 / N` tends to `0⁺`), the scalar Bayes risk tends to
-the Mourtada lower-bound rate `σ² · d`. This matches the limit step
-in `LTFP.bayes_trace_limit`. -/
+the Mourtada lower-bound rate `σ² · d / n`. This matches the limit
+step in `LTFP.bayes_trace_limit`, which carries the same `/ n`
+sample-size normalization. -/
 lemma gaussianBayesRiskScalar_tendsto_atTop
-    (σSq : ℝ) (d : ℕ) :
+    (σSq : ℝ) (d : ℕ) (n : ℕ) :
     Filter.Tendsto
-      (fun N : ℕ => gaussianBayesRiskScalar σSq d (1 / (N : ℝ)))
-      Filter.atTop (nhds (σSq * d)) := by
+      (fun N : ℕ => gaussianBayesRiskScalar σSq d n (1 / (N : ℝ)))
+      Filter.atTop (nhds (σSq * d / n)) := by
   -- `1 / N → 0` along `atTop`.
   have h_inv : Filter.Tendsto (fun N : ℕ => (1 : ℝ) / (N : ℝ))
       Filter.atTop (nhds 0) := tendsto_one_div_atTop_nhds_zero_nat
-  -- `1 + 1/N → 1`.
+  -- `1 + 1/N → 1`, hence `n · (1 + 1/N) → n · 1 = n`.
   have h_denom : Filter.Tendsto (fun N : ℕ => (1 : ℝ) + 1 / (N : ℝ))
       Filter.atTop (nhds (1 + 0)) :=
     Filter.Tendsto.add tendsto_const_nhds h_inv
   have h_denom' : Filter.Tendsto (fun N : ℕ => (1 : ℝ) + 1 / (N : ℝ))
       Filter.atTop (nhds 1) := by simpa using h_denom
-  -- `σ² d / (1 + 1/N) → σ² d / 1 = σ² d`.
-  have h_div : Filter.Tendsto
-      (fun N : ℕ => σSq * d / (1 + 1 / (N : ℝ)))
-      Filter.atTop (nhds (σSq * d / 1)) :=
-    Filter.Tendsto.div tendsto_const_nhds h_denom' one_ne_zero
-  simpa [gaussianBayesRiskScalar] using h_div
+  have h_n_denom : Filter.Tendsto
+      (fun N : ℕ => (n : ℝ) * (1 + 1 / (N : ℝ)))
+      Filter.atTop (nhds ((n : ℝ) * 1)) :=
+    Filter.Tendsto.mul tendsto_const_nhds h_denom'
+  have h_n_denom' : Filter.Tendsto
+      (fun N : ℕ => (n : ℝ) * (1 + 1 / (N : ℝ)))
+      Filter.atTop (nhds (n : ℝ)) := by simpa using h_n_denom
+  -- We handle `n = 0` and `n > 0` separately, since `Filter.Tendsto.div`
+  -- needs a nonzero limit denominator. In both cases the conclusion is
+  -- the obvious one.
+  by_cases hn : n = 0
+  · subst hn
+    -- denominator is `0 * (1 + 1/N) = 0`, so the function is `σ² d / 0 = 0`
+    -- pointwise, and the target `σ² d / 0 = 0` is the same constant.
+    simp [gaussianBayesRiskScalar]
+  · have hn_pos : (0 : ℝ) < (n : ℝ) := by
+      have : (0 : ℕ) < n := Nat.pos_of_ne_zero hn
+      exact_mod_cast this
+    have hn_ne : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
+    -- `σ² d / (n · (1 + 1/N)) → σ² d / n`.
+    have h_div : Filter.Tendsto
+        (fun N : ℕ => σSq * d / ((n : ℝ) * (1 + 1 / (N : ℝ))))
+        Filter.atTop (nhds (σSq * d / (n : ℝ))) :=
+      Filter.Tendsto.div tendsto_const_nhds h_n_denom' hn_ne
+    simpa [gaussianBayesRiskScalar] using h_div
 
 /-! ### Bayes-prior reduction: discharge of the scalar identity
 
@@ -374,28 +408,30 @@ project carries that lemma as a structural disjunction (used only for
 its name in the OLS Bayes-prior reduction). This lemma replaces the
 content with a clean algebraic identity:
 
-`gaussianBayesRiskScalar σ² d λ = σ² · d / (1 + λ)`.
+`gaussianBayesRiskScalar σ² d n λ = σ² · d / (n · (1 + λ))`.
 
 Combined with `gaussianBayesRiskScalar_tendsto_atTop`, it gives the
 two ingredients used by the OLS minimax-via-Bayes reduction in
 `LTFP.Ch03_LinearLeastSquares.FixedDesign`. -/
 lemma gaussianBayesRiskScalar_identity
-    (σSq : ℝ) (d : ℕ) (lam : ℝ) (hlam : 0 ≤ lam) (hσ : 0 ≤ σSq) :
-    gaussianBayesRiskScalar σSq d lam ≤ σSq * d ∧
-      0 ≤ gaussianBayesRiskScalar σSq d lam := by
-  refine ⟨?_, gaussianBayesRiskScalar_nonneg d hσ hlam⟩
+    (σSq : ℝ) (d : ℕ) (n : ℕ) (lam : ℝ)
+    (hlam : 0 ≤ lam) (hσ : 0 ≤ σSq) (hn : 0 < n) :
+    gaussianBayesRiskScalar σSq d n lam ≤ σSq * d / n ∧
+      0 ≤ gaussianBayesRiskScalar σSq d n lam := by
+  refine ⟨?_, gaussianBayesRiskScalar_nonneg d n hσ hlam⟩
   unfold gaussianBayesRiskScalar
+  have hn' : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
   have h1 : (0 : ℝ) < 1 + lam := by linarith
+  have hden : (0 : ℝ) < (n : ℝ) * (1 + lam) := mul_pos hn' h1
   have hnum : 0 ≤ σSq * (d : ℝ) := mul_nonneg hσ (Nat.cast_nonneg _)
-  -- `σ² d / (1 + λ) ≤ σ² d` iff `σ² d ≤ σ² d · (1 + λ)` iff
-  -- `0 ≤ σ² d · λ`, which follows from `σ² ≥ 0, d ≥ 0, λ ≥ 0`.
-  rw [div_le_iff₀ h1]
-  have hgoal : σSq * (d : ℝ) ≤ σSq * (d : ℝ) * (1 + lam) := by
-    have : σSq * (d : ℝ) * (1 + lam) =
-        σSq * (d : ℝ) + σSq * (d : ℝ) * lam := by ring
-    rw [this]
-    have : 0 ≤ σSq * (d : ℝ) * lam := mul_nonneg hnum hlam
-    linarith
-  exact hgoal
+  -- `σ² d / (n (1 + λ)) ≤ σ² d / n` iff
+  -- `σ² d · n ≤ σ² d · (n · (1 + λ))` iff `0 ≤ σ² d · n · λ`,
+  -- which follows from `σ² ≥ 0, d ≥ 0, n ≥ 0, λ ≥ 0`.
+  rw [div_le_div_iff₀ hden hn']
+  have hexpand : σSq * (d : ℝ) * ((n : ℝ) * (1 + lam)) =
+      σSq * (d : ℝ) * (n : ℝ) + σSq * (d : ℝ) * (n : ℝ) * lam := by ring
+  have hnnonneg : 0 ≤ σSq * (d : ℝ) * (n : ℝ) * lam :=
+    mul_nonneg (mul_nonneg hnum (le_of_lt hn')) hlam
+  linarith [hexpand]
 
 end LTFP.MathlibExt.Probability.Distributions

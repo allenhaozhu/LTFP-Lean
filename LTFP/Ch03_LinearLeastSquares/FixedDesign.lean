@@ -288,38 +288,43 @@ theorem bayes_posterior_mean_excess_risk_gaussian_scalar
     by the concrete algebraic identity from
     `LTFP.MathlibExt.Probability.Distributions.MultivariateGaussian`:
 
-    `gaussianBayesRiskScalar σ² d λ = σ² · d / (1 + λ)`.
+    `gaussianBayesRiskScalar σ² d n λ = σ² · d / (n · (1 + λ))`.
 
     This is the **canonical scalar Bayes shrinkage risk** under prior
     `β ~ N(0, τ²·I)` and noise `ε ~ N(0, σ²·I)` for the `Σ̂ = I` case
-    (Bach 2024, §3.7). The general matrix case reduces to this scalar
-    form by spectral decomposition of `Σ̂`.
+    (Bach 2024, §3.7). The explicit `n` factor carries the OLS
+    sample-size normalization so the `λ → 0⁺` limit matches
+    `mourtada_lower_bound d n σ² = σ² · d / n` exactly. The general
+    matrix case reduces to this scalar form by spectral decomposition
+    of `Σ̂`.
 
-    Together with `bayes_trace_limit` and `sup_ge_bayes_average`, this
-    discharges the algebraic content of the Bayes-prior reduction in
-    `ols_minimax_bayes_prior` for the canonical Gaussian setup. -/
+    Together with `bayes_trace_limit_discharged` and
+    `sup_ge_bayes_average`, this discharges the algebraic content of
+    the Bayes-prior reduction in `ols_minimax_bayes_prior_discharged`
+    for the canonical Gaussian setup. -/
 theorem bayes_posterior_mean_excess_risk_gaussian_scalar_discharged
-    (sigmaSq : ℝ) (d : ℕ) (lam : ℝ) :
+    (sigmaSq : ℝ) (d : ℕ) (n : ℕ) (lam : ℝ) :
     LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
-        sigmaSq d lam = sigmaSq * d / (1 + lam) :=
+        sigmaSq d n lam = sigmaSq * d / (n * (1 + lam)) :=
   LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar_eq
-    sigmaSq d lam
+    sigmaSq d n lam
 
 /-- §3.7 — Bayes-prior reduction, step (iii) — *discharged form*.
 
-    The asymptotic identity `gaussianBayesRiskScalar σ² d (1/N) →
-    σ² · d` from the multivariate-Gaussian extension matches the
-    `bayes_trace_limit` statement above. Use this form when working
-    with the discharged Bayes-risk function rather than the inline
+    The asymptotic identity `gaussianBayesRiskScalar σ² d n (1/N) →
+    σ² · d / n` from the multivariate-Gaussian extension matches the
+    Mourtada lower-bound rate `mourtada_lower_bound d n σ² =
+    σ² · d / n` exactly. Use this form when working with the
+    discharged Bayes-risk function rather than the inline
     `σ² · d / (1 + 1/N)` expression. -/
-theorem bayes_trace_limit_discharged (sigmaSq : ℝ) (d : ℕ) :
+theorem bayes_trace_limit_discharged (sigmaSq : ℝ) (d : ℕ) (n : ℕ) :
     Filter.Tendsto
       (fun N : ℕ =>
         LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
-          sigmaSq d (1 / (N : ℝ)))
-      Filter.atTop (nhds (sigmaSq * d)) :=
+          sigmaSq d n (1 / (N : ℝ)))
+      Filter.atTop (nhds (sigmaSq * d / n)) :=
   LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar_tendsto_atTop
-    sigmaSq d
+    sigmaSq d n
 
 /-- §3.7 — Bayes-prior reduction, step (iii): trace limit.
 
@@ -401,6 +406,103 @@ theorem ols_minimax_bayes_prior
       (mourtada_lower_bound d n sigmaSq) hw_nn hw_sum h_bayes_eq
   exact ⟨θ k, hk⟩
 
+/-- §3.7 — **Bayes-prior reduction, discharged (wired) form**.
+
+    Wired version of `ols_minimax_bayes_prior` that consumes the
+    discharged Gaussian-scalar Bayes risk
+    `gaussianBayesRiskScalar σ² d n λ` directly from
+    `bayes_posterior_mean_excess_risk_gaussian_scalar_discharged`,
+    rather than taking the inequality
+    `mourtada_lower_bound d n σ² ≤ ∑ w k · risk k`
+    as a parametric hypothesis.
+
+    Given:
+
+    * the same finite prior weights `w` with `∑ w = 1`,
+    * a shrinkage parameter `λ ≥ 0` (interpreted as `σ² / τ²`),
+    * the Gaussian-conjugate computation that the prior-averaged
+      excess risk dominates the closed-form Bayes shrinkage risk
+      `gaussianBayesRiskScalar σ² d n λ` (this *is* the discharged
+      step (ii) identity composed with the matrix → scalar reduction),
+
+    the conclusion is: there exists a parameter `θ_star` forcing
+    every estimator below the Bayes-shrinkage rate
+    `σ² · d / (n · (1 + λ))`. As `λ → 0⁺` (`τ → ∞`) the rate equals
+    `σ² · d / n = mourtada_lower_bound d n σ²` by
+    `bayes_trace_limit_discharged`. -/
+theorem ols_minimax_bayes_prior_discharged
+    {d n : ℕ} {sigmaSq : ℝ} (_hσ : 0 ≤ sigmaSq) (_hn : 0 < n)
+    {K : Type*} [Fintype K] [Nonempty K]
+    (θ : K → (Fin d → ℝ))
+    (w : K → ℝ) (hw_nn : ∀ k, 0 ≤ w k) (hw_sum : ∑ k, w k = 1)
+    (sample : (Fin d → ℝ) → (Fin n → ℝ))
+    (excessRisk : (Fin d → ℝ) → (Fin d → ℝ) → ℝ)
+    (A : (Fin n → ℝ) → (Fin d → ℝ))
+    (lam : ℝ) (_hlam : 0 ≤ lam)
+    (h_bayes_gaussian :
+      LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+          sigmaSq d n lam ≤
+        ∑ k, w k * excessRisk (A (sample (θ k))) (θ k)) :
+    ∃ θ_star : Fin d → ℝ,
+      LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+          sigmaSq d n lam ≤ excessRisk (A (sample θ_star)) θ_star := by
+  -- Apply step (i) with bound = `gaussianBayesRiskScalar σ² d n λ`.
+  obtain ⟨k, hk⟩ :=
+    sup_ge_bayes_average (K := K) w
+      (fun k => excessRisk (A (sample (θ k))) (θ k))
+      (LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+        sigmaSq d n lam)
+      hw_nn hw_sum h_bayes_gaussian
+  exact ⟨θ k, hk⟩
+
+/-- §3.7 — **Bayes-prior reduction, wired closed form at `λ = 0`**.
+
+    The cleanest specialization: at `λ = 0` (the `τ → ∞` limit of the
+    shrinkage parameter), `gaussianBayesRiskScalar σ² d n 0 = σ² · d / n =
+    mourtada_lower_bound d n σ²`. So if the prior-averaged excess risk
+    dominates `σ² · d / n` (the Gaussian-conjugate computation read off
+    in the limit), then the carrier
+    `ols_minimax_lower_bound_for_all_estimators` is satisfied for the
+    estimator `A`, *without* a parametric `h_bayes_eq` Bayes-trace
+    hypothesis: the rate is the rate produced by the discharged
+    Gaussian scalar identity. -/
+theorem ols_minimax_bayes_prior_discharged_at_zero
+    {d n : ℕ} {sigmaSq : ℝ} (hσ : 0 ≤ sigmaSq) (hn : 0 < n)
+    {K : Type*} [Fintype K] [Nonempty K]
+    (θ : K → (Fin d → ℝ))
+    (w : K → ℝ) (hw_nn : ∀ k, 0 ≤ w k) (hw_sum : ∑ k, w k = 1)
+    (sample : (Fin d → ℝ) → (Fin n → ℝ))
+    (excessRisk : (Fin d → ℝ) → (Fin d → ℝ) → ℝ)
+    (A : (Fin n → ℝ) → (Fin d → ℝ))
+    (h_bayes_gaussian_at_zero :
+      LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+          sigmaSq d n 0 ≤
+        ∑ k, w k * excessRisk (A (sample (θ k))) (θ k)) :
+    ∃ θ_star : Fin d → ℝ,
+      mourtada_lower_bound d n sigmaSq ≤ excessRisk (A (sample θ_star)) θ_star := by
+  -- Apply the parametric-lambda version with `lam = 0`, then translate
+  -- `gaussianBayesRiskScalar σ² d n 0 = σ² · d / n = mourtada_lower_bound d n σ²`
+  -- via the discharged identity.
+  obtain ⟨θ_star, hθ⟩ :=
+    ols_minimax_bayes_prior_discharged (d := d) (n := n) (sigmaSq := sigmaSq)
+      hσ hn θ w hw_nn hw_sum sample excessRisk A 0 (le_refl _)
+      h_bayes_gaussian_at_zero
+  refine ⟨θ_star, ?_⟩
+  -- Rewrite the bound on `hθ` from `gaussianBayesRiskScalar σ² d n 0` to
+  -- `mourtada_lower_bound d n σ²`.
+  have h_eq :
+      LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+          sigmaSq d n 0 = mourtada_lower_bound d n sigmaSq := by
+    unfold mourtada_lower_bound
+    rw [bayes_posterior_mean_excess_risk_gaussian_scalar_discharged]
+    have hn_ne : (n : ℝ) ≠ 0 := by
+      have : (0 : ℕ) < n := hn
+      exact_mod_cast (Nat.pos_iff_ne_zero.mp this)
+    field_simp
+    ring
+  rw [h_eq] at hθ
+  exact hθ
+
 /-- §3.5 — Sum of squared residuals is nonneg (any residual vector). -/
 theorem sum_sq_residuals_nonneg {n : ℕ} (r : Fin n → ℝ) :
     0 ≤ ∑ i, (r i)^2 :=
@@ -430,5 +532,7 @@ theorem all_zero_of_sum_sq_eq_zero {n : ℕ} (r : Fin n → ℝ)
 #check @LTFP.bayes_trace_limit
 #check @LTFP.bayes_trace_limit_discharged
 #check @LTFP.ols_minimax_bayes_prior
+#check @LTFP.ols_minimax_bayes_prior_discharged
+#check @LTFP.ols_minimax_bayes_prior_discharged_at_zero
 
 end LTFP
