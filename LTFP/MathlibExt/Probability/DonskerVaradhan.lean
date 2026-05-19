@@ -8,6 +8,7 @@ import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.Order.Monotone.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
+import LTFP.MathlibExt.Probability.KullbackLeibler
 
 /-!
 # Donsker--Varadhan variational formula (algebraic core)
@@ -284,6 +285,41 @@ theorem dv_two_n_gap_of_primitive {EQgapSq logMGFp D n : ℝ}
     (h_prim : 2 * n * EQgapSq - logMGFp ≤ D) :
     2 * n * EQgapSq ≤ D + logMGFp := by
   linarith
+
+/-! ### Bridge from the measure-theoretic Donsker--Varadhan inequality
+
+The lemma below discharges the scalar DV hypothesis
+`Ef ≤ KL + logEexp` directly from
+`LTFP.MathlibExt.Probability.donsker_varadhan_inequality`. Given:
+
+* probability measures `μ ≪ ν`,
+* a test function `f : α → ℝ` with `f` integrable under `μ` and
+  `Real.exp ∘ f` integrable under `ν`,
+* `Integrable (llr μ ν) μ` (the standard finiteness condition on KL),
+
+the measure-theoretic DV inequality
+
+  `∫ f ∂μ  ≤  (klDiv μ ν).toReal  +  Real.log (∫ exp f ∂ν)`
+
+instantiates `dvFunctional_le_kl_iff` with
+`Ef = ∫ f ∂μ`, `logEexp = Real.log (∫ exp f ∂ν)`,
+`KL = (klDiv μ ν).toReal`. -/
+
+theorem dvFunctional_le_klDiv_of_measure
+    {α : Type*} {mα : MeasurableSpace α} (μ ν : MeasureTheory.Measure α)
+    [MeasureTheory.IsProbabilityMeasure μ] [MeasureTheory.IsProbabilityMeasure ν]
+    {f : α → ℝ}
+    (hμν : μ.AbsolutelyContinuous ν)
+    (hf : MeasureTheory.Integrable f μ)
+    (hfν : MeasureTheory.Integrable (fun x => Real.exp (f x)) ν)
+    (h_int : MeasureTheory.Integrable (MeasureTheory.llr μ ν) μ) :
+    dvFunctional (∫ x, f x ∂μ) (Real.log (∫ x, Real.exp (f x) ∂ν))
+      ≤ (InformationTheory.klDiv μ ν).toReal := by
+  have h_dv :
+      ∫ x, f x ∂μ ≤ (InformationTheory.klDiv μ ν).toReal
+                    + Real.log (∫ x, Real.exp (f x) ∂ν) :=
+    donsker_varadhan_inequality hμν hf hfν h_int
+  exact (dvFunctional_le_kl_iff _ _ _).mpr h_dv
 
 /-! ### Examples
 
