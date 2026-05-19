@@ -14,6 +14,7 @@ import LTFP.MathlibExt.Calculus.GradientFlow
 import LTFP.MathlibExt.Probability.Adversary
 import LTFP.MathlibExt.Probability.TotalVariation
 import LTFP.MathlibExt.Probability.Distance.Pinsker
+import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussian
 import LTFP.MathlibExt.Probability.DonskerVaradhan
 import LTFP.MathlibExt.Probability.Moments.SubExponential
 import LTFP.MathlibExt.Probability.LeCam

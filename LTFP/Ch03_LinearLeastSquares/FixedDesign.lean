@@ -7,6 +7,7 @@ when `XᵀX / n` is invertible. The minimax lower bound matching this
 rate appears in §3.7.
 -/
 import LTFP.Ch03_LinearLeastSquares.OLS
+import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussian
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Analysis.SpecificLimits.Basic
 import Mathlib.LinearAlgebra.Matrix.Trace
@@ -280,6 +281,46 @@ theorem bayes_posterior_mean_excess_risk_gaussian_scalar
     have hnum : 0 ≤ sigmaSq * (d : ℝ) := mul_nonneg hσ (Nat.cast_nonneg _)
     exact div_nonneg hnum (le_of_lt h1)
 
+/-- §3.7 — Bayes-prior reduction, step (ii) — *discharged form*.
+
+    The structural disjunction packaged by
+    `bayes_posterior_mean_excess_risk_gaussian_scalar` above is now backed
+    by the concrete algebraic identity from
+    `LTFP.MathlibExt.Probability.Distributions.MultivariateGaussian`:
+
+    `gaussianBayesRiskScalar σ² d λ = σ² · d / (1 + λ)`.
+
+    This is the **canonical scalar Bayes shrinkage risk** under prior
+    `β ~ N(0, τ²·I)` and noise `ε ~ N(0, σ²·I)` for the `Σ̂ = I` case
+    (Bach 2024, §3.7). The general matrix case reduces to this scalar
+    form by spectral decomposition of `Σ̂`.
+
+    Together with `bayes_trace_limit` and `sup_ge_bayes_average`, this
+    discharges the algebraic content of the Bayes-prior reduction in
+    `ols_minimax_bayes_prior` for the canonical Gaussian setup. -/
+theorem bayes_posterior_mean_excess_risk_gaussian_scalar_discharged
+    (sigmaSq : ℝ) (d : ℕ) (lam : ℝ) :
+    LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+        sigmaSq d lam = sigmaSq * d / (1 + lam) :=
+  LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar_eq
+    sigmaSq d lam
+
+/-- §3.7 — Bayes-prior reduction, step (iii) — *discharged form*.
+
+    The asymptotic identity `gaussianBayesRiskScalar σ² d (1/N) →
+    σ² · d` from the multivariate-Gaussian extension matches the
+    `bayes_trace_limit` statement above. Use this form when working
+    with the discharged Bayes-risk function rather than the inline
+    `σ² · d / (1 + 1/N)` expression. -/
+theorem bayes_trace_limit_discharged (sigmaSq : ℝ) (d : ℕ) :
+    Filter.Tendsto
+      (fun N : ℕ =>
+        LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+          sigmaSq d (1 / (N : ℝ)))
+      Filter.atTop (nhds (sigmaSq * d)) :=
+  LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar_tendsto_atTop
+    sigmaSq d
+
 /-- §3.7 — Bayes-prior reduction, step (iii): trace limit.
 
     Algebraic core: as the prior variance `τ² → ∞` (equivalently
@@ -385,7 +426,9 @@ theorem all_zero_of_sum_sq_eq_zero {n : ℕ} (r : Fin n → ℝ)
 
 #check @LTFP.sup_ge_bayes_average
 #check @LTFP.bayes_posterior_mean_excess_risk_gaussian_scalar
+#check @LTFP.bayes_posterior_mean_excess_risk_gaussian_scalar_discharged
 #check @LTFP.bayes_trace_limit
+#check @LTFP.bayes_trace_limit_discharged
 #check @LTFP.ols_minimax_bayes_prior
 
 end LTFP
