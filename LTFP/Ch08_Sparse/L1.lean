@@ -18,6 +18,7 @@ import Mathlib.Order.Filter.Extr
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Polyrith
 import LTFP.MathlibExt.Analysis.Subgradient.L1
+import LTFP.MathlibExt.Analysis.Subgradient.SumRule
 
 namespace LTFP
 
@@ -395,6 +396,42 @@ theorem lasso_kkt_multidim
     IsMinOn (fun β => f β + lam * l1Norm β) Set.univ βhat :=
   lasso_kkt_abstract hlam hf
     ((isL1SubgradientFin_iff_isL1Subgradient).mp hv) hKKT
+
+open LTFP.MathlibExt.Analysis in
+/-- §8.2 — **Necessity / discharge of the Lasso KKT subgradient.**
+
+    Converse of `lasso_kkt_multidim` for *quadratic-tight* losses. If
+    `f` admits an exact Taylor expansion at `β̂` with linear part `w`
+    and a nonnegative degree-two-homogeneous remainder `Q`, and if `β̂`
+    is a global minimizer of `F(β) = f(β) + λ · ‖β‖₁` for some `λ > 0`,
+    then there *exists* an ℓ¹ subgradient `v` of `β̂` satisfying the
+    KKT certificate `wᵢ + λ · vᵢ = 0` coordinatewise.
+
+    This discharges the `IsL1SubgradientFin` hypothesis of
+    `lasso_kkt_multidim`: at the squared-loss optimum, the subgradient
+    *exists* and need not be supplied externally. Combined with
+    `lasso_kkt_multidim`, this gives the full *iff* characterization
+    of optimality `0 ∈ ∇f(β̂) + λ · ∂‖β̂‖₁` for quadratic losses
+    (Bach 2024 §8.2, eq. 8.10).
+
+    The squared loss `f(β) = c · ‖y − Xβ‖²` is quadratic-tight with
+    `w = 2c · Xᵀ(Xβ̂ − y)` and `Q(Δ) = c · ‖XΔ‖²`, recovering
+    `Xᵀ(Xβ̂ − y) ∈ −λ · ∂‖β̂‖₁`. -/
+theorem lasso_kkt_discharge
+    {f : (Fin d → ℝ) → ℝ} {βhat w : Fin d → ℝ} {Q : (Fin d → ℝ) → ℝ}
+    {lam : ℝ}
+    (hlam : 0 < lam)
+    (hQT : IsQuadraticTight f w βhat Q)
+    (hopt : IsMinOn (fun β => f β + lam * l1Norm β) Set.univ βhat) :
+    ∃ v : Fin d → ℝ, IsL1SubgradientFin v βhat ∧
+      ∀ i, w i + lam * v i = 0 := by
+  -- `l1Norm` unfolds to `∑ i, |β i|`, matching the convention of
+  -- `lasso_kkt_discharge_quadTight`.
+  have hopt' : IsMinOn (fun β => f β + lam * (∑ i, |β i|)) Set.univ βhat := by
+    intro β hβ
+    have := hopt hβ
+    simpa [l1Norm] using this
+  exact lasso_kkt_discharge_quadTight hlam hQT hopt'
 
 /-! ### ℓ¹ norm: scaling and ℓ₀ / ℓ∞ comparisons -/
 

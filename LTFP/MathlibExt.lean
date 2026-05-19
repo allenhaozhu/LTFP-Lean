@@ -9,6 +9,7 @@ no `sorry`).
 
 import LTFP.MathlibExt.Analysis.Smoothness
 import LTFP.MathlibExt.Analysis.Subgradient.L1
+import LTFP.MathlibExt.Analysis.Subgradient.SumRule
 import LTFP.MathlibExt.Analysis.InnerProductSpace.RKHS
 import LTFP.MathlibExt.Calculus.GradientFlow
 import LTFP.MathlibExt.Probability.Adversary

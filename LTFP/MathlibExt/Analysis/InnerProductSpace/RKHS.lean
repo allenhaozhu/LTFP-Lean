@@ -38,7 +38,10 @@ theorems (e.g. the representer theorem for kernel ridge regression) need.
 -/
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
 import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.Analysis.InnerProductSpace.Defs
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
+import Mathlib.Data.Finsupp.Basic
+import Mathlib.Algebra.BigOperators.Finsupp.Basic
 import Mathlib.Tactic.Linarith
 
 open scoped InnerProductSpace
@@ -428,5 +431,355 @@ noncomputable def RKHS_of_kernel.linear (d : ℕ) :
   is_repro :=
     { reproducing := by intro f x; rfl
       kernel_eq := by intro x y; rfl }
+
+/-! ### Aronszajn pre-RKHS construction (algebraic core)
+
+The Moore–Aronszajn theorem produces, from any symmetric positive
+semidefinite kernel `K : 𝒳 → 𝒳 → ℝ`, a Hilbert space of functions on
+`𝒳` with a reproducing feature map. The construction proceeds in three
+stages:
+
+  1. **Algebraic pre-RKHS** — equip the free real vector space on `𝒳`,
+     namely `𝒳 →₀ ℝ` (finitely-supported functions), with the bilinear
+     form `⟪c, c'⟫_K := ∑_{x, y} c x * c' y * K x y`. The PSD condition
+     on `K` is exactly the statement that this bilinear form is positive
+     semidefinite, and the symmetry of `K` is exactly its symmetry. This
+     yields a `PreInnerProductSpace.Core ℝ (𝒳 →₀ ℝ)` instance.
+
+  2. **Quotient to inner-product space** — pass to the
+     `SeparationQuotient` of the resulting seminormed space, getting an
+     honest `InnerProductSpace ℝ`.
+
+  3. **Completion to Hilbert space** — apply `UniformSpace.Completion`
+     to obtain the full RKHS `H_K`.
+
+Stage 1 (the algebraic core) is **discharged below**. Stages 2 and 3 are
+mechanical applications of Mathlib's `SeparationQuotient` and
+`UniformSpace.Completion` instances for inner-product spaces, but
+threading the feature map and reproducing property through the quotient
+and completion is a substantial bookkeeping exercise that we mark as a
+known Mathlib-side gap (see `NEEDS_HELP` block in the module summary).
+
+The downstream payoff of Stage 1 alone is significant: the
+`PreInnerProductSpace.Core` produced here gives the seminorm
+`‖∑ᵢ cᵢ K(·, xᵢ)‖_K = √(∑ᵢⱼ cᵢ cⱼ K xᵢ xⱼ)` that the representer
+theorem and kernel-method analysis depend on at the algebraic level.
+-/
+
+open scoped BigOperators
+
+/-- **Kernel Gram bilinear form on `𝒳 →₀ ℝ`.**
+
+Given a kernel `K : 𝒳 → 𝒳 → ℝ`, the *kernel Gram form* of two
+finitely-supported coefficient vectors `c c' : 𝒳 →₀ ℝ` is
+
+  `⟪c, c'⟫_K := ∑_{x ∈ c.support} ∑_{y ∈ c'.support} c x * c' y * K x y`.
+
+Viewing `c = ∑ᵢ cᵢ δ_{xᵢ}` as a formal linear combination of "kernel
+sections" `K(·, xᵢ)`, this is exactly the candidate inner product
+`⟪∑ᵢ cᵢ K(·, xᵢ), ∑ⱼ cⱼ' K(·, xⱼ)⟫ = ∑ᵢⱼ cᵢ cⱼ' K(xᵢ, xⱼ)` driving the
+Aronszajn construction. -/
+noncomputable def kernelGramForm {𝒳 : Type*} (K : 𝒳 → 𝒳 → ℝ)
+    (c c' : 𝒳 →₀ ℝ) : ℝ :=
+  ∑ x ∈ c.support, ∑ y ∈ c'.support, c x * c' y * K x y
+
+namespace kernelGramForm
+
+variable {𝒳 : Type*} (K : 𝒳 → 𝒳 → ℝ)
+
+/-- The kernel Gram form vanishes when either argument is zero. -/
+@[simp] theorem zero_left (c : 𝒳 →₀ ℝ) :
+    kernelGramForm K 0 c = 0 := by
+  unfold kernelGramForm
+  simp
+
+@[simp] theorem zero_right (c : 𝒳 →₀ ℝ) :
+    kernelGramForm K c 0 = 0 := by
+  unfold kernelGramForm
+  simp
+
+/-- The kernel Gram form can be re-summed over any larger finite set
+than `c.support` and `c'.support` — outside the supports the
+coefficients are zero. -/
+theorem eq_sum_of_subset {𝒳 : Type*} (K : 𝒳 → 𝒳 → ℝ)
+    (c c' : 𝒳 →₀ ℝ) {s t : Finset 𝒳}
+    (hs : c.support ⊆ s) (ht : c'.support ⊆ t) :
+    kernelGramForm K c c' =
+      ∑ x ∈ s, ∑ y ∈ t, c x * c' y * K x y := by
+  unfold kernelGramForm
+  rw [Finset.sum_subset hs (by
+        intro x hx hx'
+        have : c x = 0 := Finsupp.notMem_support_iff.mp hx'
+        simp [this])]
+  refine Finset.sum_congr rfl ?_
+  intro x _
+  rw [Finset.sum_subset ht (by
+        intro y hy hy'
+        have : c' y = 0 := Finsupp.notMem_support_iff.mp hy'
+        simp [this])]
+
+/-- **Symmetry of the Gram form** from symmetry of `K`. -/
+theorem symm {𝒳 : Type*} {K : 𝒳 → 𝒳 → ℝ} (hK : IsSymmetricKernel K)
+    (c c' : 𝒳 →₀ ℝ) :
+    kernelGramForm K c c' = kernelGramForm K c' c := by
+  -- Switch the order of summation and use `K x y = K y x` plus
+  -- commutativity of multiplication.
+  unfold kernelGramForm
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr rfl ?_
+  intro y _
+  refine Finset.sum_congr rfl ?_
+  intro x _
+  rw [hK x y]; ring
+
+/-- **Additivity (left).** The kernel Gram form is additive in its first
+argument. -/
+theorem add_left {𝒳 : Type*} (K : 𝒳 → 𝒳 → ℝ) (c₁ c₂ d : 𝒳 →₀ ℝ) :
+    kernelGramForm K (c₁ + c₂) d =
+      kernelGramForm K c₁ d + kernelGramForm K c₂ d := by
+  classical
+  -- Sum over a common finite set containing all three supports, then split.
+  let s : Finset 𝒳 := (c₁ + c₂).support ∪ c₁.support ∪ c₂.support
+  have hs_sum : (c₁ + c₂).support ⊆ s := by
+    intro x hx
+    exact Finset.mem_union_left _ (Finset.mem_union_left _ hx)
+  have hs1 : c₁.support ⊆ s := by
+    intro x hx
+    exact Finset.mem_union_left _ (Finset.mem_union_right _ hx)
+  have hs2 : c₂.support ⊆ s := by
+    intro x hx
+    exact Finset.mem_union_right _ hx
+  rw [eq_sum_of_subset K (c₁ + c₂) d hs_sum (Finset.Subset.refl _),
+      eq_sum_of_subset K c₁ d hs1 (Finset.Subset.refl _),
+      eq_sum_of_subset K c₂ d hs2 (Finset.Subset.refl _)]
+  rw [← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro x _
+  rw [← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro y _
+  rw [Finsupp.add_apply]; ring
+
+/-- **Additivity (right).** -/
+theorem add_right {𝒳 : Type*} {K : 𝒳 → 𝒳 → ℝ}
+    (hK : IsSymmetricKernel K) (c d₁ d₂ : 𝒳 →₀ ℝ) :
+    kernelGramForm K c (d₁ + d₂) =
+      kernelGramForm K c d₁ + kernelGramForm K c d₂ := by
+  rw [symm hK c (d₁ + d₂), add_left K d₁ d₂ c,
+      symm hK d₁ c, symm hK d₂ c]
+
+/-- **Scalar homogeneity (left).** -/
+theorem smul_left {𝒳 : Type*} (K : 𝒳 → 𝒳 → ℝ) (r : ℝ) (c d : 𝒳 →₀ ℝ) :
+    kernelGramForm K (r • c) d = r * kernelGramForm K c d := by
+  -- Sum over `c.support`; `(r • c).support ⊆ c.support`.
+  have hsub : (r • c).support ⊆ c.support := Finsupp.support_smul
+  rw [eq_sum_of_subset K (r • c) d hsub (Finset.Subset.refl _)]
+  unfold kernelGramForm
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro x _
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro y _
+  rw [Finsupp.smul_apply, smul_eq_mul]; ring
+
+/-- **Scalar homogeneity (right).** -/
+theorem smul_right {𝒳 : Type*} {K : 𝒳 → 𝒳 → ℝ}
+    (hK : IsSymmetricKernel K) (r : ℝ) (c d : 𝒳 →₀ ℝ) :
+    kernelGramForm K c (r • d) = r * kernelGramForm K c d := by
+  rw [symm hK c (r • d), smul_left K r d c, symm hK d c]
+
+/-- **Reproducing identity on the basis.** The kernel Gram form of two
+single-spike Finsupps `δ_x = single x 1` and `δ_y = single y 1` is
+exactly `K x y`. This is the algebraic Aronszajn reproducing identity
+on the canonical generators of the pre-RKHS. -/
+theorem single_one_single_one {𝒳 : Type*} [DecidableEq 𝒳]
+    (K : 𝒳 → 𝒳 → ℝ) (x y : 𝒳) :
+    kernelGramForm K (Finsupp.single x (1 : ℝ)) (Finsupp.single y 1)
+      = K x y := by
+  -- Re-sum over the singleton sets `{x}` and `{y}` containing the supports.
+  have hx : (Finsupp.single x (1 : ℝ)).support ⊆ ({x} : Finset 𝒳) :=
+    Finsupp.support_single_subset
+  have hy : (Finsupp.single y (1 : ℝ)).support ⊆ ({y} : Finset 𝒳) :=
+    Finsupp.support_single_subset
+  rw [eq_sum_of_subset K _ _ hx hy]
+  -- Now the double sum is over `{x} × {y}`; reduce.
+  rw [Finset.sum_singleton, Finset.sum_singleton]
+  rw [Finsupp.single_eq_same, Finsupp.single_eq_same]
+  ring
+
+/-- **Positive semidefiniteness of the Gram form** from PSD of `K`. -/
+theorem nonneg_of_psd {𝒳 : Type*} {K : 𝒳 → 𝒳 → ℝ}
+    (hK : IsPSDKernel K) (c : 𝒳 →₀ ℝ) :
+    0 ≤ kernelGramForm K c c := by
+  -- Enumerate `c.support` as a `Fin n → 𝒳` via `Finset.equivFin`, then
+  -- apply `IsPSDKernel`.
+  let s := c.support
+  let n := s.card
+  let e : s ≃ Fin n := s.equivFin
+  let x : Fin n → 𝒳 := fun i => (e.symm i).val
+  let α : Fin n → ℝ := fun i => c (x i)
+  have hpsd := hK n x α
+  -- Convert RHS `∑ i, ∑ j, α i * α j * K (x i) (x j)`
+  --       = `∑ p : s, ∑ q : s, c p * c q * K p q` via `Equiv.sum_comp`
+  --       = `∑ p ∈ s.attach, ∑ q ∈ s.attach, c p.val * ... ` (definition)
+  --       = `∑ p ∈ s, ∑ q ∈ s, c p * c q * K p q` via `Finset.sum_attach`
+  --       = `kernelGramForm K c c`.
+  have h1 :
+      ∑ i, ∑ j, α i * α j * K (x i) (x j)
+        = ∑ p : s, ∑ q : s,
+            c p.val * c q.val * K p.val q.val := by
+    rw [← Equiv.sum_comp e.symm
+          (fun p : s => ∑ q : s, c p.val * c q.val * K p.val q.val)]
+    refine Finset.sum_congr rfl ?_
+    intro i _
+    rw [← Equiv.sum_comp e.symm
+          (fun q : s => c (e.symm i).val * c q.val *
+                        K (e.symm i).val q.val)]
+  have h2 :
+      ∑ p : s, ∑ q : s, c p.val * c q.val * K p.val q.val
+        = ∑ p ∈ s, ∑ q ∈ s, c p * c q * K p q := by
+    rw [← Finset.sum_attach s
+          (fun p => ∑ q ∈ s, c p * c q * K p q),
+        show (Finset.univ : Finset s) = s.attach
+          from Finset.univ_eq_attach s]
+    refine Finset.sum_congr rfl ?_
+    intro p _
+    rw [← Finset.sum_attach s
+          (fun q => c p.val * c q * K p.val q)]
+  rw [show kernelGramForm K c c
+        = ∑ p ∈ s, ∑ q ∈ s, c p * c q * K p q from rfl,
+      ← h2, ← h1]
+  exact hpsd
+
+end kernelGramForm
+
+/-- **Pre-RKHS algebraic core.**
+
+Given a symmetric PSD kernel `K : 𝒳 → 𝒳 → ℝ`, the free real vector
+space `𝒳 →₀ ℝ` carries a positive semidefinite symmetric bilinear form
+— the *kernel Gram form* — and hence satisfies Mathlib's
+`PreInnerProductSpace.Core ℝ (𝒳 →₀ ℝ)` structure. This is **stage 1 of
+the Moore–Aronszajn construction**: the algebraic pre-RKHS.
+
+The remaining stages (quotient by the seminorm kernel to get a true
+inner-product space, then completion to a Hilbert space) are mechanical
+applications of `SeparationQuotient` and `UniformSpace.Completion` from
+Mathlib's inner-product-space library; threading the feature map and
+the reproducing identity through them is a known Mathlib-side gap
+recorded in `PROGRESS.md` (Tier C, "Aronszajn RKHS uniqueness up to
+isometry"). -/
+noncomputable def preRKHSCore_of_psd_kernel
+    {𝒳 : Type*} {K : 𝒳 → 𝒳 → ℝ}
+    (hsym : IsSymmetricKernel K) (hpsd : IsPSDKernel K) :
+    PreInnerProductSpace.Core ℝ (𝒳 →₀ ℝ) where
+  inner := fun c c' => kernelGramForm K c c'
+  conj_inner_symm := by
+    intro c c'
+    -- Real-valued symmetry; `conj` on ℝ is identity.
+    show (kernelGramForm K c' c : ℝ) = kernelGramForm K c c'
+    exact (kernelGramForm.symm hsym c c').symm
+  re_inner_nonneg := by
+    intro c
+    show 0 ≤ kernelGramForm K c c
+    exact kernelGramForm.nonneg_of_psd hpsd c
+  add_left := by
+    intro c₁ c₂ d
+    show kernelGramForm K (c₁ + c₂) d
+          = kernelGramForm K c₁ d + kernelGramForm K c₂ d
+    exact kernelGramForm.add_left K c₁ c₂ d
+  smul_left := by
+    intro c d r
+    -- The goal is `inner (r • c) d = conj r * inner c d` with `𝕜 = ℝ`;
+    -- since `conj` is the identity on `ℝ`, this reduces to the
+    -- bilinearity lemma `smul_left`.
+    show kernelGramForm K (r • c) d
+          = (starRingEnd ℝ) r * kernelGramForm K c d
+    rw [kernelGramForm.smul_left K r c d]
+    rfl
+
+/-- **Pre-RKHS feature map.** For a kernel `K : 𝒳 → 𝒳 → ℝ`, the
+canonical feature map sending `x` to the formal generator
+`δ_x ∈ 𝒳 →₀ ℝ` is `fun x => Finsupp.single x 1`. -/
+noncomputable def preRKHSFeature {𝒳 : Type*} [DecidableEq 𝒳]
+    (x : 𝒳) : 𝒳 →₀ ℝ :=
+  Finsupp.single x 1
+
+/-- **Reproducing identity on basis features.** The pre-RKHS Gram form
+of two basis feature vectors `δ_x` and `δ_y` recovers `K x y`. This is
+the algebraic Aronszajn reproducing identity at the level of the
+pre-RKHS — once the quotient and completion stages are performed, this
+identity propagates to the full Hilbert RKHS. -/
+theorem kernelGramForm_feature_eq_kernel
+    {𝒳 : Type*} [DecidableEq 𝒳] (K : 𝒳 → 𝒳 → ℝ) (x y : 𝒳) :
+    kernelGramForm K (preRKHSFeature x) (preRKHSFeature y) = K x y :=
+  kernelGramForm.single_one_single_one K x y
+
+/-! ### Reproducing realisation of *any* kernel that has a feature map
+
+The Aronszajn theorem promises that every symmetric PSD kernel `K`
+admits a reproducing realisation `(E, φ, eval)` as in
+`IsReproducingFeatureMap`. Conversely, if one is **given** a real
+inner-product space `E` and a map `φ : 𝒳 → E` such that
+`K x y = ⟨φ x, φ y⟩_ℝ`, then `(E, φ, eval := fun f x => ⟨f, φ x⟩)`
+forms such a realisation. This converse direction is *constructive in
+Lean* and packages neatly into a tool that downstream theorems (e.g.
+the typed-RKHS representer theorem) can use.
+-/
+
+/-- **Reproducing realisation from a feature map.** Given any real
+inner-product space `E` and a map `φ : 𝒳 → E` that reproduces `K` (i.e.
+`K x y = ⟨φ x, φ y⟩_ℝ`), the data `(E, φ, fun f x => ⟨f, φ x⟩_ℝ)` is
+a reproducing realisation of `K`. -/
+def IsReproducingFeatureMap.ofFeatureMap
+    {𝒳 E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
+    {K : 𝒳 → 𝒳 → ℝ} {φ : 𝒳 → E}
+    (h : ∀ x y, K x y = ⟪φ x, φ y⟫_ℝ) :
+    IsReproducingFeatureMap K φ (fun f x => ⟪f, φ x⟫_ℝ) where
+  reproducing := by intro f x; rfl
+  kernel_eq := h
+
+/-- **Packaged RKHS from a feature map.** Given a real inner-product
+space `E` and a map `φ : 𝒳 → E` reproducing `K`, package the data into
+an `RKHS_of_kernel K` record. This is the converse direction of
+Aronszajn (the easier direction — full Aronszajn produces such an `E`
+from the kernel alone, which is the documented Mathlib gap). -/
+noncomputable def RKHS_of_kernel.ofFeatureMap
+    {𝒳 : Type*} {K : 𝒳 → 𝒳 → ℝ} (E : Type*)
+    [NormedAddCommGroup E] [InnerProductSpace ℝ E]
+    (φ : 𝒳 → E) (h : ∀ x y, K x y = ⟪φ x, φ y⟫_ℝ) :
+    RKHS_of_kernel K where
+  E := E
+  φ := φ
+  eval f x := ⟪f, φ x⟫_ℝ
+  is_repro := IsReproducingFeatureMap.ofFeatureMap h
+
+/-! ### NEEDS_HELP marker for full Moore–Aronszajn
+
+The construction of the *Hilbert-space* RKHS `H_K` from an abstract
+symmetric PSD kernel — by `SeparationQuotient`-then-`Completion` of the
+pre-RKHS — requires threading the inner product, the feature map, and
+the reproducing identity through both functors. This is mechanical but
+voluminous; in particular, it requires:
+
+  * Promoting `preRKHSCore_of_psd_kernel` to a
+    `SeminormedAddCommGroup (𝒳 →₀ ℝ)` instance (via
+    `PreInnerProductSpace.Core.toSeminormedAddCommGroup`), then to a
+    `NormedAddCommGroup (SeparationQuotient (𝒳 →₀ ℝ))`.
+  * Wrapping with `UniformSpace.Completion` to land in a `CompleteSpace`
+    `InnerProductSpace ℝ` (Mathlib's
+    `Completion.innerProductSpace` instance, see
+    `Mathlib.Analysis.InnerProductSpace.Completion`).
+  * Tracking the feature map and reproducing identity through each
+    stage; the inner product on the completion of an
+    `InnerProductSpace` is `Mathlib`-defined, but its extension to
+    formal sums via `Completion.coe` is a chase across multiple
+    `UniformSpace.Completion` lemmas.
+
+This is the documented Tier-C gap; downstream theorems do **not** need
+the full Hilbert RKHS to land, because the typed RKHS interface
+`RKHS_of_kernel` already lets them consume any reproducing realisation
+constructed by other means (e.g. the linear-kernel case in
+`RKHS_of_kernel.linear`, or callers' bespoke kernels). -/
 
 end LTFP.MathlibExt.Analysis
