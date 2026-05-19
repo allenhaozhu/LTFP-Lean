@@ -455,18 +455,37 @@ theorem ols_minimax_bayes_prior_discharged
       hw_nn hw_sum h_bayes_gaussian
   exact ⟨θ k, hk⟩
 
-/-- §3.7 — **Bayes-prior reduction, wired closed form at `λ = 0`**.
+/-- §3.7 — **Per-estimator finite-prior averaging at the improper limit**
+    (NOT a closed discharge of the carrier theorem).
 
-    The cleanest specialization: at `λ = 0` (the `τ → ∞` limit of the
-    shrinkage parameter), `gaussianBayesRiskScalar σ² d n 0 = σ² · d / n =
-    mourtada_lower_bound d n σ²`. So if the prior-averaged excess risk
-    dominates `σ² · d / n` (the Gaussian-conjugate computation read off
-    in the limit), then the carrier
-    `ols_minimax_lower_bound_for_all_estimators` is satisfied for the
-    estimator `A`, *without* a parametric `h_bayes_eq` Bayes-trace
-    hypothesis: the rate is the rate produced by the discharged
-    Gaussian scalar identity. -/
-theorem ols_minimax_bayes_prior_discharged_at_zero
+    Honest scope (per Codex peer-review, 2026-05-19): this lemma is the
+    **per-estimator building block** of the Bayes-prior reduction, not
+    the carrier discharge. Given a *fixed* estimator `A` and a finite
+    grid `(θ, w)` whose prior-averaged excess risk dominates
+    `gaussianBayesRiskScalar σ² d n 0`, the lemma produces a single
+    worst-case parameter for that `A` at the Mourtada rate.
+
+    What it does NOT do:
+
+    * It does NOT close `ols_minimax_lower_bound_for_all_estimators`'s
+      hypothesis `∀ A, ∃ θ_star, mourtada ≤ excessRisk (A (sample θ_star)) θ_star`.
+      That requires a *universally quantified* hypothesis "for every
+      estimator there exists *some* finite prior averaging it down to
+      the Bayes risk", which is the content of
+      `ols_minimax_bayes_prior_properly_quantified` below.
+
+    * `λ = 0` is the **improper / infinite-variance** prior limit, not
+      a finite-`τ²` Gaussian. The Gaussian-conjugate posterior identity
+      is sound at finite `τ²`; the bridge to `λ = 0` involves a
+      limiting/approximation argument that is left to the caller (or
+      to a future Mathlib measure-theoretic discharge).
+
+    Use this lemma as a finite-prior averaging tool when the
+    Gaussian-conjugate Bayes-risk inequality has already been
+    established at `λ = 0` for the specific estimator `A` and grid
+    `(θ, w)`. For the universal/carrier-discharge form, see
+    `ols_minimax_bayes_prior_properly_quantified`. -/
+theorem ols_minimax_bayes_prior_finite_average_at_improper_limit
     {d n : ℕ} {sigmaSq : ℝ} (hσ : 0 ≤ sigmaSq) (hn : 0 < n)
     {K : Type*} [Fintype K] [Nonempty K]
     (θ : K → (Fin d → ℝ))
@@ -503,6 +522,103 @@ theorem ols_minimax_bayes_prior_discharged_at_zero
   rw [h_eq] at hθ
   exact hθ
 
+/-- §3.7 — **Bayes-prior reduction, properly quantified discharge**.
+
+    This is the universal-quantifier form Codex's peer-review identified
+    as the actually-needed shape (2026-05-19): the hypothesis takes a
+    *universally quantified* "for every estimator `A`, there exists a
+    finite prior grid whose averaged excess risk dominates the Bayes
+    risk at `λ = 0`", and the conclusion is exactly the carrier's
+    `h_twoPoint` hypothesis (`∀ A, ∃ θ_star, mourtada ≤ excessRisk
+    (A (sample θ_star)) θ_star`).
+
+    Concretely, the hypothesis bundles:
+
+    * the *existence* of a finite parameter grid `(θ_k)_{k : Fin m}`
+      with prior weights `(w_k)_{k : Fin m}` (`0 ≤ w_k`, `∑ w = 1`)
+      for each estimator `A` (the "for every estimator" sup→avg step);
+    * the Gaussian-conjugate Bayes-risk inequality at the improper
+      limit `λ = 0`: prior-averaged excess risk dominates
+      `gaussianBayesRiskScalar σ² d n 0 = σ² · d / n`.
+
+    Both ingredients are *honestly* the unfinished mathematical work:
+    the existence of the witnessing grid for every estimator is the
+    Bayesian-prior + Le Cam sup-vs-Bayes step, and the bridge from
+    finite-`τ²` Gaussian conjugacy to the `λ = 0` improper limit is
+    the limiting/approximation argument flagged by Codex. *This
+    theorem does not close that gap.* It packages the two together
+    into the carrier shape so that downstream wiring is exposed.
+
+    The conclusion is then literally the
+    `ols_minimax_lower_bound_for_all_estimators` `h_twoPoint`
+    hypothesis, so this theorem composes directly with the carrier
+    (see `ols_minimax_lower_bound_via_bayes_prior_quantified` below). -/
+theorem ols_minimax_bayes_prior_properly_quantified
+    {d n : ℕ} {sigmaSq : ℝ} (hσ : 0 ≤ sigmaSq) (hn : 0 < n)
+    (sample : (Fin d → ℝ) → (Fin n → ℝ))
+    (excessRisk : (Fin d → ℝ) → (Fin d → ℝ) → ℝ)
+    (h_bayes_quantified :
+      ∀ A : (Fin n → ℝ) → (Fin d → ℝ),
+        ∃ (m : ℕ) (_hm : 0 < m) (θ : Fin m → (Fin d → ℝ)) (w : Fin m → ℝ),
+          (∀ k, 0 ≤ w k) ∧ (∑ k, w k = 1) ∧
+          LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+              sigmaSq d n 0 ≤
+            ∑ k, w k * excessRisk (A (sample (θ k))) (θ k)) :
+    ∀ A : (Fin n → ℝ) → (Fin d → ℝ),
+      ∃ θ_star : Fin d → ℝ,
+        mourtada_lower_bound d n sigmaSq ≤ excessRisk (A (sample θ_star)) θ_star := by
+  intro A
+  -- Extract the (estimator-specific) witnessing grid from the quantified
+  -- hypothesis.
+  obtain ⟨m, hm, θ, w, hw_nn, hw_sum, h_avg⟩ := h_bayes_quantified A
+  -- The grid lives in `Fin m` with `m > 0`, so `Fin m` is `Nonempty`.
+  haveI : Nonempty (Fin m) := ⟨⟨0, hm⟩⟩
+  -- Apply the per-estimator finite-prior averaging lemma at the improper
+  -- limit. This converts the prior-averaged Bayes risk inequality into
+  -- the single-witness conclusion `∃ θ_star, mourtada ≤ excessRisk ...`.
+  exact ols_minimax_bayes_prior_finite_average_at_improper_limit
+    (d := d) (n := n) (sigmaSq := sigmaSq) hσ hn θ w hw_nn hw_sum
+    sample excessRisk A h_avg
+
+/-- §3.7 — **Wired carrier**: the OLS minimax lower-bound theorem
+    derived by feeding the properly-quantified Bayes-prior discharge
+    into the carrier `ols_minimax_lower_bound_for_all_estimators`.
+
+    This is the actual consumer composition Codex's peer-review asked
+    for (2026-05-19): the hypothesis is the universally-quantified
+    Bayesian-prior + improper-limit Gaussian-conjugate inequality, and
+    the conclusion is the carrier theorem's
+    `∀ A, ∃ θ_star, mourtada_lower_bound ≤ excessRisk ...` statement.
+
+    The honest gap remains the hypothesis itself: producing, for every
+    estimator `A`, an explicit witnessing finite prior whose averaged
+    excess risk dominates `gaussianBayesRiskScalar σ² d n 0` requires
+    both (a) the Gaussian-conjugate posterior-mean identity at finite
+    `τ²` (Mathlib gap), and (b) the limiting/approximation bridge from
+    finite-`τ²` Bayes risk to the `λ = 0` improper-prior limit. Once
+    Mathlib lands the multivariate Gaussian posterior calculus and the
+    limit bridge, the hypothesis becomes a theorem and the carrier
+    upgrades to an unconditional minimax statement. -/
+theorem ols_minimax_lower_bound_via_bayes_prior_quantified
+    {d n : ℕ} {sigmaSq : ℝ} (hσ : 0 ≤ sigmaSq) (hn : 0 < n)
+    (sample : (Fin d → ℝ) → (Fin n → ℝ))
+    (excessRisk : (Fin d → ℝ) → (Fin d → ℝ) → ℝ)
+    (h_bayes_quantified :
+      ∀ A : (Fin n → ℝ) → (Fin d → ℝ),
+        ∃ (m : ℕ) (_hm : 0 < m) (θ : Fin m → (Fin d → ℝ)) (w : Fin m → ℝ),
+          (∀ k, 0 ≤ w k) ∧ (∑ k, w k = 1) ∧
+          LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+              sigmaSq d n 0 ≤
+            ∑ k, w k * excessRisk (A (sample (θ k))) (θ k)) :
+    ∀ A : (Fin n → ℝ) → (Fin d → ℝ),
+      ∃ θ_star : Fin d → ℝ,
+        mourtada_lower_bound d n sigmaSq ≤ excessRisk (A (sample θ_star)) θ_star :=
+  ols_minimax_lower_bound_for_all_estimators (d := d) (n := n)
+    (sigmaSq := sigmaSq) hσ hn sample excessRisk
+    (ols_minimax_bayes_prior_properly_quantified
+      (d := d) (n := n) (sigmaSq := sigmaSq) hσ hn sample excessRisk
+      h_bayes_quantified)
+
 /-- §3.5 — Sum of squared residuals is nonneg (any residual vector). -/
 theorem sum_sq_residuals_nonneg {n : ℕ} (r : Fin n → ℝ) :
     0 ≤ ∑ i, (r i)^2 :=
@@ -533,6 +649,8 @@ theorem all_zero_of_sum_sq_eq_zero {n : ℕ} (r : Fin n → ℝ)
 #check @LTFP.bayes_trace_limit_discharged
 #check @LTFP.ols_minimax_bayes_prior
 #check @LTFP.ols_minimax_bayes_prior_discharged
-#check @LTFP.ols_minimax_bayes_prior_discharged_at_zero
+#check @LTFP.ols_minimax_bayes_prior_finite_average_at_improper_limit
+#check @LTFP.ols_minimax_bayes_prior_properly_quantified
+#check @LTFP.ols_minimax_lower_bound_via_bayes_prior_quantified
 
 end LTFP
