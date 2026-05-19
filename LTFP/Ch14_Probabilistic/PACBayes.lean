@@ -594,7 +594,7 @@ project. We therefore *do not* attempt to prove Eq. 14.21 here; instead
 we expose it as a single named predicate
 (`bounded_average_sq_exp_moment_assumption`) that future work can
 discharge, and provide a carrier
-(`pac_bayes_mcallester_measure_theoretic_unconditional`) that consumes
+(`pac_bayes_mcallester_measure_theoretic_with_bounded_moment_assumption`) that consumes
 this single predicate (plus standard integrability regularity) and
 produces the function-class concentration event needed by
 `pac_bayes_mcallester_measure_theoretic`. -/
@@ -663,7 +663,7 @@ The chain internally uses
 to flip the order of integration from `∫ h ∫ S` to `∫ S ∫ h`, so the
 output is directly in the form consumed by
 `pac_bayes_good_sample_event`. -/
-theorem pac_bayes_mcallester_measure_theoretic_unconditional
+theorem pac_bayes_mcallester_measure_theoretic_with_bounded_moment_assumption
     {𝒳 ℋ : Type*} [MeasurableSpace 𝒳] [MeasurableSpace ℋ]
     (P : MeasureTheory.Measure ℋ) [MeasureTheory.IsProbabilityMeasure P]
     (D : MeasureTheory.Measure 𝒳) [MeasureTheory.IsProbabilityMeasure D]
@@ -765,7 +765,7 @@ single named Bach Eq. 14.21 hypothesis and standard integrability
 regularity, the **good sample event** has `Dⁿ`-measure at most `δ` on
 its complement, which is the form fed into the McAllester carrier
 `pac_bayes_mcallester_measure_theoretic`. This is a thin restatement of
-`pac_bayes_mcallester_measure_theoretic_unconditional` for readability;
+`pac_bayes_mcallester_measure_theoretic_with_bounded_moment_assumption` for readability;
 the work is in the predicate's discharge, which is the deferred
 Catoni/Alquier bounded-differences moment lemma. -/
 theorem pac_bayes_function_class_concentration_event
@@ -805,7 +805,7 @@ theorem pac_bayes_function_class_concentration_event
               ((1 / (n : ℝ)) * ∑ i : Fin n, ℓ h (s i)
                 - ∫ x, ℓ h x ∂D) ^ 2) ∂P }
       ≤ δ :=
-  pac_bayes_mcallester_measure_theoretic_unconditional
+  pac_bayes_mcallester_measure_theoretic_with_bounded_moment_assumption
     P D ℓ hℓ hn hδ h_bound_moment h_int_joint h_int_inner_S h_int_inner_h
 
 end LTFP

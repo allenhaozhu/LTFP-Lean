@@ -824,7 +824,7 @@ When the measure-theoretic discharges of `h_lecam` and `h_kl_bridge`
 become available in Mathlib (see the file docstring), this theorem
 becomes the textbook Bretagnolle--Huber inequality with `D` =
 `(klDiv μ ν).toReal`. -/
-theorem tvDist_sq_le_one_sub_exp_neg_klDiv_of_bhattacharyya
+theorem tvDist_sq_le_one_sub_exp_neg_of_bhattacharyya_bridge
     {D : ℝ}
     (h_lecam : ((tvDist μ ν).toReal) ^ 2 ≤ 1 - bhattacharyya μ ν ^ 2)
     (h_kl_bridge : Real.exp (-D / 2) ≤ bhattacharyya μ ν) :

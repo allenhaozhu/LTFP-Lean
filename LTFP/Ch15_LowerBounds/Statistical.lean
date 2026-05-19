@@ -526,17 +526,19 @@ Remaining Mathlib gap:
 "BH bridge" `tvDist² ≤ 1 - exp(-D)` as a hypothesis. The Hellinger /
 Bhattacharyya factorization of that bridge is now discharged in
 `tvDist_sq_le_one_sub_exp_neg_of_bhattacharyya` (and its Hellinger-form
-variant), so the only remaining input is the **measure-theoretic Le Cam
-step** `tvDist² ≤ 1 - ρ²` and the **Bhattacharyya--KL step**
-`exp(-KL/2) ≤ ρ`. Specializing to `D = (klDiv μ ν).toReal` therefore
-reduces to discharging those two integral inequalities — exactly the
-content of the classical proof. Mathlib does not yet expose
-`bhattacharyya` / `hellingerSquared`, but neither inequality is needed
-in the algebraic chain above.
+variant). The measure-theoretic Le Cam step
+`tvDist² ≤ 1 - bhattacharyya²` is now discharged in
+`LTFP.MathlibExt.Probability.Distance.Bhattacharyya` via
+`tvDist_sq_le_one_sub_bhattacharyya_sq`. The remaining residual
+hypothesis is the **Bhattacharyya--KL Jensen bridge**
+`exp(-KL/2) ≤ bhattacharyya μ ν`. Specializing to
+`D = (klDiv μ ν).toReal` therefore reduces to discharging that single
+integral inequality — the classical Jensen step on `-log` against the
+Bhattacharyya affinity.
 
-When upstream lands the Hellinger machinery, the two abstract inputs
-collapse to one-liners derived from `klDiv`, and the wrappers
-`tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya` /
+When upstream lands the `klDiv → bhattacharyya` Jensen bridge, the
+last abstract input collapses to a one-liner derived from `klDiv`,
+and the wrappers `tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya` /
 `tvDist_le_sqrt_one_sub_exp_neg_of_hellinger` immediately give the
 classical Bretagnolle--Huber bound in terms of `klDiv`. The sharper
 textbook Pinsker `tvDist ≤ √(KL/2)` factor of `1/2` still needs a finer

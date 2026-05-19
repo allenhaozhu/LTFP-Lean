@@ -472,7 +472,7 @@ theorem ols_minimax_bayes_prior_discharged
       That requires a *universally quantified* hypothesis "for every
       estimator there exists *some* finite prior averaging it down to
       the Bayes risk", which is the content of
-      `ols_minimax_bayes_prior_properly_quantified` below.
+      `ols_minimax_bayes_prior_via_quantified_finite_average` below.
 
     * `λ = 0` is the **improper / infinite-variance** prior limit, not
       a finite-`τ²` Gaussian. The Gaussian-conjugate posterior identity
@@ -484,7 +484,7 @@ theorem ols_minimax_bayes_prior_discharged
     Gaussian-conjugate Bayes-risk inequality has already been
     established at `λ = 0` for the specific estimator `A` and grid
     `(θ, w)`. For the universal/carrier-discharge form, see
-    `ols_minimax_bayes_prior_properly_quantified`. -/
+    `ols_minimax_bayes_prior_via_quantified_finite_average`. -/
 theorem ols_minimax_bayes_prior_finite_average_at_improper_limit
     {d n : ℕ} {sigmaSq : ℝ} (hσ : 0 ≤ sigmaSq) (hn : 0 < n)
     {K : Type*} [Fintype K] [Nonempty K]
@@ -552,8 +552,8 @@ theorem ols_minimax_bayes_prior_finite_average_at_improper_limit
     The conclusion is then literally the
     `ols_minimax_lower_bound_for_all_estimators` `h_twoPoint`
     hypothesis, so this theorem composes directly with the carrier
-    (see `ols_minimax_lower_bound_via_bayes_prior_quantified` below). -/
-theorem ols_minimax_bayes_prior_properly_quantified
+    (see `ols_minimax_lower_bound_via_quantified_finite_average` below). -/
+theorem ols_minimax_bayes_prior_via_quantified_finite_average
     {d n : ℕ} {sigmaSq : ℝ} (hσ : 0 ≤ sigmaSq) (hn : 0 < n)
     (sample : (Fin d → ℝ) → (Fin n → ℝ))
     (excessRisk : (Fin d → ℝ) → (Fin d → ℝ) → ℝ)
@@ -599,7 +599,7 @@ theorem ols_minimax_bayes_prior_properly_quantified
     Mathlib lands the multivariate Gaussian posterior calculus and the
     limit bridge, the hypothesis becomes a theorem and the carrier
     upgrades to an unconditional minimax statement. -/
-theorem ols_minimax_lower_bound_via_bayes_prior_quantified
+theorem ols_minimax_lower_bound_via_quantified_finite_average
     {d n : ℕ} {sigmaSq : ℝ} (hσ : 0 ≤ sigmaSq) (hn : 0 < n)
     (sample : (Fin d → ℝ) → (Fin n → ℝ))
     (excessRisk : (Fin d → ℝ) → (Fin d → ℝ) → ℝ)
@@ -615,7 +615,7 @@ theorem ols_minimax_lower_bound_via_bayes_prior_quantified
         mourtada_lower_bound d n sigmaSq ≤ excessRisk (A (sample θ_star)) θ_star :=
   ols_minimax_lower_bound_for_all_estimators (d := d) (n := n)
     (sigmaSq := sigmaSq) hσ hn sample excessRisk
-    (ols_minimax_bayes_prior_properly_quantified
+    (ols_minimax_bayes_prior_via_quantified_finite_average
       (d := d) (n := n) (sigmaSq := sigmaSq) hσ hn sample excessRisk
       h_bayes_quantified)
 
@@ -650,7 +650,7 @@ theorem all_zero_of_sum_sq_eq_zero {n : ℕ} (r : Fin n → ℝ)
 #check @LTFP.ols_minimax_bayes_prior
 #check @LTFP.ols_minimax_bayes_prior_discharged
 #check @LTFP.ols_minimax_bayes_prior_finite_average_at_improper_limit
-#check @LTFP.ols_minimax_bayes_prior_properly_quantified
-#check @LTFP.ols_minimax_lower_bound_via_bayes_prior_quantified
+#check @LTFP.ols_minimax_bayes_prior_via_quantified_finite_average
+#check @LTFP.ols_minimax_lower_bound_via_quantified_finite_average
 
 end LTFP
