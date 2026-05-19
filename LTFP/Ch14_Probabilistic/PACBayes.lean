@@ -12,6 +12,8 @@ sanity lemma that `KL(P ‖ P) = 0`.
 -/
 import LTFP.Foundations.InfoTheory
 import LTFP.MathlibExt.Probability.DonskerVaradhan
+import LTFP.MathlibExt.Probability.FunctionClassConcentration
+import LTFP.MathlibExt.Probability.KullbackLeibler
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 
 namespace LTFP
@@ -349,5 +351,227 @@ theorem pac_bayes_mcallester_unfolded
     EQgap ≤ Real.sqrt ((D + Real.log (2 * Real.sqrt n / δ)) / (2 * n)) :=
   pac_bayes_mcallester (expMGFp := expMGFp)
     hn hδ hD hEQgap_nn h_jensen h_mgf_pos h_DV_primitive h_conc_mgf
+
+/-! ### Measure-theoretic discharge of `h_DV_primitive`
+
+The scalar `h_DV_primitive` hypothesis of `pac_bayes_mcallester` is the
+real-valued shadow of the measure-theoretic Donsker--Varadhan inequality.
+The lemma below discharges it directly from
+`donsker_varadhan_inequality_diff` (in
+`LTFP.MathlibExt.Probability.KullbackLeibler`) by instantiating with the
+test function `f(h) := 2 n · gap(h)²`.
+
+Specifically, given probability measures `Q ≪ P` (a posterior and prior
+on a hypothesis space), a real-valued "gap" function
+`gap : α → ℝ` (typically `R̂_n(h) − R(h)`), a sample size `n > 0`, and
+the standard integrability hypotheses on `2 n · gap²` and
+`exp ∘ (2 n · gap²)`, the inequality
+
+  `2 n · ∫ gap² ∂Q − log (∫ exp(2 n · gap²) ∂P) ≤ (klDiv Q P).toReal`
+
+follows directly from `donsker_varadhan_inequality_diff`. This is the
+exact form consumed as `h_DV_primitive` (with
+`D := (klDiv Q P).toReal`, `EQgapSq := ∫ gap² ∂Q`,
+`expMGFp := ∫ exp(2 n · gap²) ∂P`). -/
+theorem pac_bayes_h_DV_primitive_discharged
+    {ℋ : Type*} [MeasurableSpace ℋ]
+    (Q P : MeasureTheory.Measure ℋ)
+    [MeasureTheory.IsProbabilityMeasure Q] [MeasureTheory.IsProbabilityMeasure P]
+    (hQP : Q.AbsolutelyContinuous P)
+    (gap : ℋ → ℝ) {n : ℝ} (_hn : 0 < n)
+    (hgap_int : MeasureTheory.Integrable (fun h => 2 * n * gap h ^ 2) Q)
+    (hexp_int :
+      MeasureTheory.Integrable (fun h => Real.exp (2 * n * gap h ^ 2)) P)
+    (hllr_int : MeasureTheory.Integrable (MeasureTheory.llr Q P) Q) :
+    2 * n * (∫ h, gap h ^ 2 ∂Q)
+        - Real.log (∫ h, Real.exp (2 * n * gap h ^ 2) ∂P)
+      ≤ (InformationTheory.klDiv Q P).toReal := by
+  -- Apply DV with f := 2 n · gap².
+  have h_dv :=
+    LTFP.MathlibExt.Probability.donsker_varadhan_inequality_diff
+      (μ := Q) (ν := P) (f := fun h => 2 * n * gap h ^ 2)
+      hQP hgap_int hexp_int hllr_int
+  -- Pull `(2 n) ·` outside the integral on the LHS.
+  have h_pull :
+      ∫ h, (2 * n) * gap h ^ 2 ∂Q = (2 * n) * ∫ h, gap h ^ 2 ∂Q := by
+    exact MeasureTheory.integral_const_mul (2 * n) (fun h => gap h ^ 2)
+  -- Rewrite `h_dv` using `h_pull` to expose the `2 * n * (∫ gap²)` form.
+  -- The DV inequality reads:
+  --   `∫ (2 n · gap²) ∂Q - log(∫ exp(...) ∂P) ≤ kl`,
+  -- and `∫ (2 n · gap²) ∂Q = 2 n · ∫ gap² ∂Q` by `integral_const_mul`.
+  calc 2 * n * (∫ h, gap h ^ 2 ∂Q)
+        - Real.log (∫ h, Real.exp (2 * n * gap h ^ 2) ∂P)
+      = (∫ h, (2 * n) * gap h ^ 2 ∂Q)
+          - Real.log (∫ h, Real.exp (2 * n * gap h ^ 2) ∂P) := by
+        rw [h_pull]
+    _ ≤ (InformationTheory.klDiv Q P).toReal := h_dv
+
+/-! ### Discharging the per-h MGF hypothesis
+
+The PAC-Bayes carrier's remaining input — after Primitive 1 is
+discharged via Donsker--Varadhan — is the function-class MGF bound
+
+  `E_{h∼P}[E_{S∼D}[exp(2 n · gap(h, S)²)]] ≤ 2 √n`,
+
+which factors into a per-`h` Hoeffding-MGF bound followed by Fubini
+over the prior. The per-`h` step (Bach 2024 Eq. 14.21) requires the
+improper Riemann integration of `t · exp(c t²)` against a
+Hoeffding-tail integrand; we expose it as a hypothesis below, and
+discharge the Fubini-plus-Markov chain via
+`LTFP.MathlibExt.Probability.function_class_mgf_bound_of_per_h` and
+`LTFP.MathlibExt.Probability.pac_bayes_chernoff_step`. Once the per-`h`
+bound lands upstream (as a Mathlib lemma on bounded random variables),
+this assembly becomes the unconditional function-class concentration
+step. -/
+
+/-- §14.4 — **Function-class MGF expectation bound from per-`h` MGF bounds.**
+
+If for every fixed hypothesis `h ∈ ℋ` the per-sample squared-gap MGF is
+bounded by `2 √n`, i.e.
+
+  `∀ h, ∫ s, exp(2 n · gap(h, s)²) ∂D ≤ 2 √n`,
+
+then the iterated function-class MGF under the prior also satisfies
+
+  `∫ h, ∫ s, exp(2 n · gap(h, s)²) ∂D ∂P ≤ 2 √n`.
+
+This is a direct application of
+`LTFP.MathlibExt.Probability.function_class_mgf_bound_of_per_h` to the
+test function `c := 2 n`. -/
+theorem pac_bayes_function_class_mgf_expectation
+    {ℋ Ω : Type*} [MeasurableSpace ℋ] [MeasurableSpace Ω]
+    {P : MeasureTheory.Measure ℋ} {D : MeasureTheory.Measure Ω}
+    [MeasureTheory.IsProbabilityMeasure P]
+    (gap : ℋ → Ω → ℝ) (n : ℝ) (_hn : 0 < n)
+    (h_per_h_mgf :
+      ∀ h, ∫ s, Real.exp (2 * n * (gap h s) ^ 2) ∂D ≤ 2 * Real.sqrt n)
+    (h_inner_int :
+      MeasureTheory.Integrable
+        (fun h => ∫ s, Real.exp (2 * n * (gap h s) ^ 2) ∂D) P) :
+    ∫ h, ∫ s, Real.exp (2 * n * (gap h s) ^ 2) ∂D ∂P ≤ 2 * Real.sqrt n :=
+  LTFP.MathlibExt.Probability.function_class_mgf_bound_of_per_h
+    gap (2 * n) (2 * Real.sqrt n) h_per_h_mgf h_inner_int
+
+/-- §14.4 — **Existence of a "good sample" for PAC-Bayes**.
+
+Given the per-`h` Hoeffding-based squared-gap MGF bound
+`∀ h, E_{S∼D}[exp(2 n · gap(h,S)²)] ≤ 2 √n` and `δ > 0`, the set of
+samples on which the function-class MGF under the prior fails the
+high-probability bound `E_{h∼P}[exp(2 n · gap(h,S)²)] ≤ 2 √n / δ`
+has measure at most `δ`. Hence there exists a "good sample" event of
+measure `≥ 1 − δ` on which the carrier hypothesis `h_conc_mgf` of
+`pac_bayes_mcallester` holds. This is the function-class
+concentration step in its high-probability form. -/
+theorem pac_bayes_good_sample_event
+    {ℋ Ω : Type*} [MeasurableSpace ℋ] [MeasurableSpace Ω]
+    {P : MeasureTheory.Measure ℋ} {D : MeasureTheory.Measure Ω}
+    [MeasureTheory.IsProbabilityMeasure P] [MeasureTheory.IsProbabilityMeasure D]
+    (gap : ℋ → Ω → ℝ) (n : ℝ) (hn : 0 < n) (δ : ℝ) (hδ : 0 < δ)
+    (h_inner_int :
+      MeasureTheory.Integrable
+        (fun s => ∫ h, Real.exp (2 * n * (gap h s) ^ 2) ∂P) D)
+    (h_inner_nn :
+      0 ≤ᵐ[D] fun s => ∫ h, Real.exp (2 * n * (gap h s) ^ 2) ∂P)
+    (h_exp_bound :
+      ∫ s, ∫ h, Real.exp (2 * n * (gap h s) ^ 2) ∂P ∂D
+        ≤ 2 * Real.sqrt n) :
+    D.real { s | 2 * Real.sqrt n / δ ≤ ∫ h, Real.exp (2 * n * (gap h s) ^ 2) ∂P }
+      ≤ δ :=
+  LTFP.MathlibExt.Probability.function_class_chernoff_event_for_mgf
+    gap n hn δ hδ h_inner_int h_inner_nn h_exp_bound
+
+/-! ### Near-fully-discharged McAllester wrapper
+
+This wrapper assembles all of the above into a single statement: given a
+*fixed* sample `S` on which the function-class MGF under the prior `P` is
+bounded by `2 √n / δ` (i.e., `S` belongs to the "good sample" event of
+measure `≥ 1 − δ` provided by `pac_bayes_good_sample_event`), and given
+standard measure-theoretic regularity on the posterior `Q ≪ P`, the
+McAllester bound holds.
+
+The only remaining input that this wrapper does *not* discharge from
+ambient assumptions is the *per-sample* function-class MGF bound under
+the prior, `expFnc ≤ 2 √n / δ`. The latter comes from
+`pac_bayes_good_sample_event` once the per-`h` Hoeffding-MGF bound
+(Bach Eq. 14.21) is available — which is a self-contained
+`MeasureTheory.Integral.IntervalIntegral` exercise pending upstream
+Mathlib work. Other than this single per-`h` Hoeffding-MGF input, the
+McAllester PAC-Bayes bound is fully wired in Lean. -/
+
+/-- §14.4 — **McAllester PAC-Bayes bound, measure-theoretically wired.**
+
+For a fixed sample on which the per-sample function-class exponential
+moment under the prior is bounded by `2 √n / δ` (the "good sample"
+event provided by `pac_bayes_good_sample_event`), the McAllester PAC-Bayes
+bound holds with `D := (klDiv Q P).toReal`. The DV step is discharged
+from the measure-theoretic Donsker--Varadhan inequality via
+`pac_bayes_h_DV_primitive_discharged`; the concentration step is
+discharged from the supplied per-sample MGF bound via
+`pac_bayes_conc_of_mgf_bound`.
+
+This is the form to invoke once the per-`h` Hoeffding-based squared-gap
+MGF bound (Bach 2024 Eq. 14.21) is available upstream: combine it with
+`pac_bayes_function_class_mgf_expectation` to obtain the joint MGF
+expectation bound, then `pac_bayes_good_sample_event` to extract a "good
+sample" `S` on which the present theorem applies. -/
+theorem pac_bayes_mcallester_measure_theoretic
+    {ℋ : Type*} [MeasurableSpace ℋ]
+    (Q P : MeasureTheory.Measure ℋ)
+    [MeasureTheory.IsProbabilityMeasure Q] [MeasureTheory.IsProbabilityMeasure P]
+    (hQP : Q.AbsolutelyContinuous P)
+    (gap : ℋ → ℝ) {n δ : ℝ} (hn : 0 < n) (hδ : 0 < δ)
+    (EQgap : ℝ) (hEQgap_nn : 0 ≤ EQgap)
+    (h_jensen : EQgap ^ 2 ≤ ∫ h, gap h ^ 2 ∂Q)
+    (hgap_int : MeasureTheory.Integrable (fun h => 2 * n * gap h ^ 2) Q)
+    (hexp_int :
+      MeasureTheory.Integrable (fun h => Real.exp (2 * n * gap h ^ 2)) P)
+    (hllr_int : MeasureTheory.Integrable (MeasureTheory.llr Q P) Q)
+    (h_expFnc_pos : 0 < ∫ h, Real.exp (2 * n * gap h ^ 2) ∂P)
+    (h_expFnc_le :
+      ∫ h, Real.exp (2 * n * gap h ^ 2) ∂P ≤ 2 * Real.sqrt n / δ) :
+    EQgap ≤ mcallesterBound
+              ((InformationTheory.klDiv Q P).toReal)
+              (Real.log (2 * Real.sqrt n / δ))
+              n := by
+  -- Discharge `h_DV_primitive` from the measure-theoretic DV inequality.
+  have h_DV_primitive :
+      2 * n * (∫ h, gap h ^ 2 ∂Q)
+          - Real.log (∫ h, Real.exp (2 * n * gap h ^ 2) ∂P)
+        ≤ (InformationTheory.klDiv Q P).toReal :=
+    pac_bayes_h_DV_primitive_discharged
+      Q P hQP gap hn hgap_int hexp_int hllr_int
+  -- Wrap the rest with `pac_bayes_mcallester`.
+  have hD : 0 ≤ (InformationTheory.klDiv Q P).toReal :=
+    ENNReal.toReal_nonneg
+  exact pac_bayes_mcallester
+    (EQgapSq := ∫ h, gap h ^ 2 ∂Q)
+    (expMGFp := ∫ h, Real.exp (2 * n * gap h ^ 2) ∂P)
+    (D := (InformationTheory.klDiv Q P).toReal)
+    hn hδ hD hEQgap_nn h_jensen h_expFnc_pos h_DV_primitive h_expFnc_le
+
+/-- §14.4 — **Unfolded form of the measure-theoretically wired McAllester
+bound**: identical to `pac_bayes_mcallester_measure_theoretic` but with
+the `mcallesterBound` wrapper unfolded to `√((D + log(2√n/δ)) / (2n))`. -/
+theorem pac_bayes_mcallester_measure_theoretic_unfolded
+    {ℋ : Type*} [MeasurableSpace ℋ]
+    (Q P : MeasureTheory.Measure ℋ)
+    [MeasureTheory.IsProbabilityMeasure Q] [MeasureTheory.IsProbabilityMeasure P]
+    (hQP : Q.AbsolutelyContinuous P)
+    (gap : ℋ → ℝ) {n δ : ℝ} (hn : 0 < n) (hδ : 0 < δ)
+    (EQgap : ℝ) (hEQgap_nn : 0 ≤ EQgap)
+    (h_jensen : EQgap ^ 2 ≤ ∫ h, gap h ^ 2 ∂Q)
+    (hgap_int : MeasureTheory.Integrable (fun h => 2 * n * gap h ^ 2) Q)
+    (hexp_int :
+      MeasureTheory.Integrable (fun h => Real.exp (2 * n * gap h ^ 2)) P)
+    (hllr_int : MeasureTheory.Integrable (MeasureTheory.llr Q P) Q)
+    (h_expFnc_pos : 0 < ∫ h, Real.exp (2 * n * gap h ^ 2) ∂P)
+    (h_expFnc_le :
+      ∫ h, Real.exp (2 * n * gap h ^ 2) ∂P ≤ 2 * Real.sqrt n / δ) :
+    EQgap ≤ Real.sqrt
+      (((InformationTheory.klDiv Q P).toReal + Real.log (2 * Real.sqrt n / δ))
+        / (2 * n)) :=
+  pac_bayes_mcallester_measure_theoretic
+    Q P hQP gap hn hδ EQgap hEQgap_nn h_jensen
+    hgap_int hexp_int hllr_int h_expFnc_pos h_expFnc_le
 
 end LTFP

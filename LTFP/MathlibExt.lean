@@ -17,6 +17,7 @@ import LTFP.MathlibExt.Probability.TotalVariation
 import LTFP.MathlibExt.Probability.Distance.Pinsker
 import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussian
 import LTFP.MathlibExt.Probability.DonskerVaradhan
+import LTFP.MathlibExt.Probability.FunctionClassConcentration
 import LTFP.MathlibExt.Probability.KullbackLeibler
 import LTFP.MathlibExt.Probability.Moments.SubExponential
 import LTFP.MathlibExt.Probability.LeCam
