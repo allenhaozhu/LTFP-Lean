@@ -323,7 +323,7 @@ theorem rkhs_inner_eq_eval
 
 end TypedRKHS
 
-/-! ### PSD-kernel-only representer theorem
+/-! ### Feature-map representer theorem
 
 The Aronszajn-style RKHS interface `RKHS_of_kernel K` packages an inner
 product space together with a feature map reproducing the kernel `K`.
@@ -335,39 +335,47 @@ Moore–Aronszajn construction is discharged — the canonical span-then-
 complete RKHS) and immediately obtain the representer-theorem
 conclusion.
 
-The Stage-1 algebraic pre-RKHS produced by
-`preRKHSCore_of_psd_kernel` (see `MathlibExt.Analysis.InnerProductSpace.
-RKHS`) supplies the inner product on the free vector space `𝒳 →₀ ℝ`;
-quotienting and completing to a Hilbert space is mechanical but
-voluminous and remains a Mathlib-side gap. Here we expose the
-PSD-kernel-only API for callers who construct their own witness.
+**Scope of this section.** The theorems below take `(E, φ, h_kernel)`
+as *inputs*. They do not construct the RKHS from the kernel alone — the
+Stage-2/3 Moore–Aronszajn completion (quotient of the free pre-RKHS by
+the seminorm kernel, followed by metric completion to a Hilbert space)
+is the documented Mathlib-side gap tracked at
+`LTFP/MathlibExt/Analysis/InnerProductSpace/RKHS.lean` (see the
+`preRKHSCore_of_psd_kernel` deferral block there). The Stage-1
+algebraic pre-RKHS on the free vector space `𝒳 →₀ ℝ` is supplied; the
+quotient-and-complete passage to a Hilbert space is mechanical but
+voluminous and not yet shipped. So the API here is a
+**feature-map-based** representer theorem, not a kernel-alone one.
 -/
 
-section PSDKernel
+section FeatureMapRepresenter
 
 variable {𝒳 : Type*} {K : 𝒳 → 𝒳 → ℝ}
 
-/-- §7.2 — **Representer theorem from a PSD kernel and a feature-map
-witness.**
+-- See `LTFP/MathlibExt/Analysis/InnerProductSpace/RKHS.lean` for the
+-- in-file Stage-2/3 deferral block that would turn the theorems below
+-- into a true kernel-alone Moore–Aronszajn discharge.
 
-Given a PSD kernel `K : 𝒳 → 𝒳 → ℝ` and a feature-map witness — i.e. a
-real inner-product space `E` and a map `φ : 𝒳 → E` with
-`K x y = ⟨φ x, φ y⟩_ℝ` for all `x y` — the typed RKHS interface is
-inhabited (via `RKHS_of_kernel.ofFeatureMap`) and the representer
-theorem applies. Concretely: for any objective
-`J(f) = L((⟨f, φ(xⱼ)⟩)ⱼ) + Ω(‖f‖)` with `Ω` non-decreasing, every
-global minimiser in `E` is matched in objective value by a minimiser
-in the finite-dimensional span `span ℝ {φ(x₁), …, φ(xₙ)}`.
+/-- §7.2 — **Representer theorem via a supplied feature map.**
 
-This is the **PSD-kernel-only form** of the representer theorem: the
-caller supplies just `(E, φ, h_kernel)` instead of the full
-`RKHS_of_kernel` record. The kernel-PSD hypothesis is not strictly
-needed for this corollary itself (the conclusion follows directly from
-the orthogonal-projection core), but the corollary is *only* useful in
-contexts where `K` is known to be PSD (otherwise no feature-map
-realisation exists in the first place — see
-`IsReproducingFeatureMap.isPSDKernel`). -/
-theorem representer_theorem_psd_kernel
+Caller supplies an ambient inner-product space `E`, a feature map
+`φ : 𝒳 → E`, and a proof that the kernel realises as
+`K x y = ⟨φ x, φ y⟩_ℝ`. The kernel-alone construction via
+Moore–Aronszajn Stage 2/3 completion is NOT yet shipped; the witness
+`(E, φ, h_kernel)` is the caller's responsibility.
+
+Concretely: for any objective `J(f) = L((⟨f, φ(xⱼ)⟩)ⱼ) + Ω(‖f‖)` with
+`Ω` non-decreasing, every global minimiser in `E` is matched in
+objective value by a minimiser in the finite-dimensional span
+`span ℝ {φ(x₁), …, φ(xₙ)}`. The proof reduces directly to
+`representer_theorem_minimizer` on the composed feature vectors
+`φ ∘ xs`; the kernel-PSD hypothesis `_hK` and the kernel-realisation
+hypothesis `_hφ` are accepted for API uniformity but are not used by
+the proof body itself (the conclusion follows from the
+orthogonal-projection core applied to `φ ∘ xs`). They become load-bearing
+once a future caller drops the explicit feature-map witness and invokes
+this theorem through a kernel-only Aronszajn constructor. -/
+theorem representer_theorem_via_feature_map
     (_hK : IsPSDKernel K)
     {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
     (φ : 𝒳 → E) (_hφ : ∀ x y, K x y = inner ℝ (φ x) (φ y))
@@ -389,12 +397,22 @@ theorem representer_theorem_psd_kernel
         L (fun j => inner ℝ g ((φ ∘ xs) j)) + Ω ‖g‖ := hf
   exact representer_theorem_minimizer (φ ∘ xs) L Ω hΩ hf'
 
-/-- §7.2 — **Representer theorem from a PSD kernel** (existence form,
-no minimiser hypothesis). Given a PSD kernel and a feature-map witness,
-for every candidate `f : E` there exists a point `g` in the
+/-- §7.2 — **Representer theorem via a supplied feature map** (existence
+form, no minimiser hypothesis).
+
+Caller supplies an ambient inner-product space `E`, a feature map
+`φ : 𝒳 → E`, and a proof that the kernel realises as
+`K x y = ⟨φ x, φ y⟩_ℝ`. The kernel-alone construction via
+Moore–Aronszajn Stage 2/3 completion is NOT yet shipped; the witness
+`(E, φ, h_kernel)` is the caller's responsibility.
+
+For every candidate `f : E` there exists a point `g` in the
 finite-dimensional span of the kernel features at the training inputs
-whose objective value is no larger than `J(f)`. -/
-theorem representer_theorem_psd_kernel_exists
+whose objective value is no larger than `J(f)`. The proof reduces
+directly to `representer_theorem_exists` on the composed feature
+vectors `φ ∘ xs`; `_hK` and `_hφ` are accepted for API uniformity but
+are not used by the proof body. -/
+theorem representer_theorem_via_feature_map_exists
     (_hK : IsPSDKernel K)
     {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
     (φ : 𝒳 → E) (_hφ : ∀ x y, K x y = inner ℝ (φ x) (φ y))
@@ -408,20 +426,25 @@ theorem representer_theorem_psd_kernel_exists
         L (fun j => inner ℝ f ((φ ∘ xs) j)) + Ω ‖f‖ :=
   representer_theorem_exists (φ ∘ xs) L Ω hΩ f
 
-/-- §7.2 — **Packaged RKHS witness from a feature-map.** Given a PSD
-kernel `K`, a real inner-product space `E`, and a map `φ : 𝒳 → E`
-reproducing `K`, the typed RKHS interface `RKHS_of_kernel K` is
+/-- §7.2 — **Packaged RKHS witness from a feature map.**
+
+Caller supplies an ambient inner-product space `E`, a feature map
+`φ : 𝒳 → E`, and a proof that the kernel realises as
+`K x y = ⟨φ x, φ y⟩_ℝ`. The kernel-alone construction via
+Moore–Aronszajn Stage 2/3 completion is NOT yet shipped.
+
+Given such a witness, the typed RKHS interface `RKHS_of_kernel K` is
 inhabited. This is the constructive converse direction of Aronszajn —
 the harder forward direction (constructing `E` and `φ` from `K` alone)
 remains a documented Mathlib gap, partially discharged at the algebraic
 level by `preRKHSCore_of_psd_kernel`. -/
-noncomputable def RKHS_of_kernel_of_psd
+noncomputable def RKHS_of_kernel_of_feature_map
     (_hK : IsPSDKernel K)
     {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
     (φ : 𝒳 → E) (hφ : ∀ x y, K x y = inner ℝ (φ x) (φ y)) :
     RKHS_of_kernel K :=
   RKHS_of_kernel.ofFeatureMap E φ hφ
 
-end PSDKernel
+end FeatureMapRepresenter
 
 end LTFP
