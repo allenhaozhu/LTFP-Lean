@@ -433,6 +433,32 @@ theorem lasso_kkt_discharge
     simpa [l1Norm] using this
   exact lasso_kkt_discharge_quadTight hlam hQT hopt'
 
+open LTFP.MathlibExt.Analysis in
+/-- §8.2 — **Concrete Lasso KKT discharge for the squared loss.**
+
+    Specialization of `lasso_kkt_discharge` to the textbook squared-loss
+    carrier `f(β) = (1/2) · ∑ᵢ (yᵢ − ∑ⱼ Xᵢⱼ βⱼ)²`. If `βhat` is a global
+    minimizer of `F(β) = (1/2)·‖y − Xβ‖² + λ · ‖β‖₁` for some `λ > 0`,
+    then there exists an ℓ¹ subgradient `v` of `βhat` such that
+    `(Xᵀ(Xβhat − y))ⱼ + λ · vⱼ = 0` for every coordinate `j`.
+
+    This is the fully-concrete form of the Lasso optimality system
+    (Bach 2024 §8.2, eq. 8.10): the existence of the subgradient is
+    *discharged* from the optimality hypothesis alone, with no external
+    `IsQuadraticTight` witness required. The witness instance
+    `isQuadraticTight_squaredLoss` lives in
+    `LTFP.MathlibExt.Analysis.Subgradient.SumRule`. -/
+theorem lasso_kkt_discharge_squaredLoss
+    {n : ℕ} (X : Fin n → Fin d → ℝ) (y : Fin n → ℝ) (βhat : Fin d → ℝ)
+    {lam : ℝ}
+    (hlam : 0 < lam)
+    (hopt : IsMinOn (fun β => squaredLoss X y β + lam * l1Norm β)
+              Set.univ βhat) :
+    ∃ v : Fin d → ℝ, IsL1SubgradientFin v βhat ∧
+      ∀ j, (∑ i, X i j * ((∑ k, X i k * βhat k) - y i)) + lam * v j = 0 :=
+  lasso_kkt_discharge hlam
+    (isQuadraticTight_squaredLoss X y βhat) hopt
+
 /-! ### ℓ¹ norm: scaling and ℓ₀ / ℓ∞ comparisons -/
 
 /-- §8.3 — **Absolute homogeneity of the ℓ¹ norm.**

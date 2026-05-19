@@ -419,4 +419,179 @@ theorem lasso_kkt_discharge_quadTight
     field_simp
     ring
 
+/-! ### Concrete `IsQuadraticTight` instance for the Lasso squared loss
+
+We instantiate `IsQuadraticTight` on the concrete squared-loss carrier
+`f(β) = (1/2) · ∑ᵢ (yᵢ − ∑ⱼ Xᵢⱼ βⱼ)²` used by the Lasso in
+`LTFP.Ch08_Sparse.L1`. The design represents the design matrix `X` as a
+plain double-index function `Fin n → Fin d → ℝ` to keep the dependency
+surface minimal (no `Matrix.mulVec` / `Matrix.transpose` infrastructure).
+
+Concretely, the linear part is the textbook gradient
+`wⱼ = ∑ᵢ Xᵢⱼ · ((∑ₖ Xᵢₖ βhatₖ) − yᵢ)`
+(componentwise `Xᵀ(Xβhat − y)`), and the quadratic remainder is
+`Q Δ = (1/2) · ∑ᵢ (∑ⱼ Xᵢⱼ Δⱼ)²`, the half-norm squared of `XΔ`.
+
+Composing with `lasso_kkt_discharge_quadTight` yields a fully concrete
+Lasso KKT discharge that takes only the optimality assumption
+`IsMinOn (fun β => (1/2)·‖y−Xβ‖² + λ·‖β‖₁) Set.univ βhat` and produces
+the textbook ℓ¹ subgradient witness `v` with `Xᵀ(Xβhat − y) + λ v = 0`. -/
+
+variable {n : ℕ}
+
+/-- The concrete squared-loss carrier used in the Lasso:
+`squaredLoss X y β = (1/2) · ∑ᵢ (yᵢ − ∑ⱼ Xᵢⱼ βⱼ)²`. -/
+noncomputable def squaredLoss (X : Fin n → Fin d → ℝ) (y : Fin n → ℝ)
+    (β : Fin d → ℝ) : ℝ :=
+  (1 / 2 : ℝ) * ∑ i, (y i - ∑ j, X i j * β j) ^ 2
+
+/-- The textbook gradient of the squared loss at `βhat`:
+`squaredLossGrad X y βhat j = ∑ᵢ Xᵢⱼ · ((∑ₖ Xᵢₖ βhatₖ) − yᵢ)`. This is
+the coordinate form of `Xᵀ(Xβhat − y)`. -/
+def squaredLossGrad (X : Fin n → Fin d → ℝ) (y : Fin n → ℝ)
+    (βhat : Fin d → ℝ) (j : Fin d) : ℝ :=
+  ∑ i, X i j * ((∑ k, X i k * βhat k) - y i)
+
+/-- The quadratic remainder of the squared loss:
+`squaredLossQuad X Δ = (1/2) · ∑ᵢ (∑ⱼ Xᵢⱼ Δⱼ)²`. -/
+noncomputable def squaredLossQuad (X : Fin n → Fin d → ℝ) (Δ : Fin d → ℝ) : ℝ :=
+  (1 / 2 : ℝ) * ∑ i, (∑ j, X i j * Δ j) ^ 2
+
+/-- **Concrete `IsQuadraticTight` instance for the Lasso squared loss.**
+
+For every design matrix `X : Fin n → Fin d → ℝ`, response `y : Fin n → ℝ`,
+and reference point `βhat : Fin d → ℝ`, the squared loss
+`β ↦ (1/2) · ∑ᵢ (yᵢ − ∑ⱼ Xᵢⱼ βⱼ)²` admits the exact Taylor expansion
+template required by `IsQuadraticTight`, with linear part
+`Xᵀ(Xβhat − y)` and remainder `(1/2) · ∑ᵢ (∑ⱼ Xᵢⱼ Δⱼ)²`.
+
+The proof unfolds to pointwise algebra: residuals at `β` differ from
+residuals at `βhat` by exactly `∑ⱼ Xᵢⱼ Δⱼ` where `Δ = β − βhat`,
+and the squared identity
+`(r − s)² = r² − 2rs + s²` integrates over `i` to the claimed decomposition
+after exchanging the order of summation on the cross term. -/
+theorem isQuadraticTight_squaredLoss
+    (X : Fin n → Fin d → ℝ) (y : Fin n → ℝ) (βhat : Fin d → ℝ) :
+    IsQuadraticTight (squaredLoss X y) (squaredLossGrad X y βhat) βhat
+      (squaredLossQuad X) where
+  exact := by
+    intro β
+    -- Notation: r i = y i - (Xβhat) i; s i = ∑ j, X i j * (β j - βhat j) = (XΔ) i.
+    -- Then y i - (Xβ) i = r i - s i, and (r i - s i)² = r²i - 2 r i s i + s²i.
+    unfold squaredLoss squaredLossGrad squaredLossQuad
+    -- Pointwise rewrite of each `(y i - ∑ j, X i j * β j)^2`.
+    have hpt : ∀ i : Fin n,
+        (y i - ∑ j, X i j * β j) ^ 2
+          = (y i - ∑ j, X i j * βhat j) ^ 2
+            + 2 * ((∑ j, X i j * βhat j) - y i) * (∑ j, X i j * (β j - βhat j))
+            + (∑ j, X i j * (β j - βhat j)) ^ 2 := by
+      intro i
+      -- (Xβ) i = (Xβhat) i + (XΔ) i.
+      have hsplit :
+          (∑ j, X i j * β j)
+            = (∑ j, X i j * βhat j) + ∑ j, X i j * (β j - βhat j) := by
+        rw [← Finset.sum_add_distrib]
+        refine Finset.sum_congr rfl (fun j _ => ?_)
+        ring
+      rw [hsplit]
+      ring
+    -- Sum over i.
+    have hsum :
+        ∑ i, (y i - ∑ j, X i j * β j) ^ 2
+          = (∑ i, (y i - ∑ j, X i j * βhat j) ^ 2)
+            + 2 * ∑ i, ((∑ j, X i j * βhat j) - y i) *
+                       (∑ j, X i j * (β j - βhat j))
+            + ∑ i, (∑ j, X i j * (β j - βhat j)) ^ 2 := by
+      have h1 :
+          ∑ i, (y i - ∑ j, X i j * β j) ^ 2
+            = ∑ i, ((y i - ∑ j, X i j * βhat j) ^ 2
+                   + 2 * ((∑ j, X i j * βhat j) - y i) *
+                          (∑ j, X i j * (β j - βhat j))
+                   + (∑ j, X i j * (β j - βhat j)) ^ 2) :=
+        Finset.sum_congr rfl (fun i _ => hpt i)
+      have hsplitA :
+          ∑ i, ((y i - ∑ j, X i j * βhat j) ^ 2
+                 + 2 * ((∑ j, X i j * βhat j) - y i) *
+                        (∑ j, X i j * (β j - βhat j))
+                 + (∑ j, X i j * (β j - βhat j)) ^ 2)
+            = ∑ i, ((y i - ∑ j, X i j * βhat j) ^ 2
+                     + 2 * ((∑ j, X i j * βhat j) - y i) *
+                            (∑ j, X i j * (β j - βhat j)))
+              + ∑ i, (∑ j, X i j * (β j - βhat j)) ^ 2 :=
+        Finset.sum_add_distrib
+      have hsplitB :
+          ∑ i, ((y i - ∑ j, X i j * βhat j) ^ 2
+                 + 2 * ((∑ j, X i j * βhat j) - y i) *
+                        (∑ j, X i j * (β j - βhat j)))
+            = (∑ i, (y i - ∑ j, X i j * βhat j) ^ 2)
+              + ∑ i, 2 * ((∑ j, X i j * βhat j) - y i) *
+                        (∑ j, X i j * (β j - βhat j)) :=
+        Finset.sum_add_distrib
+      have hfactor :
+          ∑ i, 2 * ((∑ j, X i j * βhat j) - y i) *
+                 (∑ j, X i j * (β j - βhat j))
+            = 2 * ∑ i, ((∑ j, X i j * βhat j) - y i) *
+                          (∑ j, X i j * (β j - βhat j)) := by
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl (fun i _ => ?_)
+        ring
+      rw [h1, hsplitA, hsplitB, hfactor]
+    -- Exchange order of summation on the cross term: ∑ᵢ aᵢ · (∑ⱼ Xᵢⱼ Δⱼ) = ∑ⱼ wⱼ · Δⱼ.
+    have hcross :
+        ∑ i, ((∑ j, X i j * βhat j) - y i) *
+              (∑ j, X i j * (β j - βhat j))
+          = ∑ j, (∑ i, X i j * ((∑ k, X i k * βhat k) - y i)) *
+                  (β j - βhat j) := by
+      -- Distribute the outer scalar through the inner sum, then swap.
+      have hexpand : ∀ i,
+          ((∑ j, X i j * βhat j) - y i) *
+            (∑ j, X i j * (β j - βhat j))
+            = ∑ j, X i j * ((∑ k, X i k * βhat k) - y i) *
+                  (β j - βhat j) := by
+        intro i
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl (fun j _ => ?_)
+        ring
+      have h1 :
+          ∑ i, ((∑ j, X i j * βhat j) - y i) *
+                (∑ j, X i j * (β j - βhat j))
+            = ∑ i, ∑ j, X i j * ((∑ k, X i k * βhat k) - y i) *
+                              (β j - βhat j) :=
+        Finset.sum_congr rfl (fun i _ => hexpand i)
+      rw [h1, Finset.sum_comm]
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [Finset.sum_mul]
+    -- Assemble the final identity.
+    rw [hsum, hcross]
+    simp only [Pi.sub_apply]
+    ring
+  nonneg := by
+    intro Δ
+    unfold squaredLossQuad
+    have hsum_nn : 0 ≤ ∑ i, (∑ j, X i j * Δ j) ^ 2 :=
+      Finset.sum_nonneg (fun i _ => sq_nonneg _)
+    have hhalf : (0 : ℝ) ≤ 1 / 2 := by norm_num
+    exact mul_nonneg hhalf hsum_nn
+  homog := by
+    intro t Δ
+    unfold squaredLossQuad
+    -- (∑ j, X i j * (t * Δ j))^2 = t^2 * (∑ j, X i j * Δ j)^2.
+    have hinner : ∀ i, (∑ j, X i j * (t * Δ j)) = t * ∑ j, X i j * Δ j := by
+      intro i
+      rw [Finset.mul_sum]
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      ring
+    have hstep : ∀ i, (∑ j, X i j * (t * Δ j)) ^ 2
+                    = t ^ 2 * (∑ j, X i j * Δ j) ^ 2 := by
+      intro i
+      rw [hinner i]
+      ring
+    have hsum :
+        ∑ i, (∑ j, X i j * (t * Δ j)) ^ 2
+          = t ^ 2 * ∑ i, (∑ j, X i j * Δ j) ^ 2 := by
+      rw [Finset.mul_sum]
+      exact Finset.sum_congr rfl (fun i _ => hstep i)
+    rw [hsum]
+    ring
+
 end LTFP.MathlibExt.Analysis
