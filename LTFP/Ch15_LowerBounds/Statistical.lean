@@ -15,6 +15,7 @@ inequalities themselves are deferred.
 import LTFP.Foundations.InfoTheory
 import LTFP.MathlibExt.Probability.TotalVariation
 import LTFP.MathlibExt.Probability.Distance.Pinsker
+import LTFP.MathlibExt.Probability.Distance.Bhattacharyya
 import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Analysis.Complex.Exponential
@@ -366,6 +367,28 @@ theorem tvDist_le_sqrt_one_sub_exp_neg_of_hellinger
     LTFP.MathlibExt.Probability.tvDist_sq_le_one_sub_exp_neg_of_hellinger
       μ ν hH_nonneg hH_le_two h_lecam h_kl_bridge
   exact tvDist_le_sqrt_one_sub_exp_neg μ ν D hD h_bridge
+
+/-- §15.1 — **Bretagnolle--Huber via the named Bhattacharyya affinity.**
+
+Same as `tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya`, but stated
+directly in terms of `LTFP.MathlibExt.Probability.bhattacharyya μ ν`
+(the symmetric definition introduced in
+`LTFP/MathlibExt/Probability/Distance/Bhattacharyya.lean`).
+
+This wrapper exists because the named definition lets callers package
+the Bhattacharyya hypothesis chain without introducing an auxiliary real
+parameter `ρ`. The nonnegativity of `bhattacharyya μ ν` is provided
+automatically by `bhattacharyya_nonneg`. -/
+theorem tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya_def
+    (μ ν : Measure α) {D : ℝ} (hD : 0 ≤ D)
+    (h_lecam : ((tvDist μ ν).toReal) ^ 2 ≤
+      1 - LTFP.MathlibExt.Probability.bhattacharyya μ ν ^ 2)
+    (h_kl_bridge : Real.exp (-D / 2) ≤
+      LTFP.MathlibExt.Probability.bhattacharyya μ ν) :
+    (tvDist μ ν).toReal ≤ Real.sqrt (1 - Real.exp (-D)) :=
+  tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya μ ν hD
+    (LTFP.MathlibExt.Probability.bhattacharyya_nonneg μ ν)
+    h_lecam h_kl_bridge
 
 end MeasureBretagnolleHuber
 
