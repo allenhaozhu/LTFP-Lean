@@ -168,6 +168,45 @@ theorem function_class_mgf_bound_of_per_h
     simp [integral_const]
   linarith [h_le, h_const.le, h_const.ge]
 
+/-- **Per-`h` MGF bound lifts to function-class MGF bound, swapped order.**
+Bridge variant of `function_class_mgf_bound_of_per_h` whose conclusion has
+the integrals in the order `∫ s, ∫ h, … ∂P ∂D` rather than
+`∫ h, ∫ s, … ∂D ∂P`. This is the order consumed by
+`pac_bayes_good_sample_event` (Markov over the sample `S`), and is
+obtained from the unswapped bound by applying Fubini
+(`integral_integral_swap`) to the jointly integrable integrand.
+
+The joint integrability witness `h_int_joint` is the standard hypothesis
+attached to a Fubini swap in Mathlib. -/
+theorem function_class_mgf_bound_of_per_h_swapped
+    {P : Measure ℋ} {D : Measure Ω}
+    [IsProbabilityMeasure P] [SFinite D]
+    (gap : ℋ → Ω → ℝ) (c M : ℝ)
+    (h_int_joint :
+      Integrable (fun p : ℋ × Ω => Real.exp (c * (gap p.1 p.2) ^ 2)) (P.prod D))
+    (h_per_h : ∀ h, ∫ s, Real.exp (c * (gap h s) ^ 2) ∂D ≤ M)
+    (h_int : Integrable (fun h => ∫ s, Real.exp (c * (gap h s) ^ 2) ∂D) P) :
+    ∫ s, ∫ h, Real.exp (c * (gap h s) ^ 2) ∂P ∂D ≤ M := by
+  -- Unswapped bound (this file's existing lemma).
+  have h_unswapped : ∫ h, ∫ s, Real.exp (c * (gap h s) ^ 2) ∂D ∂P ≤ M :=
+    function_class_mgf_bound_of_per_h gap c M h_per_h h_int
+  -- Fubini swap on jointly integrable integrand.
+  have h_swap :
+      ∫ s, ∫ h, Real.exp (c * (gap h s) ^ 2) ∂P ∂D
+        = ∫ h, ∫ s, Real.exp (c * (gap h s) ^ 2) ∂D ∂P := by
+    have h_unc :
+        Integrable
+          (Function.uncurry (fun h s => Real.exp (c * (gap h s) ^ 2)))
+          (P.prod D) := by
+      simpa [Function.uncurry] using h_int_joint
+    -- `integral_integral_swap` rewrites `∫ x, ∫ y, f x y ∂ν ∂μ` to
+    -- `∫ y, ∫ x, f x y ∂μ ∂ν`. Applied with `μ := P`, `ν := D`, we obtain
+    -- the unswapped → swapped direction; we want the reverse, so symm.
+    have h := integral_integral_swap (μ := P) (ν := D) h_unc
+    exact h.symm
+  rw [h_swap]
+  exact h_unswapped
+
 /-! ### Chernoff / Markov step
 
 The standard conversion from "expectation is bounded" to

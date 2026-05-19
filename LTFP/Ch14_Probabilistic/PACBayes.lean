@@ -15,6 +15,7 @@ import LTFP.MathlibExt.Probability.DonskerVaradhan
 import LTFP.MathlibExt.Probability.FunctionClassConcentration
 import LTFP.MathlibExt.Probability.KullbackLeibler
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
+import Mathlib.MeasureTheory.Constructions.Pi
 
 namespace LTFP
 
@@ -573,5 +574,238 @@ theorem pac_bayes_mcallester_measure_theoretic_unfolded
   pac_bayes_mcallester_measure_theoretic
     Q P hQP gap hn hδ EQgap hEQgap_nn h_jensen
     hgap_int hexp_int hllr_int h_expFnc_pos h_expFnc_le
+
+/-! ### Narrowing the residual hypothesis to a single named slot
+
+The carrier `pac_bayes_mcallester_measure_theoretic` consumes a
+sample-fixed bound `∫ h, exp(2 n · gap(h)²) ∂P ≤ 2 √n / δ` as
+`h_expFnc_le`. Producing this bound from a per-`h` Bach Eq. 14.21 input
+requires three steps: lift the per-`h` bound to a joint expectation,
+swap the Fubini order, and apply Markov over the sample.
+
+A 2026-05-19 `xhigh`-Codex audit observed that the per-`h` step is **not**
+discharged by the naive Hoeffding-tail layer-cake calculation: at the
+critical exponent `2 n`, the resulting integral diverges (or is `O(n)`
+after truncation), not `O(√n)`. The actual proof of Bach Eq. 14.21 goes
+via the **bounded-differences moment lemma** in the Catoni / Alquier /
+McAllester style — convex-order arguments on log-MGFs of bounded
+differences — and is a self-contained 3–7 person-day standalone Mathlib
+project. We therefore *do not* attempt to prove Eq. 14.21 here; instead
+we expose it as a single named predicate
+(`bounded_average_sq_exp_moment_assumption`) that future work can
+discharge, and provide a carrier
+(`pac_bayes_mcallester_measure_theoretic_unconditional`) that consumes
+this single predicate (plus standard integrability regularity) and
+produces the function-class concentration event needed by
+`pac_bayes_mcallester_measure_theoretic`. -/
+
+/-- §14.4 — **Bach 2024 Eq. 14.21 as a named predicate.**
+
+For a `[0, 1]`-bounded loss `ℓ : 𝒳 → ℝ` and i.i.d. sample distribution
+`D` on `𝒳`, the squared-gap exponential moment under `Dⁿ` satisfies
+
+  `∫ S, exp(2 n · ((1/n)∑ᵢ ℓ(Sᵢ) - E_D[ℓ])²) ∂Dⁿ ≤ 2 √n`.
+
+This is Bach 2024 Eq. 14.21, the per-`h` scalar input to the PAC-Bayes
+function-class concentration argument.
+
+**Why this is a named predicate, not a theorem.** A 2026-05-19 `xhigh`
+Codex audit determined that this bound is **not** obtained from
+Hoeffding's two-sided tail bound by the naive layer-cake calculation —
+at the critical exponent `2 n`, that calculation diverges (or yields
+`O(n)`). The actual proof goes via the **bounded-differences moment
+lemma** in the Catoni / Alquier / McAllester style: convex-order arguments
+on log-MGFs of bounded differences combined with the
+McDiarmid-style martingale decomposition. Formalizing this in Lean is a
+self-contained 3–7 person-day standalone Mathlib project requiring
+machinery (convex-order, McDiarmid, Hoeffding–Azuma) that is only
+partially available upstream. We therefore keep this as a named
+predicate to be discharged by future focused work; the rest of the
+PAC-Bayes chain is unconditionally wired through it.
+
+References:
+* F. Bach, *Learning Theory from First Principles*, 2024, Eq. 14.21.
+* O. Catoni, *PAC-Bayesian Supervised Classification: The Thermodynamics
+  of Statistical Learning*, IMS Lecture Notes, 2007.
+* P. Alquier, *User-friendly introduction to PAC-Bayes bounds*,
+  Foundations and Trends in Machine Learning, 17(2):174–303, 2024. -/
+def bounded_average_sq_exp_moment_assumption
+    {𝒳 : Type*} [MeasurableSpace 𝒳]
+    (D : MeasureTheory.Measure 𝒳) [MeasureTheory.IsProbabilityMeasure D]
+    (ℓ : 𝒳 → ℝ)
+    (_hℓ : ∀ x, ℓ x ∈ Set.Icc (0 : ℝ) 1)
+    (n : ℕ) (_hn : 0 < n) : Prop :=
+  ∫ s, Real.exp (2 * (n : ℝ) *
+        ((1 / (n : ℝ)) * ∑ i : Fin n, ℓ (s i)
+          - ∫ x, ℓ x ∂D) ^ 2) ∂(MeasureTheory.Measure.pi (fun _ : Fin n => D))
+    ≤ 2 * Real.sqrt (n : ℝ)
+
+/-- §14.4 — **PAC-Bayes carrier with residual narrowed to a single
+named slot.**
+
+Given the **single** non-trivial residual hypothesis
+`bounded_average_sq_exp_moment_assumption` (Bach 2024 Eq. 14.21) on the
+loss `ℓ` and the i.i.d. sample distribution `D`, together with standard
+joint-integrability regularity on the squared-gap exponential moment,
+the **function-class concentration event** for PAC-Bayes holds: the
+sample-product measure of the *bad* set on which the function-class MGF
+exceeds `2 √n / δ` is at most `δ`. Equivalently, the *good* set on which
+the carrier's `h_expFnc_le` hypothesis holds has `Dⁿ`-measure `≥ 1 − δ`.
+
+On any sample `S` in this good set,
+`pac_bayes_mcallester_measure_theoretic` applies and yields the
+McAllester PAC-Bayes bound
+
+  `E_{h∼Q}[gap(h, S)] ≤ √((KL(Q ‖ P) + log(2 √n / δ)) / (2 n))`.
+
+The chain internally uses
+`LTFP.MathlibExt.Probability.function_class_mgf_bound_of_per_h_swapped`
+to flip the order of integration from `∫ h ∫ S` to `∫ S ∫ h`, so the
+output is directly in the form consumed by
+`pac_bayes_good_sample_event`. -/
+theorem pac_bayes_mcallester_measure_theoretic_unconditional
+    {𝒳 ℋ : Type*} [MeasurableSpace 𝒳] [MeasurableSpace ℋ]
+    (P : MeasureTheory.Measure ℋ) [MeasureTheory.IsProbabilityMeasure P]
+    (D : MeasureTheory.Measure 𝒳) [MeasureTheory.IsProbabilityMeasure D]
+    (ℓ : ℋ → 𝒳 → ℝ)
+    (hℓ : ∀ h x, ℓ h x ∈ Set.Icc (0 : ℝ) 1)
+    {n : ℕ} (hn : 0 < n) {δ : ℝ} (hδ : 0 < δ)
+    -- The SINGLE non-trivial residual hypothesis (Bach Eq. 14.21).
+    (h_bound_moment :
+      ∀ h : ℋ, bounded_average_sq_exp_moment_assumption D (ℓ h) (hℓ h) n hn)
+    -- Standard joint integrability regularity (for Fubini swap).
+    (h_int_joint :
+      MeasureTheory.Integrable
+        (fun p : ℋ × (Fin n → 𝒳) =>
+          Real.exp (2 * (n : ℝ) *
+            ((1 / (n : ℝ)) * ∑ i : Fin n, ℓ p.1 (p.2 i)
+              - ∫ x, ℓ p.1 x ∂D) ^ 2))
+        (P.prod (MeasureTheory.Measure.pi (fun _ : Fin n => D))))
+    -- Inner integrability for the unswapped direction.
+    (h_int_inner_S :
+      MeasureTheory.Integrable
+        (fun h => ∫ s,
+          Real.exp (2 * (n : ℝ) *
+            ((1 / (n : ℝ)) * ∑ i : Fin n, ℓ h (s i)
+              - ∫ x, ℓ h x ∂D) ^ 2)
+          ∂(MeasureTheory.Measure.pi (fun _ : Fin n => D))) P)
+    -- Inner integrability for the swapped direction.
+    (h_int_inner_h :
+      MeasureTheory.Integrable
+        (fun s : Fin n → 𝒳 => ∫ h,
+          Real.exp (2 * (n : ℝ) *
+            ((1 / (n : ℝ)) * ∑ i : Fin n, ℓ h (s i)
+              - ∫ x, ℓ h x ∂D) ^ 2) ∂P)
+        (MeasureTheory.Measure.pi (fun _ : Fin n => D))) :
+    (MeasureTheory.Measure.pi (fun _ : Fin n => D)).real
+        { s : Fin n → 𝒳 |
+          2 * Real.sqrt (n : ℝ) / δ ≤
+            ∫ h, Real.exp (2 * (n : ℝ) *
+              ((1 / (n : ℝ)) * ∑ i : Fin n, ℓ h (s i)
+                - ∫ x, ℓ h x ∂D) ^ 2) ∂P }
+      ≤ δ := by
+  -- Abbreviate the gap-from-sample and the exponential integrand.
+  set gap : ℋ → (Fin n → 𝒳) → ℝ :=
+    fun h s => (1 / (n : ℝ)) * ∑ i : Fin n, ℓ h (s i) - ∫ x, ℓ h x ∂D with hgap_def
+  -- Reformulate the named assumption in `gap` form.
+  have h_per_h :
+      ∀ h, ∫ s, Real.exp (2 * (n : ℝ) * (gap h s) ^ 2)
+            ∂(MeasureTheory.Measure.pi (fun _ : Fin n => D))
+              ≤ 2 * Real.sqrt (n : ℝ) := by
+    intro h
+    -- `bounded_average_sq_exp_moment_assumption` is definitionally equal to
+    -- the integral in `gap`-form.
+    exact h_bound_moment h
+  -- Reformulate the joint integrability in `gap` form.
+  have h_int_joint' :
+      MeasureTheory.Integrable
+        (fun p : ℋ × (Fin n → 𝒳) =>
+          Real.exp (2 * (n : ℝ) * (gap p.1 p.2) ^ 2))
+        (P.prod (MeasureTheory.Measure.pi (fun _ : Fin n => D))) := h_int_joint
+  -- Reformulate inner integrability hypotheses in `gap` form.
+  have h_int_inner_S' :
+      MeasureTheory.Integrable
+        (fun h => ∫ s, Real.exp (2 * (n : ℝ) * (gap h s) ^ 2)
+            ∂(MeasureTheory.Measure.pi (fun _ : Fin n => D))) P := h_int_inner_S
+  have h_int_inner_h' :
+      MeasureTheory.Integrable
+        (fun s : Fin n → 𝒳 => ∫ h,
+          Real.exp (2 * (n : ℝ) * (gap h s) ^ 2) ∂P)
+        (MeasureTheory.Measure.pi (fun _ : Fin n => D)) := h_int_inner_h
+  -- Step 1: lift per-`h` to swapped joint bound via the Fubini bridge.
+  have h_swapped :
+      ∫ s, ∫ h, Real.exp (2 * (n : ℝ) * (gap h s) ^ 2) ∂P
+        ∂(MeasureTheory.Measure.pi (fun _ : Fin n => D))
+      ≤ 2 * Real.sqrt (n : ℝ) :=
+    LTFP.MathlibExt.Probability.function_class_mgf_bound_of_per_h_swapped
+      (P := P) (D := MeasureTheory.Measure.pi (fun _ : Fin n => D))
+      gap (2 * (n : ℝ)) (2 * Real.sqrt (n : ℝ))
+      h_int_joint' h_per_h h_int_inner_S'
+  -- Step 2: non-negativity of the inner integrand (exp ≥ 0).
+  have h_inner_nn :
+      0 ≤ᵐ[MeasureTheory.Measure.pi (fun _ : Fin n => D)]
+        fun s : Fin n → 𝒳 =>
+          ∫ h, Real.exp (2 * (n : ℝ) * (gap h s) ^ 2) ∂P := by
+    refine Filter.Eventually.of_forall (fun s => ?_)
+    refine MeasureTheory.integral_nonneg (fun h => ?_)
+    exact (Real.exp_pos _).le
+  -- Step 3: Markov via `function_class_chernoff_event_for_mgf`.
+  have hn_real : 0 < (n : ℝ) := by exact_mod_cast hn
+  have h_good_event :=
+    LTFP.MathlibExt.Probability.function_class_chernoff_event_for_mgf
+      (P := P) (D := MeasureTheory.Measure.pi (fun _ : Fin n => D))
+      gap (n : ℝ) hn_real δ hδ
+      h_int_inner_h' h_inner_nn h_swapped
+  -- The conclusion of `function_class_chernoff_event_for_mgf` is exactly
+  -- the goal (after unfolding `gap`).
+  exact h_good_event
+
+/-- §14.4 — **Existence form of the unconditional carrier.** Given the
+single named Bach Eq. 14.21 hypothesis and standard integrability
+regularity, the **good sample event** has `Dⁿ`-measure at most `δ` on
+its complement, which is the form fed into the McAllester carrier
+`pac_bayes_mcallester_measure_theoretic`. This is a thin restatement of
+`pac_bayes_mcallester_measure_theoretic_unconditional` for readability;
+the work is in the predicate's discharge, which is the deferred
+Catoni/Alquier bounded-differences moment lemma. -/
+theorem pac_bayes_function_class_concentration_event
+    {𝒳 ℋ : Type*} [MeasurableSpace 𝒳] [MeasurableSpace ℋ]
+    (P : MeasureTheory.Measure ℋ) [MeasureTheory.IsProbabilityMeasure P]
+    (D : MeasureTheory.Measure 𝒳) [MeasureTheory.IsProbabilityMeasure D]
+    (ℓ : ℋ → 𝒳 → ℝ)
+    (hℓ : ∀ h x, ℓ h x ∈ Set.Icc (0 : ℝ) 1)
+    {n : ℕ} (hn : 0 < n) {δ : ℝ} (hδ : 0 < δ)
+    (h_bound_moment :
+      ∀ h : ℋ, bounded_average_sq_exp_moment_assumption D (ℓ h) (hℓ h) n hn)
+    (h_int_joint :
+      MeasureTheory.Integrable
+        (fun p : ℋ × (Fin n → 𝒳) =>
+          Real.exp (2 * (n : ℝ) *
+            ((1 / (n : ℝ)) * ∑ i : Fin n, ℓ p.1 (p.2 i)
+              - ∫ x, ℓ p.1 x ∂D) ^ 2))
+        (P.prod (MeasureTheory.Measure.pi (fun _ : Fin n => D))))
+    (h_int_inner_S :
+      MeasureTheory.Integrable
+        (fun h => ∫ s,
+          Real.exp (2 * (n : ℝ) *
+            ((1 / (n : ℝ)) * ∑ i : Fin n, ℓ h (s i)
+              - ∫ x, ℓ h x ∂D) ^ 2)
+          ∂(MeasureTheory.Measure.pi (fun _ : Fin n => D))) P)
+    (h_int_inner_h :
+      MeasureTheory.Integrable
+        (fun s : Fin n → 𝒳 => ∫ h,
+          Real.exp (2 * (n : ℝ) *
+            ((1 / (n : ℝ)) * ∑ i : Fin n, ℓ h (s i)
+              - ∫ x, ℓ h x ∂D) ^ 2) ∂P)
+        (MeasureTheory.Measure.pi (fun _ : Fin n => D))) :
+    (MeasureTheory.Measure.pi (fun _ : Fin n => D)).real
+        { s : Fin n → 𝒳 |
+          2 * Real.sqrt (n : ℝ) / δ ≤
+            ∫ h, Real.exp (2 * (n : ℝ) *
+              ((1 / (n : ℝ)) * ∑ i : Fin n, ℓ h (s i)
+                - ∫ x, ℓ h x ∂D) ^ 2) ∂P }
+      ≤ δ :=
+  pac_bayes_mcallester_measure_theoretic_unconditional
+    P D ℓ hℓ hn hδ h_bound_moment h_int_joint h_int_inner_S h_int_inner_h
 
 end LTFP
