@@ -459,6 +459,40 @@ theorem lasso_kkt_discharge_squaredLoss
   lasso_kkt_discharge hlam
     (isQuadraticTight_squaredLoss X y βhat) hopt
 
+open LTFP.MathlibExt.Analysis Matrix in
+/-- §8.2 — **Matrix-form Lasso KKT discharge for the squared loss.**
+
+    Thin wrapper around `lasso_kkt_discharge_squaredLoss` that exposes
+    the conclusion using `Matrix.mulVec` (`*ᵥ`) and `Matrix.transpose`
+    (`ᵀ`), the shape downstream consumers (`Ch03_LinearLeastSquares`,
+    random projections in `Foundations`) actually want. The hypothesis
+    carrier remains the LTFP-local `squaredLoss + lam * l1Norm` since
+    its scalar-loss/ℓ¹-regularizer decomposition is what the discharge
+    machinery is calibrated against; the Matrix and plain-function
+    surfaces are definitionally interchangeable, so callers may supply
+    `X : Matrix (Fin n) (Fin d) ℝ` directly.
+
+    Conclusion: the textbook KKT residual `(Xᵀ(Xβhat − y))ⱼ + λ · vⱼ = 0`
+    in coordinate `j`, with `v` an ℓ¹ subgradient of `βhat`. -/
+theorem lasso_kkt_discharge_squaredLoss_matrix
+    {n : ℕ} (X : Matrix (Fin n) (Fin d) ℝ) (y : Fin n → ℝ)
+    (βhat : Fin d → ℝ) {lam : ℝ} (hlam : 0 < lam)
+    (hopt : IsMinOn (fun β => squaredLoss X y β + lam * l1Norm β)
+              Set.univ βhat) :
+    ∃ v : Fin d → ℝ, IsL1SubgradientFin v βhat ∧
+      ∀ j, (Xᵀ *ᵥ (X *ᵥ βhat - y)) j + lam * v j = 0 := by
+  obtain ⟨v, hv, hKKT⟩ :=
+    lasso_kkt_discharge_squaredLoss (X := X) y βhat hlam hopt
+  refine ⟨v, hv, ?_⟩
+  intro j
+  -- Bridge `Matrix.mulVec` / `Matrix.transpose` to the coordinate-sum
+  -- form the plain-function discharge produced.
+  have hbridge : (Xᵀ *ᵥ (X *ᵥ βhat - y)) j
+      = ∑ i, X i j * ((∑ k, X i k * βhat k) - y i) := by
+    simp [Matrix.mulVec, dotProduct, Matrix.transpose, Pi.sub_apply]
+  rw [hbridge]
+  exact hKKT j
+
 /-! ### ℓ¹ norm: scaling and ℓ₀ / ℓ∞ comparisons -/
 
 /-- §8.3 — **Absolute homogeneity of the ℓ¹ norm.**
