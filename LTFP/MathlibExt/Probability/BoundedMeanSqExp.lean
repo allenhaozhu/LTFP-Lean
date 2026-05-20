@@ -306,6 +306,170 @@ lemma piSampleFamily_bdd
   refine Filter.Eventually.of_forall (fun ω => ?_)
   simpa [piSampleFamily] using hℓ (ω i)
 
+/-! ### Sub-Gaussian variance proxy for bounded centered averages (Phase 3b-1)
+
+Catoni / Alquier's bounded-differences moment lemma rests on the
+following sub-Gaussian variance-proxy input for the centered empirical
+average:
+
+> *If `X₀, …, X_{n-1}` are i.i.d. real random variables almost surely
+> in `[0, 1]` with common mean `μ_X`, then the centered average
+> `Z_n := (1/n) ∑ Xᵢ - μ_X` has a sub-Gaussian MGF with parameter
+> `σ² = 1 / (4 n)`.*
+
+The proof composes three Mathlib pieces:
+
+1. **Hoeffding's lemma**
+   (`hasSubgaussianMGF_of_mem_Icc_of_integral_eq_zero`) gives each
+   centered summand `Yᵢ ω := Xᵢ ω - μ_X` a sub-Gaussian MGF with
+   parameter `((‖1‖₊ / 2) ^ 2) = 1/4`.
+2. **Sum of independent sub-Gaussians**
+   (`HasSubgaussianMGF.sum_of_iIndepFun`) compounds the parameters
+   additively: `∑ᵢ Yᵢ` is sub-Gaussian with parameter `n · (1/4)`.
+3. **Scaling** (`HasSubgaussianMGF.const_mul`) multiplies the
+   parameter by the square of the scalar: `(1/n) · ∑ Yᵢ` is
+   sub-Gaussian with parameter `(1/n)² · (n/4) = 1/(4n)`.
+
+A final pointwise rewrite identifies the result with the centered
+empirical average `Z_n = (1/n) ∑ Xᵢ - μ_X`. -/
+
+omit [MeasurableSpace Ω] in
+/-- Algebraic identity for centering a finite average: shifting each
+summand by the same constant `c` and averaging is the same as averaging
+and then shifting by `c`. -/
+private lemma centered_sum_div_eq
+    {n : ℕ} (hn : 0 < n) (X : Fin n → Ω → ℝ) (c : ℝ) (ω : Ω) :
+    (1 / (n : ℝ)) * ∑ i, (X i ω - c)
+      = (1 / (n : ℝ)) * ∑ i, X i ω - c := by
+  have hn_pos : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have hn_ne : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
+  rw [Finset.sum_sub_distrib]
+  simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+  field_simp
+
+/-- **Sub-Gaussian variance proxy for the centered empirical average
+of an i.i.d. `[0, 1]`-bounded family** (Phase 3b-1 of the
+Catoni/Alquier bounded-differences route).
+
+Given `n` independent identically distributed `[0, 1]`-valued random
+variables `Xᵢ` on a probability space `(Ω, μ)` with common mean `μ_X`,
+the centered average
+
+  `Z_n ω := (1 / n) · ∑ᵢ Xᵢ ω - μ_X`
+
+has a sub-Gaussian MGF with parameter `1 / (4 n)`.
+
+This is the basic Hoeffding-style input to the Catoni/Alquier
+bounded-differences moment lemma. It is *not* yet Bach Eq. 14.21: the
+generic sub-Gaussian "exp of square" formula diverges at the PAC-Bayes
+critical exponent `c = 2 n` because `2 c σ² = 2 · 2n · 1/(4n) = 1`
+exactly (see `critical_exponent_boundary`). The Catoni/Alquier route
+goes one step further to extract the precise `2 √n` constant from
+bounded-differences structure. -/
+theorem hasSubgaussianMGF_centered_bounded_average
+    (μ : Measure Ω) [IsProbabilityMeasure μ]
+    {n : ℕ} (hn : 0 < n) (X : Fin n → Ω → ℝ)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_indep : iIndepFun X μ)
+    (hX_bdd : ∀ i, ∀ᵐ ω ∂μ, X i ω ∈ Set.Icc (0 : ℝ) 1)
+    (hX_same_mean : ∀ i, ∫ ω, X i ω ∂μ = ∫ ω, X ⟨0, hn⟩ ω ∂μ) :
+    ProbabilityTheory.HasSubgaussianMGF
+      (fun ω => (1 / (n : ℝ)) * ∑ i, X i ω - ∫ ω, X ⟨0, hn⟩ ω ∂μ)
+      ⟨1 / (4 * (n : ℝ)),
+        div_nonneg (by norm_num) (by positivity)⟩
+      μ := by
+  -- Notation
+  set μ_X : ℝ := ∫ ω, X ⟨0, hn⟩ ω ∂μ with hμ_X
+  -- Step 1: centered summands `Y i ω := X i ω - μ_X`.
+  set Y : Fin n → Ω → ℝ := fun i ω => X i ω - μ_X with hY
+  -- Each `X i` is integrable (bounded a.e. on a finite measure).
+  have hX_int : ∀ i, Integrable (X i) μ := by
+    intro i
+    exact Integrable.of_mem_Icc 0 1 (hX_meas i).aemeasurable (hX_bdd i)
+  -- Mean of `Y i` is zero.
+  have hY_mean : ∀ i, ∫ ω, Y i ω ∂μ = 0 := by
+    intro i
+    have h_int := hX_int i
+    have h_int' : Integrable (fun _ : Ω => μ_X) μ := integrable_const _
+    have h_sub : ∫ ω, X i ω - μ_X ∂μ = ∫ ω, X i ω ∂μ - μ_X := by
+      rw [integral_sub h_int h_int']
+      simp
+    have h_same : ∫ ω, X i ω ∂μ = μ_X := by
+      rw [hX_same_mean i]
+    show ∫ ω, X i ω - μ_X ∂μ = 0
+    rw [h_sub, h_same, sub_self]
+  -- `Y i ω ∈ [-μ_X, 1 - μ_X]` a.e.
+  have hY_bdd : ∀ i, ∀ᵐ ω ∂μ, Y i ω ∈ Set.Icc (-μ_X) (1 - μ_X) := by
+    intro i
+    filter_upwards [hX_bdd i] with ω hω
+    refine ⟨?_, ?_⟩
+    · linarith [hω.1]
+    · linarith [hω.2]
+  -- Measurability of `Y i`.
+  have hY_meas : ∀ i, Measurable (Y i) := fun i => (hX_meas i).sub_const _
+  -- Step 2: Hoeffding gives sub-Gaussian MGF for each `Y i` with proxy
+  -- `((‖(1 - μ_X) - (-μ_X)‖₊ / 2) ^ 2) = (‖1‖₊ / 2)^2 = 1/4`.
+  -- We first establish it with the Hoeffding proxy, then identify with `1/4`.
+  have hY_subG_hoeff : ∀ i,
+      HasSubgaussianMGF (Y i) ((‖(1 - μ_X) - (-μ_X)‖₊ / 2) ^ 2) μ := by
+    intro i
+    exact hasSubgaussianMGF_of_mem_Icc_of_integral_eq_zero
+      (hY_meas i).aemeasurable (hY_bdd i) (hY_mean i)
+  -- Simplify the Hoeffding proxy to the constant `1/4`.
+  have h_proxy_simp : ((‖(1 - μ_X) - (-μ_X)‖₊ / 2) ^ 2 : ℝ≥0) = ⟨1 / 4, by norm_num⟩ := by
+    apply NNReal.eq
+    push_cast
+    have h1 : (1 - μ_X) - (-μ_X) = (1 : ℝ) := by ring
+    rw [h1]
+    rw [show ‖(1 : ℝ)‖ = 1 by simp]
+    norm_num
+  have hY_subG : ∀ i, HasSubgaussianMGF (Y i) ⟨1 / 4, by norm_num⟩ μ := by
+    intro i
+    have h := hY_subG_hoeff i
+    rwa [h_proxy_simp] at h
+  -- Step 3: Independence of `Y i` via composition with `· - μ_X`.
+  have hY_indep : iIndepFun Y μ := by
+    have h := hX_indep.comp (fun _ x => x - μ_X) (fun _ => measurable_id.sub_const _)
+    exact h
+  -- Step 4: Sum of i.i.d. sub-Gaussians with proxy `1/4` each.
+  have hSum_subG : HasSubgaussianMGF
+      (fun ω => ∑ i, Y i ω) (∑ _i : Fin n, (⟨1 / 4, by norm_num⟩ : ℝ≥0)) μ := by
+    exact HasSubgaussianMGF.sum_of_iIndepFun hY_indep
+      (fun i _ => hY_subG i)
+  -- Simplify the sum of constants to `n / 4`.
+  have h_sum_const : (∑ _i : Fin n, (⟨1 / 4, by norm_num⟩ : ℝ≥0))
+      = ⟨(n : ℝ) / 4, by positivity⟩ := by
+    rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin]
+    apply NNReal.eq
+    rw [NNReal.coe_nsmul, NNReal.coe_mk, NNReal.coe_mk, nsmul_eq_mul]
+    ring
+  rw [h_sum_const] at hSum_subG
+  -- Step 5: Scale by `1/n`.
+  have hAvg_subG : HasSubgaussianMGF
+      (fun ω => (1 / (n : ℝ)) * ∑ i, Y i ω)
+      (⟨(1 / (n : ℝ)) ^ 2, sq_nonneg _⟩ * ⟨(n : ℝ) / 4, by positivity⟩) μ :=
+    hSum_subG.const_mul (1 / (n : ℝ))
+  -- Simplify the scaled proxy to `1 / (4 n)`.
+  have hn_pos : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have hn_ne : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
+  have h_proxy_final :
+      (⟨(1 / (n : ℝ)) ^ 2, sq_nonneg _⟩ * ⟨(n : ℝ) / 4, by positivity⟩ : ℝ≥0)
+        = ⟨1 / (4 * (n : ℝ)), div_nonneg (by norm_num) (by positivity)⟩ := by
+    apply NNReal.eq
+    push_cast
+    field_simp
+  rw [h_proxy_final] at hAvg_subG
+  -- Step 6: Identify the scaled sum with the centered empirical average.
+  have h_eq : ∀ ω, (1 / (n : ℝ)) * ∑ i, Y i ω
+      = (1 / (n : ℝ)) * ∑ i, X i ω - μ_X := by
+    intro ω
+    show (1 / (n : ℝ)) * ∑ i, (X i ω - μ_X)
+      = (1 / (n : ℝ)) * ∑ i, X i ω - μ_X
+    exact centered_sum_div_eq hn X μ_X ω
+  refine hAvg_subG.congr ?_
+  refine Filter.Eventually.of_forall (fun ω => ?_)
+  exact h_eq ω
+
 /-! ### PAC-Bayes carrier bridge
 
 The bridge theorem: starting from the named Catoni/Alquier residual
