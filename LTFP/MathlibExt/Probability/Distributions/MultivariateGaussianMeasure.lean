@@ -633,6 +633,207 @@ theorem covariance_multivariateGaussian
             rw [this]
           rw [this, hSqSq]
 
+/-! ### `IsGaussian` instances
+
+The multivariate Gaussian measures defined above are Gaussian in the
+Mathlib `ProbabilityTheory.IsGaussian` sense: the pushforward by every
+continuous linear form on `EuclideanSpace ℝ (Fin d)` is a real
+Gaussian measure. We register this for both
+`stdMultivariateGaussian d` and the general `multivariateGaussian m S hS`.
+
+The route, mirroring the construction:
+
+1. The univariate `gaussianReal 0 1` is Gaussian (Mathlib).
+2. The finite product `Measure.pi (fun _ : Fin d => gaussianReal 0 1)`
+   is Gaussian by induction on `d`, using
+   `measurePreserving_piFinSuccAbove` to identify it with a binary
+   product of a univariate Gaussian and a smaller product Gaussian.
+3. `stdMultivariateGaussian d` is the pushforward of the product
+   measure by the continuous linear equivalence
+   `(PiLp.continuousLinearEquiv 2 ℝ _).symm : (Fin d → ℝ) ≃L[ℝ]
+   EuclideanSpace ℝ (Fin d)`, hence Gaussian.
+4. `multivariateGaussian m S hS` is the pushforward of
+   `stdMultivariateGaussian d` by the affine map
+   `z ↦ m + (CFC.sqrt S) z`, hence Gaussian by linear + translation
+   preservation. -/
+
+/-- The standard product Gaussian on `Fin d → ℝ` is Gaussian. -/
+instance instIsGaussianMeasurePiGaussian (d : ℕ) :
+    IsGaussian (Measure.pi (fun _ : Fin d ↦ gaussianReal 0 1)) := by
+  induction d with
+  | zero =>
+      -- Base case: `Fin 0 → ℝ` is a subsingleton, so `Measure.pi ...` is
+      -- a Dirac measure (the empty function), which is Gaussian.
+      have hSub : Subsingleton (Fin 0 → ℝ) := by
+        refine ⟨fun f g => funext ?_⟩
+        intro i; exact Fin.elim0 i
+      have hUniv :
+          (Measure.pi (fun _ : Fin 0 ↦ gaussianReal 0 1)) Set.univ = 1 := by
+        rw [Measure.pi_univ]
+        simp
+      have hIsProb :
+          IsProbabilityMeasure (Measure.pi (fun _ : Fin 0 ↦ gaussianReal 0 1)) := ⟨hUniv⟩
+      -- A probability measure on a subsingleton is a Dirac mass at any
+      -- (and hence every) point.
+      have hDirac :
+          Measure.pi (fun _ : Fin 0 ↦ gaussianReal 0 1)
+            = Measure.dirac (fun i : Fin 0 => (0 : ℝ)) := by
+        refine Measure.ext ?_
+        intro s _
+        by_cases hs : (fun i : Fin 0 => (0 : ℝ)) ∈ s
+        · -- Both sides equal 1: LHS because the measure is a probability
+          -- measure on a subsingleton and `s` contains the unique point;
+          -- RHS by `Measure.dirac_apply` since the point is in `s`.
+          have hsuniv : s = Set.univ := by
+            apply Set.eq_univ_of_forall
+            intro x
+            have hx : x = (fun i : Fin 0 => (0 : ℝ)) := Subsingleton.elim _ _
+            simpa [hx] using hs
+          rw [hsuniv, hUniv, Measure.dirac_apply' _ MeasurableSet.univ]
+          simp
+        · -- Both sides equal 0: `s` is empty.
+          have hsempty : s = ∅ := by
+            apply Set.eq_empty_of_forall_notMem
+            intro x hx
+            have hx' : x = (fun i : Fin 0 => (0 : ℝ)) := Subsingleton.elim _ _
+            exact hs (hx' ▸ hx)
+          rw [hsempty]
+          simp
+      rw [hDirac]
+      infer_instance
+  | succ n ih =>
+      -- Inductive step: use `Fin.consEquivL` to identify
+      -- `Measure.pi (fun _ : Fin (n+1) => μ)` with
+      -- `μ.prod (Measure.pi (fun _ : Fin n => μ))`, via the
+      -- `measurePreserving_piFinSuccAbove` measure-preserving fact.
+      have hMP :
+          MeasurePreserving (MeasurableEquiv.piFinSuccAbove
+              (fun _ : Fin (n + 1) => ℝ) 0)
+            (Measure.pi (fun _ : Fin (n + 1) ↦ gaussianReal 0 1))
+            ((gaussianReal 0 1).prod
+              (Measure.pi (fun _ : Fin n ↦ gaussianReal 0 1))) := by
+        have h := measurePreserving_piFinSuccAbove
+          (μ := fun _ : Fin (n + 1) => gaussianReal 0 1) (0 : Fin (n + 1))
+        -- The codomain measure given by Mathlib is
+        --   (μ 0).prod (Measure.pi fun j => μ ((0:Fin _).succAbove j))
+        -- and `(0:Fin (n+1)).succAbove j = Fin.succ j`. Both indexed
+        -- measures are still `gaussianReal 0 1`, so the second factor
+        -- equals `Measure.pi (fun _ : Fin n => gaussianReal 0 1)`.
+        exact h
+      -- The CLE between `ℝ × (Fin n → ℝ)` and `Fin (n+1) → ℝ`.
+      let L : (Fin (n + 1) → ℝ) ≃L[ℝ] ℝ × (Fin n → ℝ) :=
+        (Fin.consEquivL ℝ (fun _ : Fin (n + 1) => ℝ)).symm
+      -- The CLE and the measurable equivalence have the same underlying
+      -- function: both equal `fun f => (f 0, fun j => f (Fin.succ j))`.
+      have hLfun :
+          ∀ f : Fin (n + 1) → ℝ,
+            (L f) =
+              MeasurableEquiv.piFinSuccAbove (fun _ : Fin (n + 1) => ℝ) 0 f := by
+        intro f
+        rfl
+      -- Therefore the CLE pushforward equals the binary product measure.
+      have hMap :
+          (Measure.pi (fun _ : Fin (n + 1) ↦ gaussianReal 0 1)).map L
+            = (gaussianReal 0 1).prod
+                (Measure.pi (fun _ : Fin n ↦ gaussianReal 0 1)) := by
+        have hMPeq : (Measure.pi (fun _ : Fin (n + 1) ↦ gaussianReal 0 1)).map
+              (MeasurableEquiv.piFinSuccAbove (fun _ : Fin (n + 1) => ℝ) 0)
+            = (gaussianReal 0 1).prod
+                (Measure.pi (fun _ : Fin n ↦ gaussianReal 0 1)) := hMP.map_eq
+        -- Replace the CLE pushforward by the measurable-equivalence
+        -- pushforward, since they have the same underlying function.
+        have hEq : (Measure.pi (fun _ : Fin (n + 1) ↦ gaussianReal 0 1)).map L
+                = (Measure.pi (fun _ : Fin (n + 1) ↦ gaussianReal 0 1)).map
+                    (MeasurableEquiv.piFinSuccAbove (fun _ : Fin (n + 1) => ℝ) 0) := by
+          refine Measure.map_congr ?_
+          refine Filter.Eventually.of_forall ?_
+          exact hLfun
+        rw [hEq]
+        exact hMPeq
+      -- The product measure is Gaussian (using IH for the second factor).
+      haveI : IsGaussian ((gaussianReal 0 1).prod
+            (Measure.pi (fun _ : Fin n ↦ gaussianReal 0 1))) := inferInstance
+      -- Pull back along the CLE.
+      have hMapGauss :
+          IsGaussian
+            ((Measure.pi (fun _ : Fin (n + 1) ↦ gaussianReal 0 1)).map L) := by
+        rw [hMap]; infer_instance
+      exact (isGaussian_map_equiv_iff L).mp hMapGauss
+
+/-- The standard multivariate Gaussian on `EuclideanSpace ℝ (Fin d)` is
+Gaussian. The pushforward of the product Gaussian by the continuous
+linear equivalence `(Fin d → ℝ) ≃L[ℝ] EuclideanSpace ℝ (Fin d)`. -/
+instance instIsGaussianStdMultivariateGaussian (d : ℕ) :
+    IsGaussian (stdMultivariateGaussian d) := by
+  -- `stdMultivariateGaussian d` is defined as a pushforward by
+  -- `MeasurableEquiv.toLp 2 (Fin d → ℝ)`, whose underlying function
+  -- equals the symm of the continuous linear equivalence
+  -- `PiLp.continuousLinearEquiv 2 ℝ (fun _ : Fin d => ℝ)`.
+  -- Rewriting through this identification, the measure becomes a CLE
+  -- pushforward of a Gaussian product measure, hence Gaussian.
+  unfold stdMultivariateGaussian
+  -- The continuous linear equivalence we transport along.
+  set L : (Fin d → ℝ) ≃L[ℝ] EuclideanSpace ℝ (Fin d) :=
+    (PiLp.continuousLinearEquiv 2 ℝ (fun _ : Fin d => ℝ)).symm with hL_def
+  -- The CLE and the measurable equivalence agree as functions:
+  -- both equal `WithLp.toLp 2` on `Fin d → ℝ`.
+  have hLfun :
+      ∀ x : Fin d → ℝ,
+        (L x) = MeasurableEquiv.toLp 2 (Fin d → ℝ) x := by
+    intro x; rfl
+  -- Replace the measurable-equivalence pushforward with the CLE
+  -- pushforward, then invoke `isGaussian_map_equiv`.
+  have hRewrite :
+      (Measure.pi (fun _ : Fin d ↦ gaussianReal 0 1)).map
+            (MeasurableEquiv.toLp 2 (Fin d → ℝ))
+        = (Measure.pi (fun _ : Fin d ↦ gaussianReal 0 1)).map L := by
+    refine (Measure.map_congr ?_).symm
+    refine Filter.Eventually.of_forall ?_
+    exact hLfun
+  rw [hRewrite]
+  -- Now apply the IsGaussian-CLE-pushforward instance, using the IsGaussian
+  -- instance on the product measure.
+  exact isGaussian_map_equiv L
+
+/-- The general multivariate Gaussian `N(m, S)` on
+`EuclideanSpace ℝ (Fin d)` is Gaussian. We push forward the standard
+multivariate Gaussian through the linear map `Matrix.toEuclideanCLM
+(CFC.sqrt S)` (yielding a Gaussian by `isGaussian_map`), and then
+shift by `m` (yielding a Gaussian by Mathlib's translation instance). -/
+instance instIsGaussianMultivariateGaussian
+    (m : EuclideanSpace ℝ (Fin d)) (S : Matrix (Fin d) (Fin d) ℝ) (hS : S.PosSemidef) :
+    IsGaussian (multivariateGaussian m S hS) := by
+  unfold multivariateGaussian
+  -- The continuous linear map for the linear part of the affine map.
+  set A : EuclideanSpace ℝ (Fin d) →L[ℝ] EuclideanSpace ℝ (Fin d) :=
+    Matrix.toEuclideanCLM (n := Fin d) (𝕜 := ℝ) (CFC.sqrt S) with hA_def
+  -- Decompose `gaussianAffine m (CFC.sqrt S)` into a linear map followed by
+  -- a translation:  `z ↦ m + A z = (translate by m) ∘ A`.
+  have hDecomp :
+      gaussianAffine m (CFC.sqrt S)
+        = (fun y : EuclideanSpace ℝ (Fin d) => m + y) ∘ A := by
+    funext z
+    rfl
+  rw [hDecomp]
+  -- Split the composed pushforward as two successive maps:
+  -- `(std).map ((·+m) ∘ A) = ((std).map A).map (·+m)`.
+  rw [← Measure.map_map (μ := stdMultivariateGaussian d)
+        (f := A) (g := fun y : EuclideanSpace ℝ (Fin d) => m + y)
+        (by fun_prop) (by fun_prop)]
+  -- The linear pushforward `(std).map A` is Gaussian by `isGaussian_map`.
+  -- Then the translation pushforward is Gaussian by Mathlib's translation
+  -- instance.
+  haveI hLin : IsGaussian ((stdMultivariateGaussian d).map A) :=
+    isGaussian_map (μ := stdMultivariateGaussian d) A
+  infer_instance
+
+/-- Sanity check: the `IsGaussian` instance chain resolves at concrete
+parameters, verifying that all four instances above are wired together
+correctly. -/
+example {m : EuclideanSpace ℝ (Fin 3)} {S : Matrix (Fin 3) (Fin 3) ℝ}
+    (hS : S.PosSemidef) : IsGaussian (multivariateGaussian m S hS) :=
+  inferInstance
+
 end ProbabilityTheory
 
 end
