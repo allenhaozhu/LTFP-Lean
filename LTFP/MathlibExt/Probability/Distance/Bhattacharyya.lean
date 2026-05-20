@@ -98,6 +98,13 @@ What is now available:
   composes the density bridge with Hölder (`p = q = 2`) on the
   polarization `p - q = (√p - √q)(√p + √q)` and expands the `L²`-norms
   via `∫ p dτ = ∫ q dτ = 1` and the factored Bhattacharyya identity.
+* `hellingerSquared` — the squared Hellinger distance, defined via
+  `Hsq(μ, ν) := 2 (1 - bhattacharyya μ ν)`.
+* `tvDist_sq_le_hellingerSquared_mul` — Le Cam in Hellinger form:
+  `tvDist² ≤ Hsq · (1 - Hsq / 4)`.
+* `hellingerSquared_le_two_one_sub_exp_neg_half_klDiv` — Bhattacharyya
+  --KL bridge in Hellinger form: under `μ ≪ ν` and `klDiv μ ν ≠ ∞`,
+  `Hsq ≤ 2 (1 - exp(-(klDiv μ ν).toReal / 2))`.
 * `bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac` — the asymmetric-form
   bridge: under `μ ≪ ν`,
   `bhattacharyya μ ν = ∫ √((μ.rnDeriv ν).toReal) ∂ν`. Factors through
@@ -1134,6 +1141,100 @@ theorem bhattacharyya_ge_exp_neg_half_klDiv
   -- Combine.
   rw [← h_lhs_eq, ← h_rhs_eq]
   exact h_jensen
+
+/-! ### Squared Hellinger distance and the Hellinger-form bridge
+
+The **squared Hellinger distance** `Hsq(μ, ν) := 2 (1 - ρ(μ, ν))` is
+the geometric-mean complement of the Bhattacharyya affinity. It is the
+natural quantity for stating the Le Cam estimate in Hellinger form,
+
+  `tvDist²(μ, ν) ≤ Hsq · (1 - Hsq / 4)`,
+
+and the Bhattacharyya--KL bridge `Hsq ≤ 2 (1 - exp(-KL/2))`. Together
+with the algebraic chain `Hsq (1 - Hsq/4) = 1 - ρ²` (an identity in
+`ρ = 1 - Hsq/2`) these two pieces compose into the same A-class
+Bretagnolle--Huber inequality discharged through the Bhattacharyya
+route, just restated via the Hellinger affinity. -/
+
+/-- The **squared Hellinger distance** between two measures `μ` and `ν`,
+defined via the Bhattacharyya affinity by
+`Hsq(μ, ν) := 2 (1 - ρ(μ, ν))`. For probability measures this lies in
+`[0, 2]`. The classical pointwise expression
+`Hsq(μ, ν) = ∫ (√(dμ/dτ) - √(dν/dτ))² dτ` follows from the polarization
+`(√p - √q)² = p + q - 2 √(pq)` together with `∫ p dτ = ∫ q dτ = 1`. -/
+noncomputable def hellingerSquared (μ ν : Measure α) : ℝ :=
+  2 * (1 - bhattacharyya μ ν)
+
+/-- The defining identity `Hsq(μ, ν) = 2 - 2 · ρ(μ, ν)`. -/
+theorem hellingerSquared_eq_two_sub_two_bhattacharyya (μ ν : Measure α) :
+    hellingerSquared μ ν = 2 - 2 * bhattacharyya μ ν := by
+  unfold hellingerSquared; ring
+
+/-- The squared Hellinger distance is nonnegative for two probability
+measures, since `bhattacharyya μ ν ≤ 1`. -/
+theorem hellingerSquared_nonneg
+    (μ ν : Measure α) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] :
+    0 ≤ hellingerSquared μ ν := by
+  unfold hellingerSquared
+  have h := bhattacharyya_le_one μ ν
+  linarith
+
+/-- The squared Hellinger distance is bounded above by `2`, since
+`0 ≤ bhattacharyya μ ν`. -/
+theorem hellingerSquared_le_two (μ ν : Measure α) :
+    hellingerSquared μ ν ≤ 2 := by
+  unfold hellingerSquared
+  have h := bhattacharyya_nonneg μ ν
+  linarith
+
+/-- **Le Cam estimate in Hellinger form.**
+
+For two probability measures `μ`, `ν`, the squared total-variation
+distance is bounded above by `Hsq · (1 - Hsq / 4)`:
+
+  `((tvDist μ ν).toReal) ^ 2 ≤ hellingerSquared μ ν *
+      (1 - hellingerSquared μ ν / 4)`.
+
+This is the same fact as the Bhattacharyya-form Le Cam estimate
+`tvDist² ≤ 1 - ρ²`, restated through the identity
+`Hsq (1 - Hsq/4) = 1 - ρ²` (which is a polynomial identity in
+`ρ = 1 - Hsq/2`). -/
+theorem tvDist_sq_le_hellingerSquared_mul
+    (μ ν : Measure α) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] :
+    ((tvDist μ ν).toReal) ^ 2 ≤
+      hellingerSquared μ ν * (1 - hellingerSquared μ ν / 4) := by
+  -- The Bhattacharyya-form Le Cam estimate.
+  have h_bh : ((tvDist μ ν).toReal) ^ 2 ≤ 1 - bhattacharyya μ ν ^ 2 :=
+    tvDist_sq_le_one_sub_bhattacharyya_sq μ ν
+  -- Polynomial identity: `Hsq (1 - Hsq/4) = 1 - ρ²` when `Hsq = 2(1 - ρ)`.
+  have h_eq :
+      hellingerSquared μ ν * (1 - hellingerSquared μ ν / 4)
+        = 1 - bhattacharyya μ ν ^ 2 := by
+    unfold hellingerSquared; ring
+  rw [h_eq]
+  exact h_bh
+
+/-- **Bhattacharyya--KL bridge in Hellinger form.**
+
+Under `μ ≪ ν` with finite KL divergence (`klDiv μ ν ≠ ∞`), the squared
+Hellinger distance is bounded above by `2 (1 - exp(-KL/2))`:
+
+  `hellingerSquared μ ν ≤ 2 * (1 - Real.exp (-(klDiv μ ν).toReal / 2))`.
+
+This is the Hellinger-form restatement of the Jensen step
+`exp(-KL/2) ≤ bhattacharyya`. -/
+theorem hellingerSquared_le_two_one_sub_exp_neg_half_klDiv
+    (μ ν : Measure α) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+    (hμν : μ ≪ ν) (hkl : InformationTheory.klDiv μ ν ≠ ∞) :
+    hellingerSquared μ ν ≤
+      2 * (1 - Real.exp (-(InformationTheory.klDiv μ ν).toReal / 2)) := by
+  -- The Jensen step in Bhattacharyya form.
+  have h_jensen :
+      Real.exp (-(InformationTheory.klDiv μ ν).toReal / 2) ≤
+        bhattacharyya μ ν :=
+    bhattacharyya_ge_exp_neg_half_klDiv μ ν hμν hkl
+  unfold hellingerSquared
+  linarith
 
 /-! ### Bretagnolle--Huber bridge — restatement in terms of the new
 definition

@@ -357,7 +357,16 @@ Same chain as `tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya` but stated
 in terms of the **squared Hellinger distance** `Hsq` (related to the
 Bhattacharyya affinity by `ρ = 1 - Hsq / 2`). The Le Cam step in Hellinger
 form reads `tvDist² ≤ Hsq · (1 - Hsq / 4)`, and the KL bridge becomes
-`Hsq ≤ 2 · (1 - exp(-D / 2))`. -/
+`Hsq ≤ 2 · (1 - exp(-D / 2))`.
+
+This carrier takes the two Hellinger pieces as hypotheses so that users
+who already have them in their own form can plug in directly. The A-class
+fully-discharged Hellinger-route Bretagnolle--Huber inequality (where
+both pieces are unconditional theorems against
+`LTFP.MathlibExt.Probability.hellingerSquared`) is
+`tvDist_le_sqrt_one_sub_exp_neg_klDiv_via_hellinger` further down in
+this section. The present theorem is preserved as a B-class carrier for
+callers that supply the Hellinger pieces themselves. -/
 theorem tvDist_le_sqrt_one_sub_exp_neg_of_hellinger
     (μ ν : Measure α) {Hsq D : ℝ} (hD : 0 ≤ D)
     (hH_nonneg : 0 ≤ Hsq) (hH_le_two : Hsq ≤ 2)
@@ -438,6 +447,59 @@ theorem tvDist_le_sqrt_one_sub_exp_neg_klDiv
   -- Compose with the Le Cam step.
   exact tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya_kl μ ν
     ENNReal.toReal_nonneg h_kl_bridge
+
+/-- §15.1 — **Bretagnolle--Huber inequality (A-class, Hellinger route).**
+
+The textbook Bretagnolle--Huber inequality, with **both** the Le Cam step
+in Hellinger form (`tvDist² ≤ Hsq · (1 - Hsq / 4)`) and the
+Bhattacharyya--KL bridge in Hellinger form
+(`Hsq ≤ 2 (1 - exp(-(klDiv μ ν).toReal / 2))`) now discharged locally:
+
+  `(tvDist μ ν).toReal ≤ √(1 - exp(-(klDiv μ ν).toReal))`
+
+for two probability measures `μ ≪ ν` with finite KL divergence
+(`klDiv μ ν ≠ ∞`).
+
+This is the Hellinger-route companion to
+`tvDist_le_sqrt_one_sub_exp_neg_klDiv`: both end at the same inequality,
+but this one factors through the **squared Hellinger distance**
+`hellingerSquared μ ν := 2 (1 - bhattacharyya μ ν)`, whereas the
+Bhattacharyya-route theorem factors through `bhattacharyya μ ν` itself.
+Both Le Cam and Bhattacharyya--KL pieces in Hellinger form are
+discharged by composing the corresponding Bhattacharyya-form A-class
+pieces (`tvDist_sq_le_one_sub_bhattacharyya_sq` and
+`bhattacharyya_ge_exp_neg_half_klDiv`) with the algebraic identity
+`Hsq (1 - Hsq/4) = 1 - ρ²` (where `ρ = 1 - Hsq/2`).
+
+Composes
+`tvDist_sq_le_hellingerSquared_mul` and
+`hellingerSquared_le_two_one_sub_exp_neg_half_klDiv` (both in
+`LTFP/MathlibExt/Probability/Distance/Bhattacharyya.lean`) with the
+B-class carrier `tvDist_le_sqrt_one_sub_exp_neg_of_hellinger`. -/
+theorem tvDist_le_sqrt_one_sub_exp_neg_klDiv_via_hellinger
+    (μ ν : Measure α) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+    (hμν : μ ≪ ν) (hkl : InformationTheory.klDiv μ ν ≠ ∞) :
+    (tvDist μ ν).toReal ≤
+      Real.sqrt (1 - Real.exp (-(InformationTheory.klDiv μ ν).toReal)) := by
+  -- Both Hellinger-form pieces are now unconditional theorems in
+  -- `Bhattacharyya.lean`.
+  have hH_nonneg : 0 ≤ LTFP.MathlibExt.Probability.hellingerSquared μ ν :=
+    LTFP.MathlibExt.Probability.hellingerSquared_nonneg μ ν
+  have hH_le_two : LTFP.MathlibExt.Probability.hellingerSquared μ ν ≤ 2 :=
+    LTFP.MathlibExt.Probability.hellingerSquared_le_two μ ν
+  have h_lecam :
+      ((tvDist μ ν).toReal) ^ 2 ≤
+        LTFP.MathlibExt.Probability.hellingerSquared μ ν *
+          (1 - LTFP.MathlibExt.Probability.hellingerSquared μ ν / 4) :=
+    LTFP.MathlibExt.Probability.tvDist_sq_le_hellingerSquared_mul μ ν
+  have h_kl_bridge :
+      LTFP.MathlibExt.Probability.hellingerSquared μ ν ≤
+        2 * (1 - Real.exp (-(InformationTheory.klDiv μ ν).toReal / 2)) :=
+    LTFP.MathlibExt.Probability.hellingerSquared_le_two_one_sub_exp_neg_half_klDiv
+      μ ν hμν hkl
+  -- Compose into the existing B-class Hellinger carrier.
+  exact tvDist_le_sqrt_one_sub_exp_neg_of_hellinger μ ν
+    ENNReal.toReal_nonneg hH_nonneg hH_le_two h_lecam h_kl_bridge
 
 end MeasureBretagnolleHuber
 
