@@ -11,6 +11,7 @@ KL divergence wrapper from `LTFP.Foundations.InfoTheory` and a
 sanity lemma that `KL(P ‖ P) = 0`.
 -/
 import LTFP.Foundations.InfoTheory
+import LTFP.MathlibExt.Probability.BoundedMeanSqExp
 import LTFP.MathlibExt.Probability.DonskerVaradhan
 import LTFP.MathlibExt.Probability.FunctionClassConcentration
 import LTFP.MathlibExt.Probability.KullbackLeibler
@@ -807,5 +808,40 @@ theorem pac_bayes_function_class_concentration_event
       ≤ δ :=
   pac_bayes_mcallester_measure_theoretic_with_bounded_moment_assumption
     P D ℓ hℓ hn hδ h_bound_moment h_int_joint h_int_inner_S h_int_inner_h
+
+/-! ### Discharging `bounded_average_sq_exp_moment_assumption` from the
+named Catoni/Alquier residual
+
+The residual hypothesis `bounded_average_sq_exp_moment_assumption` (Bach
+2024 Eq. 14.21) is exposed in this file as a `Prop` so that the PAC-Bayes
+chain is unconditionally wired. The actual mathematical content sits in
+`LTFP.MathlibExt.Probability.BoundedMeanSqExp` as the named
+`CatoniAlquierBoundedMoment` predicate, plus the bridge theorem
+`boundedMeanSqExpMoment_pi_of_catoni_alquier` translating the abstract
+i.i.d. statement to the product-measure form.
+
+The lemma below glues the two together: given the Catoni/Alquier
+residual applied to the product-measure realization of a `[0, 1]`-bounded
+loss, the named `bounded_average_sq_exp_moment_assumption` predicate
+holds. Once Mathlib lands the Catoni/Alquier bounded-differences moment
+lemma (a 3–7 person-day standalone project; see the
+`BoundedMeanSqExp` module docstring for the precise mathematical
+contract), the residual discharges automatically and the entire
+PAC-Bayes chain becomes unconditional. -/
+theorem bounded_average_sq_exp_moment_assumption_of_catoni_alquier
+    {𝒳 : Type*} [MeasurableSpace 𝒳]
+    (D : MeasureTheory.Measure 𝒳) [MeasureTheory.IsProbabilityMeasure D]
+    (ℓ : 𝒳 → ℝ)
+    (hℓ : ∀ x, ℓ x ∈ Set.Icc (0 : ℝ) 1)
+    {n : ℕ} (hn : 0 < n)
+    (h_catoni :
+      LTFP.MathlibExt.Probability.CatoniAlquierBoundedMoment
+        (MeasureTheory.Measure.pi (fun _ : Fin n => D))
+        (LTFP.MathlibExt.Probability.piSampleFamily ℓ)
+        (∫ x, ℓ x ∂D)) :
+    bounded_average_sq_exp_moment_assumption D ℓ hℓ n hn := by
+  unfold bounded_average_sq_exp_moment_assumption
+  exact LTFP.MathlibExt.Probability.boundedMeanSqExpMoment_pi_of_catoni_alquier
+    hn hℓ h_catoni
 
 end LTFP
