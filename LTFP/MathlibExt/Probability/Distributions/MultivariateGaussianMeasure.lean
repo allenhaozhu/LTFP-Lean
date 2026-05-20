@@ -12,6 +12,10 @@ import Mathlib.MeasureTheory.Integral.Pi
 import Mathlib.MeasureTheory.Measure.Haar.InnerProductSpace
 import Mathlib.Probability.Distributions.Gaussian.Basic
 import Mathlib.Probability.Distributions.Gaussian.Real
+import Mathlib.Probability.Kernel.Composition.MapComap
+import Mathlib.Probability.Kernel.Composition.MeasureCompProd
+import Mathlib.Probability.Kernel.Composition.Prod
+import Mathlib.Topology.Algebra.Module.FiniteDimension
 
 /-!
 # Multivariate Gaussian distribution as a `Measure` on `EuclideanSpace ℝ (Fin d)`
@@ -832,6 +836,276 @@ parameters, verifying that all four instances above are wired together
 correctly. -/
 example {m : EuclideanSpace ℝ (Fin 3)} {S : Matrix (Fin 3) (Fin 3) ℝ}
     (hS : S.PosSemidef) : IsGaussian (multivariateGaussian m S hS) :=
+  inferInstance
+
+/-! ### Gaussian observation kernel
+
+We now build the **Gaussian observation kernel** that takes a parameter
+`θ : EuclideanSpace ℝ (Fin d)` and produces the observation distribution
+`N(X · θ, ν² · I)` on `EuclideanSpace ℝ (Fin n)`. This is the standard
+Gaussian linear-regression likelihood:
+  `y ∣ θ ∼ N(X θ, ν² I)`.
+
+The construction goes through:
+
+1. The **noise covariance** `ν² • 1 : Matrix (Fin n) (Fin n) ℝ` is
+   positive semidefinite (`PosSemidef.smul` of `PosSemidef.one` with
+   `0 ≤ ν²`).
+2. The **linear regression map** `X : Matrix (Fin n) (Fin d) ℝ` becomes
+   a continuous linear map `regressionCLM X :
+   EuclideanSpace ℝ (Fin d) →L[ℝ] EuclideanSpace ℝ (Fin n)` via
+   `Matrix.toEuclideanLin` followed by `LinearMap.toContinuousLinearMap`
+   (the latter is fine because the domain is finite-dimensional).
+3. The **observation kernel** is built by `Kernel.map` of the product
+   kernel `(deterministic id) ×ₖ (const _ μ_noise)` through the affine
+   map `(θ, y) ↦ X θ + y`. By the `prod_apply`/`deterministic`/`const`
+   semantics, this kernel sends `θ` to the pushforward
+   `(multivariateGaussian 0 (ν² • 1)).map (fun y ↦ X θ + y)`, which by
+   the translation-invariance of the Gaussian (and the affine
+   reparametrisation lemma) equals `multivariateGaussian (X θ) (ν² • 1)`.
+4. The **joint measure** `prior ⊗ₘ obsKernel` on
+   `EuclideanSpace ℝ (Fin d) × EuclideanSpace ℝ (Fin n)` is Gaussian:
+   it equals the pushforward of the independent product
+   `(multivariateGaussian 0 priorCov).prod (multivariateGaussian 0 (ν² • 1))`
+   through the continuous linear automorphism `(θ, ε) ↦ (θ, X θ + ε)`,
+   so it is Gaussian by `IsGaussian.prod` and `isGaussian_map`.
+-/
+
+variable {n : ℕ}
+
+/-- The noise covariance `ν² • 1` is positive semidefinite. -/
+lemma posSemidef_sq_smul_one (ν : ℝ) :
+    ((ν ^ 2) • (1 : Matrix (Fin n) (Fin n) ℝ)).PosSemidef :=
+  Matrix.PosSemidef.smul Matrix.PosSemidef.one (sq_nonneg ν)
+
+/-- The matrix `X : Matrix (Fin n) (Fin d) ℝ` viewed as a continuous
+linear map `EuclideanSpace ℝ (Fin d) →L[ℝ] EuclideanSpace ℝ (Fin n)`.
+We compose `Matrix.toEuclideanLin` (the linear-map version, valid for
+rectangular matrices) with `LinearMap.toContinuousLinearMap` (which
+upgrades to a continuous linear map, using that the domain is a
+finite-dimensional Hausdorff space).
+
+Numerical content: `regressionCLM X θ = X *ᵥ ofLp θ` after the
+`EuclideanSpace`/`Fin d → ℝ` identification (see `ofLp_regressionCLM`). -/
+def regressionCLM (X : Matrix (Fin n) (Fin d) ℝ) :
+    EuclideanSpace ℝ (Fin d) →L[ℝ] EuclideanSpace ℝ (Fin n) :=
+  LinearMap.toContinuousLinearMap (Matrix.toEuclideanLin X)
+
+@[simp] lemma ofLp_regressionCLM (X : Matrix (Fin n) (Fin d) ℝ)
+    (θ : EuclideanSpace ℝ (Fin d)) :
+    WithLp.ofLp (p := 2) (V := Fin n → ℝ) (regressionCLM X θ)
+      = X *ᵥ WithLp.ofLp (p := 2) (V := Fin d → ℝ) θ := by
+  rfl
+
+lemma continuous_regressionCLM (X : Matrix (Fin n) (Fin d) ℝ) :
+    Continuous (regressionCLM X) :=
+  (regressionCLM X).continuous
+
+lemma measurable_regressionCLM (X : Matrix (Fin n) (Fin d) ℝ) :
+    Measurable (regressionCLM X) :=
+  (continuous_regressionCLM X).measurable
+
+/-- The **observation joint map** `Ψ : E_d × E_n → E_d × E_n` defined by
+`Ψ (θ, ε) = (θ, X θ + ε)`. This is a continuous linear automorphism: the
+identity on the first coordinate and an affine reparametrisation on the
+second. It is the change of variables that turns the independent
+product `prior ⊗ noise` into the joint prior-observation law. -/
+def observationJointMap (X : Matrix (Fin n) (Fin d) ℝ) :
+    EuclideanSpace ℝ (Fin d) × EuclideanSpace ℝ (Fin n) →L[ℝ]
+      EuclideanSpace ℝ (Fin d) × EuclideanSpace ℝ (Fin n) :=
+  (ContinuousLinearMap.fst ℝ _ _).prod
+    ((regressionCLM X).comp (ContinuousLinearMap.fst ℝ _ _)
+      + ContinuousLinearMap.snd ℝ _ _)
+
+@[simp] lemma observationJointMap_apply (X : Matrix (Fin n) (Fin d) ℝ)
+    (p : EuclideanSpace ℝ (Fin d) × EuclideanSpace ℝ (Fin n)) :
+    observationJointMap X p = (p.1, regressionCLM X p.1 + p.2) := rfl
+
+/-- The Gaussian observation **kernel** `θ ↦ N(X θ, ν² · I)`.
+
+We build it as a `Kernel.map` of the deterministic-times-constant
+product kernel `(deterministic id) ×ₖ (const _ ε)` through the affine
+map `(θ, y) ↦ X θ + y`. The semantics is verified in
+`gaussianObservationKernel_apply`. -/
+noncomputable def gaussianObservationKernel
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) :
+    Kernel (EuclideanSpace ℝ (Fin d)) (EuclideanSpace ℝ (Fin n)) :=
+  Kernel.map
+    ((Kernel.deterministic (id : EuclideanSpace ℝ (Fin d) →
+        EuclideanSpace ℝ (Fin d)) measurable_id)
+      ×ₖ
+      (Kernel.const (EuclideanSpace ℝ (Fin d))
+        (multivariateGaussian (0 : EuclideanSpace ℝ (Fin n))
+          ((ν ^ 2) • (1 : Matrix (Fin n) (Fin n) ℝ))
+          (posSemidef_sq_smul_one (n := n) ν))))
+    (fun p : EuclideanSpace ℝ (Fin d) × EuclideanSpace ℝ (Fin n) =>
+      regressionCLM X p.1 + p.2)
+
+/-- The observation kernel applied to `θ` is the pushforward of the
+noise distribution by the shift `y ↦ X θ + y`. -/
+theorem gaussianObservationKernel_apply
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) (θ : EuclideanSpace ℝ (Fin d)) :
+    gaussianObservationKernel X ν θ
+      = (multivariateGaussian (0 : EuclideanSpace ℝ (Fin n))
+            ((ν ^ 2) • (1 : Matrix (Fin n) (Fin n) ℝ))
+            (posSemidef_sq_smul_one (n := n) ν)).map
+          (fun y => regressionCLM X θ + y) := by
+  classical
+  -- Unfold and use `Kernel.map_apply` then `Kernel.prod_apply`.
+  unfold gaussianObservationKernel
+  have hf : Measurable (fun p : EuclideanSpace ℝ (Fin d)
+        × EuclideanSpace ℝ (Fin n) => regressionCLM X p.1 + p.2) := by
+    refine Measurable.add ?_ measurable_snd
+    exact (measurable_regressionCLM X).comp measurable_fst
+  rw [Kernel.map_apply _ hf]
+  rw [Kernel.prod_apply, Kernel.deterministic_apply, Kernel.const_apply]
+  -- Now `((dirac θ).prod μ_noise).map (fun p => X p.1 + p.2)` is the
+  -- pushforward of μ_noise by `fun y => X θ + y`.
+  rw [MeasureTheory.Measure.dirac_prod]
+  -- Goal: map (fun p => X p.1 + p.2) (map (Prod.mk θ) noise) = map (X θ + ·) noise.
+  rw [Measure.map_map hf (by fun_prop : Measurable (Prod.mk (id θ)))]
+  rfl
+
+/-- `gaussianObservationKernel X ν θ` is a probability measure. -/
+instance instIsProbabilityMeasureGaussianObservationKernel
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) (θ : EuclideanSpace ℝ (Fin d)) :
+    IsProbabilityMeasure (gaussianObservationKernel X ν θ) := by
+  rw [gaussianObservationKernel_apply]
+  exact Measure.isProbabilityMeasure_map (by fun_prop)
+
+/-- The Gaussian observation kernel is a Markov kernel. -/
+instance instIsMarkovKernelGaussianObservationKernel
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) :
+    IsMarkovKernel (gaussianObservationKernel X ν) :=
+  ⟨fun _ => instIsProbabilityMeasureGaussianObservationKernel X ν _⟩
+
+/-- The Gaussian observation kernel is in particular S-finite, which is
+the structural property required to form composition-products with it. -/
+instance instIsSFiniteKernelGaussianObservationKernel
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) :
+    IsSFiniteKernel (gaussianObservationKernel X ν) :=
+  inferInstance
+
+/-- Each observation measure `gaussianObservationKernel X ν θ` is
+Gaussian. The pushforward of a Gaussian noise distribution through
+the translation `y ↦ X θ + y` is Gaussian by Mathlib's translation
+instance for `IsGaussian`. -/
+instance instIsGaussianGaussianObservationKernel
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) (θ : EuclideanSpace ℝ (Fin d)) :
+    IsGaussian (gaussianObservationKernel X ν θ) := by
+  rw [gaussianObservationKernel_apply]
+  -- Pushforward by `y ↦ c + y` of a Gaussian is Gaussian.
+  infer_instance
+
+/-! ### Joint prior–observation measure -/
+
+/-- The **joint prior–observation measure** on
+`EuclideanSpace ℝ (Fin d) × EuclideanSpace ℝ (Fin n)`. This is the
+distribution of the pair `(θ, y)` where `θ ∼ N(0, priorCov)` and, given
+`θ`, `y ∼ N(X θ, ν² I)`.
+
+We define it as the composition-product
+`(multivariateGaussian 0 priorCov hPrior) ⊗ₘ gaussianObservationKernel X ν`. -/
+noncomputable def jointPriorObservation
+    (priorCov : Matrix (Fin d) (Fin d) ℝ) (hPrior : priorCov.PosSemidef)
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) :
+    Measure ((EuclideanSpace ℝ (Fin d)) × (EuclideanSpace ℝ (Fin n))) :=
+  (multivariateGaussian (0 : EuclideanSpace ℝ (Fin d)) priorCov hPrior)
+    ⊗ₘ (gaussianObservationKernel X ν)
+
+/-- The joint prior–observation measure is a probability measure. -/
+instance instIsProbabilityMeasureJointPriorObservation
+    (priorCov : Matrix (Fin d) (Fin d) ℝ) (hPrior : priorCov.PosSemidef)
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) :
+    IsProbabilityMeasure (jointPriorObservation priorCov hPrior X ν) := by
+  unfold jointPriorObservation
+  infer_instance
+
+/-! ### `IsGaussian` for the joint prior–observation law
+
+To prove the joint measure is Gaussian, we identify it with the
+pushforward of an **independent product** of Gaussians through a
+continuous linear automorphism.
+
+Specifically, let:
+  * `priorMeas := multivariateGaussian 0 priorCov hPrior` on `E_d`.
+  * `noiseMeas := multivariateGaussian 0 (ν² • 1) (posSemidef_sq_smul_one ν)` on `E_n`.
+  * `Ψ := observationJointMap X : E_d × E_n →L[ℝ] E_d × E_n`,
+    `(θ, ε) ↦ (θ, X θ + ε)`.
+
+Then `jointPriorObservation = (priorMeas.prod noiseMeas).map Ψ`. The
+RHS is Gaussian because `priorMeas.prod noiseMeas` is Gaussian by
+`IsGaussian.prod` and `Ψ` is continuous linear.
+-/
+
+/-- The key identity: the joint prior–observation measure equals the
+pushforward of an independent prior–noise product through the
+observation map `(θ, ε) ↦ (θ, X θ + ε)`. -/
+theorem jointPriorObservation_eq_map_prod
+    (priorCov : Matrix (Fin d) (Fin d) ℝ) (hPrior : priorCov.PosSemidef)
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) :
+    jointPriorObservation priorCov hPrior X ν
+      = ((multivariateGaussian (0 : EuclideanSpace ℝ (Fin d)) priorCov hPrior).prod
+            (multivariateGaussian (0 : EuclideanSpace ℝ (Fin n))
+              ((ν ^ 2) • (1 : Matrix (Fin n) (Fin n) ℝ))
+              (posSemidef_sq_smul_one (n := n) ν))).map (observationJointMap X) := by
+  classical
+  -- Strategy: take an arbitrary measurable set `s` and show both sides agree.
+  -- LHS via `compProd_apply`; RHS via `map_apply` then `Measure.prod_apply`.
+  ext s hs
+  -- LHS: ∫⁻ θ, (obsK θ) (Prod.mk θ ⁻¹' s) ∂prior.
+  set priorMeas : Measure (EuclideanSpace ℝ (Fin d)) :=
+    multivariateGaussian (0 : EuclideanSpace ℝ (Fin d)) priorCov hPrior with hPriorMeas
+  set noiseMeas : Measure (EuclideanSpace ℝ (Fin n)) :=
+    multivariateGaussian (0 : EuclideanSpace ℝ (Fin n))
+      ((ν ^ 2) • (1 : Matrix (Fin n) (Fin n) ℝ))
+      (posSemidef_sq_smul_one (n := n) ν) with hNoiseMeas
+  unfold jointPriorObservation
+  rw [Measure.compProd_apply hs]
+  -- Rewrite obsK θ via gaussianObservationKernel_apply.
+  have hobs : ∀ θ : EuclideanSpace ℝ (Fin d),
+      (gaussianObservationKernel X ν θ) (Prod.mk θ ⁻¹' s)
+        = noiseMeas ((fun y => regressionCLM X θ + y) ⁻¹' (Prod.mk θ ⁻¹' s)) := by
+    intro θ
+    rw [gaussianObservationKernel_apply]
+    rw [Measure.map_apply (by fun_prop) (measurable_prodMk_left hs)]
+  simp_rw [hobs]
+  -- RHS: map by Ψ, prod measure.
+  have hΨ : Measurable (observationJointMap X) :=
+    (observationJointMap X).continuous.measurable
+  rw [Measure.map_apply hΨ hs]
+  rw [Measure.prod_apply (hΨ hs)]
+  -- Now goal: ∫⁻ θ, noiseMeas (...) ∂prior = ∫⁻ θ, noiseMeas (Prod.mk θ ⁻¹' (Ψ ⁻¹' s)) ∂prior.
+  -- Both inner sets are equal as sets of `y`: `(observationJointMap X) (θ, y) = (θ, X θ + y)`,
+  -- so `Prod.mk θ ⁻¹' (observationJointMap X ⁻¹' s) = (fun y => regressionCLM X θ + y) ⁻¹' (Prod.mk θ ⁻¹' s)`.
+  rfl
+
+/-- The joint prior–observation measure is **Gaussian**. This follows
+from the affine pushforward identity above plus `IsGaussian.prod` and
+the CLM-pushforward instance. -/
+instance instIsGaussianJointPriorObservation
+    (priorCov : Matrix (Fin d) (Fin d) ℝ) (hPrior : priorCov.PosSemidef)
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) :
+    IsGaussian (jointPriorObservation priorCov hPrior X ν) := by
+  rw [jointPriorObservation_eq_map_prod]
+  -- The pushforward is by a continuous linear map, hence Gaussian.
+  -- The base measure is the product of two Gaussian measures, hence Gaussian
+  -- by `IsGaussian.prod`.
+  have hPriorG : IsGaussian (multivariateGaussian (0 : EuclideanSpace ℝ (Fin d))
+      priorCov hPrior) := inferInstance
+  have hNoiseG : IsGaussian (multivariateGaussian (0 : EuclideanSpace ℝ (Fin n))
+      ((ν ^ 2) • (1 : Matrix (Fin n) (Fin n) ℝ))
+      (posSemidef_sq_smul_one (n := n) ν)) := inferInstance
+  -- `IsGaussian.prod` gives Gaussian on the product; then `isGaussian_map`
+  -- transports it through the CLM `observationJointMap X`.
+  infer_instance
+
+/-- Sanity check: the joint prior–observation measure resolves
+`IsGaussian` at a concrete instantiation, verifying the kernel +
+joint-construction stack composes correctly. -/
+example {priorCov : Matrix (Fin 2) (Fin 2) ℝ} (hPrior : priorCov.PosSemidef)
+    {X : Matrix (Fin 3) (Fin 2) ℝ} {ν : ℝ} :
+    IsGaussian (jointPriorObservation priorCov hPrior X ν) :=
   inferInstance
 
 end ProbabilityTheory
