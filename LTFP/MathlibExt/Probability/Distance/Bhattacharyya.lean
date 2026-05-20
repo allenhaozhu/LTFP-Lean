@@ -14,6 +14,10 @@ import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.MeasureTheory.Integral.MeanInequalities
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.MeasureTheory.Function.L2Space
+import Mathlib.Analysis.Convex.Integral
+import Mathlib.Analysis.Convex.SpecificFunctions.Basic
+import Mathlib.MeasureTheory.Measure.LogLikelihoodRatio
+import Mathlib.InformationTheory.KullbackLeibler.Basic
 
 /-!
 # Bhattacharyya affinity and the Bretagnolle--Huber bridge
@@ -72,10 +76,12 @@ real parameter `ρ`.
 
 ## Status
 
-**The Le Cam estimate `tvDist² ≤ 1 - bhattacharyya²` is now discharged
-unconditionally for probability measures. The Jensen step
-`exp(-KL/2) ≤ bhattacharyya` remains the only open hypothesis input on
-the route to the textbook Bretagnolle--Huber inequality.**
+**Both steps of the classical Bretagnolle--Huber proof are now
+discharged unconditionally for probability measures:**
+
+* the **Le Cam estimate** `tvDist² ≤ 1 - bhattacharyya²`, and
+* the **Jensen step** `exp(-(klDiv μ ν).toReal / 2) ≤ bhattacharyya μ ν`
+  (under `μ ≪ ν` and `klDiv μ ν ≠ ∞`).
 
 What is now available:
 
@@ -87,20 +93,27 @@ What is now available:
   `p, q` are the `toReal`-densities.
 * `bhattacharyya_eq_integral_sqrt_mul_sqrt` — the factored form
   `bhattacharyya μ ν = ∫ √p · √q dτ` used in the Cauchy--Schwarz step.
-* `tvDist_sq_le_one_sub_bhattacharyya_sq` — the **Le Cam estimate**, the
-  carrier theorem of this file: for two probability measures,
-  `tvDist² ≤ 1 - bhattacharyya²`. The proof composes the density bridge
-  with Hölder (`p = q = 2`) on the polarization
-  `p - q = (√p - √q)(√p + √q)` and expands the `L²`-norms via
-  `∫ p dτ = ∫ q dτ = 1` and the factored Bhattacharyya identity.
+* `tvDist_sq_le_one_sub_bhattacharyya_sq` — the **Le Cam estimate**: for
+  two probability measures, `tvDist² ≤ 1 - bhattacharyya²`. The proof
+  composes the density bridge with Hölder (`p = q = 2`) on the
+  polarization `p - q = (√p - √q)(√p + √q)` and expands the `L²`-norms
+  via `∫ p dτ = ∫ q dτ = 1` and the factored Bhattacharyya identity.
+* `bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac` — the asymmetric-form
+  bridge: under `μ ≪ ν`,
+  `bhattacharyya μ ν = ∫ √((μ.rnDeriv ν).toReal) ∂ν`. Factors through
+  the Radon--Nikodym chain rule `μ.rnDeriv τ =ᵐ[τ]
+  (μ.rnDeriv ν) · (ν.rnDeriv τ)` and the change-of-measure identity.
+* `bhattacharyya_ge_exp_neg_half_klDiv` — the **Jensen step**: under
+  `μ ≪ ν` and `klDiv μ ν ≠ ∞`,
+  `Real.exp (-(klDiv μ ν).toReal / 2) ≤ bhattacharyya μ ν`. The proof
+  composes the asymmetric-form bridge with the change-of-measure
+  identity `∫ √(dμ/dν) dν = ∫ exp(-(1/2) llr μ ν) dμ` and Jensen's
+  inequality applied to the convex exponential function over the
+  probability measure `μ`.
 
-What remains:
-
-* **Jensen step.** Requires the conditional version of Jensen's
-  inequality applied to `-log` on the `rnDeriv μ ν` density, plus
-  careful handling of the `ℝ≥0∞`/`ℝ` boundary and the integrability
-  hypothesis `Integrable (llr μ ν) μ` already exposed by
-  `Mathlib.InformationTheory.KullbackLeibler.Basic`.
+The composition `tvDist² ≤ 1 - bhattacharyya² ≤ 1 - exp(-KL)` is now an
+A-class theorem; see
+`LTFP.Ch15_LowerBounds.tvDist_le_sqrt_one_sub_exp_neg_klDiv`.
 
 The Le Cam discharge is exposed downstream by
 `tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya_kl` in
@@ -779,6 +792,349 @@ theorem tvDist_sq_le_one_sub_bhattacharyya_sq
       ≤ (Real.sqrt (1 - B ^ 2)) ^ 2 := pow_le_pow_left₀ h_tv_nonneg h_tv_le 2
     _ = 1 - B ^ 2 := by rw [sq, Real.mul_self_sqrt h_1subsq_nonneg]
 
+/-! ### Asymmetric form of the Bhattacharyya affinity
+
+When `μ ≪ ν`, the symmetric Bhattacharyya integral
+`∫ √((dμ/dτ)(dν/dτ)) dτ` over `τ = μ + ν` coincides with the
+classical asymmetric form `∫ √(dμ/dν) dν`. The bridge factors through
+the Radon--Nikodym chain rule
+`μ.rnDeriv (μ+ν) =ᵐ[μ+ν] (μ.rnDeriv ν) · (ν.rnDeriv (μ+ν))`
+and the change-of-measure identity for `ν.rnDeriv (μ+ν)`. -/
+
+/-- **Integrability of `√(dμ/dν)` under `ν`.**
+
+For two finite measures `μ`, `ν`, the function `x ↦ √((μ.rnDeriv ν x).toReal)`
+is integrable with respect to `ν`. The proof uses the elementary bound
+`√t ≤ 1 + t` for `t ≥ 0` to dominate the integrand by an integrable
+function (namely `1 + (μ.rnDeriv ν).toReal`, integrable since `ν` is
+finite and `(μ.rnDeriv ν).toReal` is integrable under `ν` for finite
+`μ`). -/
+theorem integrable_sqrt_rnDeriv
+    (μ ν : Measure α) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
+    Integrable (fun x => Real.sqrt ((μ.rnDeriv ν x).toReal)) ν := by
+  -- Measurability.
+  have h_meas : Measurable (fun x => Real.sqrt ((μ.rnDeriv ν x).toReal)) :=
+    ((MeasureTheory.Measure.measurable_rnDeriv μ ν).ennreal_toReal).sqrt
+  -- Bound: `√t ≤ 1 + t` for `t ≥ 0` (because if `t ≤ 1` then `√t ≤ 1`,
+  -- and if `t > 1` then `√t < t ≤ 1 + t`).
+  have h_bound : ∀ x, Real.sqrt ((μ.rnDeriv ν x).toReal) ≤
+      1 + (μ.rnDeriv ν x).toReal := by
+    intro x
+    set t : ℝ := (μ.rnDeriv ν x).toReal with ht_def
+    have ht_nonneg : 0 ≤ t := ENNReal.toReal_nonneg
+    by_cases ht1 : t ≤ 1
+    · have : Real.sqrt t ≤ 1 := by
+        rw [show (1 : ℝ) = Real.sqrt 1 from (Real.sqrt_one).symm]
+        exact Real.sqrt_le_sqrt ht1
+      linarith
+    · push_neg at ht1
+      have h_sqrt_le : Real.sqrt t ≤ t := by
+        have h_sq : Real.sqrt t * Real.sqrt t = t := Real.mul_self_sqrt ht_nonneg
+        have h_sqrt_pos : 0 < Real.sqrt t := Real.sqrt_pos.mpr (by linarith)
+        nlinarith [h_sq, Real.sqrt_nonneg t]
+      linarith
+  -- Integrability of the dominating function `1 + (μ.rnDeriv ν).toReal`.
+  have h_int_dom : Integrable
+      (fun x => 1 + (μ.rnDeriv ν x).toReal) ν :=
+    (integrable_const 1).add Measure.integrable_toReal_rnDeriv
+  -- Dominated convergence: `|√(rnDeriv)| ≤ 1 + rnDeriv`.
+  refine MeasureTheory.Integrable.mono' h_int_dom h_meas.aestronglyMeasurable ?_
+  refine Filter.Eventually.of_forall (fun x => ?_)
+  rw [Real.norm_of_nonneg (Real.sqrt_nonneg _)]
+  exact h_bound x
+
+/-- **Asymmetric form of the Bhattacharyya affinity.**
+
+For two finite measures `μ`, `ν` with `μ ≪ ν`, the symmetric Bhattacharyya
+integral `∫ √((dμ/dτ)(dν/dτ)) dτ` over `τ = μ + ν` reduces to the
+classical asymmetric form:
+
+  `bhattacharyya μ ν = ∫ x, √((μ.rnDeriv ν x).toReal) ∂ν`.
+
+This is the bridge between the symmetric definition (which exists for
+arbitrary pairs of measures) and the asymmetric Hellinger affinity
+(which only makes sense under absolute continuity). It is the key
+identity used to apply Jensen's inequality on `exp` for the
+`bhattacharyya ≥ exp(-KL/2)` step. -/
+theorem bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac
+    (μ ν : Measure α) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (hμν : μ ≪ ν) :
+    bhattacharyya μ ν = ∫ x, Real.sqrt ((μ.rnDeriv ν x).toReal) ∂ν := by
+  -- Notation: `τ = μ + ν`, `r = μ.rnDeriv τ`, `s = ν.rnDeriv τ`.
+  set τ : Measure α := μ + ν with hτ_def
+  -- Absolute continuity chain.
+  have hμτ : μ ≪ τ := by
+    rw [hτ_def]; exact rfl.absolutelyContinuous.add_right _
+  have hντ : ν ≪ τ := by
+    rw [hτ_def, add_comm μ ν]; exact rfl.absolutelyContinuous.add_right _
+  have hτν : τ ≪ ν := by
+    rw [hτ_def]; exact MeasureTheory.Measure.AbsolutelyContinuous.add_left hμν
+      MeasureTheory.Measure.AbsolutelyContinuous.rfl
+  have hτ_sf : SigmaFinite τ := by rw [hτ_def]; infer_instance
+  -- Chain rule: `μ.rnDeriv ν · ν.rnDeriv τ =ᵐ[τ] μ.rnDeriv τ`.
+  have h_chain :
+      μ.rnDeriv ν * ν.rnDeriv τ =ᵐ[τ] μ.rnDeriv τ :=
+    MeasureTheory.Measure.rnDeriv_mul_rnDeriv (κ := τ) hμν
+  -- Pointwise rewrite of the integrand on a.e. τ.
+  -- Use `hτν : τ ≪ ν` to lift `∀ᵐ x ∂ν, μ.rnDeriv ν x ≠ ∞` to `∀ᵐ x ∂τ`.
+  have hμν_top_τ : ∀ᵐ x ∂τ, μ.rnDeriv ν x ≠ ∞ :=
+    hτν.ae_le (MeasureTheory.Measure.rnDeriv_ne_top μ ν)
+  have hντ_top : ∀ᵐ x ∂τ, ν.rnDeriv τ x ≠ ∞ :=
+    MeasureTheory.Measure.rnDeriv_ne_top ν τ
+  have h_pt : ∀ᵐ x ∂τ,
+      Real.sqrt ((μ.rnDeriv τ x).toReal * (ν.rnDeriv τ x).toReal) =
+        Real.sqrt ((μ.rnDeriv ν x).toReal) * (ν.rnDeriv τ x).toReal := by
+    filter_upwards [h_chain, hμν_top_τ, hντ_top] with x hx hμν_top hντ_top
+    -- From the chain rule, `(μ.rnDeriv τ x).toReal = (μ.rnDeriv ν x).toReal · (ν.rnDeriv τ x).toReal`.
+    have h_chain_real :
+        (μ.rnDeriv τ x).toReal =
+          (μ.rnDeriv ν x).toReal * (ν.rnDeriv τ x).toReal := by
+      have := hx
+      -- `hx : (μ.rnDeriv ν * ν.rnDeriv τ) x = μ.rnDeriv τ x` in `ℝ≥0∞`.
+      have h_eq : μ.rnDeriv ν x * ν.rnDeriv τ x = μ.rnDeriv τ x := this
+      have h_toReal := congrArg ENNReal.toReal h_eq
+      rw [ENNReal.toReal_mul] at h_toReal
+      exact h_toReal.symm
+    rw [h_chain_real]
+    -- Now: `√(a · s² ) = √a · |s| = √a · s` since `s ≥ 0`. Here, decompose:
+    -- `(μ.rnDeriv ν x).toReal · (ν.rnDeriv τ x).toReal · (ν.rnDeriv τ x).toReal
+    --     = (μ.rnDeriv ν x).toReal · ((ν.rnDeriv τ x).toReal)²`.
+    set a : ℝ := (μ.rnDeriv ν x).toReal
+    set s : ℝ := (ν.rnDeriv τ x).toReal
+    have ha : 0 ≤ a := ENNReal.toReal_nonneg
+    have hs : 0 ≤ s := ENNReal.toReal_nonneg
+    -- We want: `√(a · s · s) = √a · s`. Use `√(a · s²) = √a · √(s²) = √a · |s| = √a · s`.
+    have h_rewrite : a * s * s = a * s ^ 2 := by ring
+    rw [h_rewrite, Real.sqrt_mul ha, Real.sqrt_sq hs]
+  -- Translate the integrand equality into an `integral` equality.
+  have h_int_eq :
+      ∫ x, Real.sqrt ((μ.rnDeriv τ x).toReal * (ν.rnDeriv τ x).toReal) ∂τ =
+        ∫ x, Real.sqrt ((μ.rnDeriv ν x).toReal) * (ν.rnDeriv τ x).toReal ∂τ :=
+    MeasureTheory.integral_congr_ae h_pt
+  -- Use change of measure: `∫ (ν.rnDeriv τ).toReal · f ∂τ = ∫ f ∂ν` (under `ν ≪ τ`).
+  have h_cofmeas :
+      ∫ x, Real.sqrt ((μ.rnDeriv ν x).toReal) * (ν.rnDeriv τ x).toReal ∂τ =
+        ∫ x, Real.sqrt ((μ.rnDeriv ν x).toReal) ∂ν := by
+    have h := MeasureTheory.integral_rnDeriv_smul (μ := ν) (ν := τ)
+      (f := fun x => Real.sqrt ((μ.rnDeriv ν x).toReal)) hντ
+    -- `h : ∫ x, (ν.rnDeriv τ x).toReal • √((μ.rnDeriv ν x).toReal) ∂τ
+    --   = ∫ x, √((μ.rnDeriv ν x).toReal) ∂ν`.
+    simp only [smul_eq_mul] at h
+    -- swap multiplication order.
+    have h_swap :
+        ∫ x, Real.sqrt ((μ.rnDeriv ν x).toReal) * (ν.rnDeriv τ x).toReal ∂τ =
+          ∫ x, (ν.rnDeriv τ x).toReal * Real.sqrt ((μ.rnDeriv ν x).toReal) ∂τ := by
+      refine MeasureTheory.integral_congr_ae ?_
+      refine Filter.Eventually.of_forall (fun x => ?_); ring
+    rw [h_swap]; exact h
+  -- Conclude.
+  unfold bhattacharyya
+  rw [show (μ + ν : Measure α) = τ from rfl, h_int_eq, h_cofmeas]
+
+/-! ### Jensen step: `exp(-(klDiv μ ν).toReal / 2) ≤ bhattacharyya μ ν`
+
+With the asymmetric form `bhattacharyya μ ν = ∫ √((μ.rnDeriv ν).toReal) ∂ν`
+in place (under `μ ≪ ν`), Jensen's inequality applied to the convex
+function `Real.exp` against the probability measure `μ` produces the
+lower bound
+
+  `Real.exp (-(klDiv μ ν).toReal / 2) ≤ bhattacharyya μ ν`,
+
+provided `μ ≪ ν`, both measures are probability measures, and the
+Kullback--Leibler divergence is finite (`klDiv μ ν ≠ ∞`, equivalently
+`Integrable (llr μ ν) μ`).
+
+The proof factors through two identities:
+
+* `(klDiv μ ν).toReal = ∫ llr μ ν dμ` (Mathlib's
+  `toReal_klDiv_of_measure_eq` for probability measures).
+* `∫ exp(-(1/2) llr μ ν x) dμ = ∫ √((μ.rnDeriv ν x).toReal) dν`
+  (change of measure via `integral_rnDeriv_smul`, combined with
+  `exp_llr_of_ac : exp(llr μ ν) =ᵐ[μ] (μ.rnDeriv ν).toReal`).
+
+Jensen on the convex function `Real.exp` then gives
+`exp(∫ -(1/2) llr dμ) ≤ ∫ exp(-(1/2) llr) dμ`, which translates to the
+desired inequality. -/
+
+/-- **Integral identity: `∫ exp(-(1/2) llr) dμ = ∫ √(dμ/dν) dν`.**
+
+For probability measures `μ ≪ ν`, the expectation of `exp(-(1/2) llr μ ν)`
+under `μ` equals the integral of `√((μ.rnDeriv ν).toReal)` against `ν`.
+This is the change-of-measure identity used in the Jensen step. -/
+theorem integral_exp_neg_half_llr_eq_integral_sqrt_rnDeriv
+    (μ ν : Measure α) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (hμν : μ ≪ ν) :
+    ∫ x, Real.exp (-(1/2) * MeasureTheory.llr μ ν x) ∂μ =
+      ∫ x, Real.sqrt ((μ.rnDeriv ν x).toReal) ∂ν := by
+  -- Change of measure: `∫ f dμ = ∫ (μ.rnDeriv ν).toReal • f dν` (under `μ ≪ ν`).
+  -- Apply with `f x = exp(-(1/2) llr μ ν x)`.
+  have h_cofmeas := MeasureTheory.integral_rnDeriv_smul (μ := μ) (ν := ν)
+    (f := fun x => Real.exp (-(1/2) * MeasureTheory.llr μ ν x)) hμν
+  -- `h_cofmeas : ∫ x, (μ.rnDeriv ν x).toReal • exp(-(1/2) llr μ ν x) ∂ν
+  --   = ∫ x, exp(-(1/2) llr μ ν x) ∂μ`.
+  simp only [smul_eq_mul] at h_cofmeas
+  rw [← h_cofmeas]
+  -- Pointwise: a.e. ν, `(μ.rnDeriv ν x).toReal · exp(-(1/2) llr μ ν x)
+  --   = √((μ.rnDeriv ν x).toReal)`.
+  -- Reason: by `exp_llr`, `exp(llr μ ν x) =ᵐ[ν] if rnDeriv = 0 then 1
+  --   else (rnDeriv).toReal`. So at rnDeriv = 0, exp(-(1/2) llr) = 1 and
+  --   the product is 0 · 1 = 0 = √0. At rnDeriv > 0, `exp(-(1/2) llr) =
+  --   1/√(rnDeriv).toReal`, so the product is `√(rnDeriv).toReal`.
+  refine MeasureTheory.integral_congr_ae ?_
+  filter_upwards [MeasureTheory.exp_llr μ ν,
+    MeasureTheory.Measure.rnDeriv_lt_top μ ν] with x hx_exp hx_top
+  -- Notation aliases (not via `set`, to keep the goal in unfolded form).
+  by_cases h_zero : μ.rnDeriv ν x = 0
+  · -- LHS = 0 · _ = 0; RHS = √0 = 0.
+    have h_toReal_zero : (μ.rnDeriv ν x).toReal = 0 := by rw [h_zero]; simp
+    show (μ.rnDeriv ν x).toReal * Real.exp (-(1/2) * MeasureTheory.llr μ ν x) =
+      Real.sqrt ((μ.rnDeriv ν x).toReal)
+    rw [h_toReal_zero, zero_mul, Real.sqrt_zero]
+  · -- rnDeriv > 0; rewrite via exp_llr.
+    set pr : ℝ := (μ.rnDeriv ν x).toReal with hpr_def
+    have hpr_nonneg : 0 ≤ pr := ENNReal.toReal_nonneg
+    have h_exp_eq_pr : Real.exp (MeasureTheory.llr μ ν x) = pr := by
+      have hxe : Real.exp (MeasureTheory.llr μ ν x) =
+          (if μ.rnDeriv ν x = 0 then (1 : ℝ) else (μ.rnDeriv ν x).toReal) := hx_exp
+      rw [hxe, if_neg h_zero]
+    have hpr_pos : 0 < pr := by
+      rw [hpr_def]
+      exact ENNReal.toReal_pos h_zero hx_top.ne
+    -- `exp((1/2) llr)` squared equals `exp(llr) = pr`, so it equals `√pr`.
+    have h_half_pos : 0 < Real.exp ((1/2) * MeasureTheory.llr μ ν x) := Real.exp_pos _
+    have h_sq_eq : Real.exp ((1/2) * MeasureTheory.llr μ ν x) *
+        Real.exp ((1/2) * MeasureTheory.llr μ ν x) = pr := by
+      rw [← Real.exp_add, show (1/2) * MeasureTheory.llr μ ν x +
+        (1/2) * MeasureTheory.llr μ ν x = MeasureTheory.llr μ ν x from by ring,
+        h_exp_eq_pr]
+    have h_eq_sqrt : Real.exp ((1/2) * MeasureTheory.llr μ ν x) = Real.sqrt pr := by
+      have : Real.sqrt (Real.exp ((1/2) * MeasureTheory.llr μ ν x) *
+          Real.exp ((1/2) * MeasureTheory.llr μ ν x)) =
+          Real.exp ((1/2) * MeasureTheory.llr μ ν x) :=
+        Real.sqrt_mul_self h_half_pos.le
+      rw [h_sq_eq] at this
+      exact this.symm
+    -- `exp(-(1/2) llr) = (exp((1/2) llr))⁻¹ = (√pr)⁻¹`.
+    have h_exp_neg_half :
+        Real.exp (-(1/2) * MeasureTheory.llr μ ν x) = (Real.sqrt pr)⁻¹ := by
+      rw [show -(1/2) * MeasureTheory.llr μ ν x = -((1/2) * MeasureTheory.llr μ ν x) from
+        by ring, Real.exp_neg, h_eq_sqrt]
+    -- Conclude: `pr · (√pr)⁻¹ = (√pr · √pr) · (√pr)⁻¹ = √pr`.
+    show pr * Real.exp (-(1/2) * MeasureTheory.llr μ ν x) = Real.sqrt pr
+    rw [h_exp_neg_half]
+    have h_sqrt_pos : 0 < Real.sqrt pr := Real.sqrt_pos.mpr hpr_pos
+    have h_sqrt_sq : Real.sqrt pr * Real.sqrt pr = pr := Real.mul_self_sqrt hpr_nonneg
+    field_simp
+    linarith [h_sqrt_sq]
+
+/-- **Integrability of `exp(-(1/2) llr μ ν)` under `μ`.**
+
+For two finite measures `μ`, `ν`, the function `x ↦ exp(-(1/2) llr μ ν x)`
+is integrable with respect to `μ`. The proof uses the elementary bound
+`exp(-y/2) ≤ 1 + exp(-y)` for all `y ∈ ℝ`, combined with the fact that
+`exp(-llr μ ν) =ᵐ[μ] (ν.rnDeriv μ).toReal` (under `μ ≪ ν`) which is
+integrable under `μ` when `ν` is a finite measure. -/
+theorem integrable_exp_neg_half_llr
+    (μ ν : Measure α) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (hμν : μ ≪ ν) :
+    Integrable (fun x => Real.exp (-(1/2) * MeasureTheory.llr μ ν x)) μ := by
+  have h_meas : Measurable (fun x => Real.exp (-(1/2) * MeasureTheory.llr μ ν x)) := by
+    refine Real.measurable_exp.comp ?_
+    exact (measurable_const.mul (MeasureTheory.measurable_llr μ ν))
+  -- Bound: `exp(-y/2) ≤ 1 + exp(-y)` for all `y`.
+  -- Proof: if `y ≥ 0`, then `-y/2 ≤ 0`, so `exp(-y/2) ≤ 1 ≤ 1 + exp(-y)`.
+  -- If `y < 0`, then `-y > 0` and `-y/2 ≤ -y`, so `exp(-y/2) ≤ exp(-y) ≤ 1 + exp(-y)`.
+  have h_bound : ∀ y : ℝ, Real.exp (-(1/2) * y) ≤ 1 + Real.exp (-y) := by
+    intro y
+    by_cases hy : 0 ≤ y
+    · have h_le : -(1/2) * y ≤ 0 := by nlinarith
+      have h_exp_le_one : Real.exp (-(1/2) * y) ≤ 1 := Real.exp_le_one_iff.mpr h_le
+      have h_exp_neg_nonneg : 0 ≤ Real.exp (-y) := (Real.exp_pos _).le
+      linarith
+    · push_neg at hy
+      have h_le : -(1/2) * y ≤ -y := by nlinarith
+      have h_exp_le : Real.exp (-(1/2) * y) ≤ Real.exp (-y) := Real.exp_le_exp.mpr h_le
+      have h_one_pos : (0 : ℝ) ≤ 1 := zero_le_one
+      linarith
+  -- Apply: `exp(-(1/2) llr μ ν x) ≤ 1 + exp(-llr μ ν x)`.
+  -- Under μ ≪ ν, `exp(-llr μ ν) =ᵐ[μ] (ν.rnDeriv μ).toReal`, integrable.
+  have h_int_neg_llr : Integrable (fun x => Real.exp (-MeasureTheory.llr μ ν x)) μ := by
+    have h_eq : (fun x => Real.exp (-MeasureTheory.llr μ ν x)) =ᵐ[μ]
+        fun x => (ν.rnDeriv μ x).toReal :=
+      MeasureTheory.exp_neg_llr hμν
+    refine (MeasureTheory.integrable_congr h_eq).mpr ?_
+    exact MeasureTheory.Measure.integrable_toReal_rnDeriv
+  have h_int_bound : Integrable (fun x => (1 : ℝ) + Real.exp (-MeasureTheory.llr μ ν x)) μ :=
+    (integrable_const _).add h_int_neg_llr
+  refine MeasureTheory.Integrable.mono' h_int_bound h_meas.aestronglyMeasurable ?_
+  refine Filter.Eventually.of_forall (fun x => ?_)
+  rw [Real.norm_of_nonneg (Real.exp_pos _).le]
+  exact h_bound _
+
+/-- **Jensen step: `exp(-(klDiv μ ν).toReal / 2) ≤ bhattacharyya μ ν`.**
+
+For two probability measures `μ ≪ ν` on `α` with finite KL divergence
+(`klDiv μ ν ≠ ∞`), the Bhattacharyya affinity dominates the
+exponentiated half-KL bound:
+
+  `Real.exp (-(klDiv μ ν).toReal / 2) ≤ bhattacharyya μ ν`.
+
+The proof composes the asymmetric-form bridge
+`bhattacharyya = ∫ √((μ.rnDeriv ν).toReal) ∂ν`, the change-of-measure
+identity `∫ √(dμ/dν) dν = ∫ exp(-(1/2) llr) dμ`, and Jensen's inequality
+applied to the convex exponential function over the probability measure
+`μ`. -/
+theorem bhattacharyya_ge_exp_neg_half_klDiv
+    (μ ν : Measure α) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+    (hμν : μ ≪ ν) (hkl : InformationTheory.klDiv μ ν ≠ ∞) :
+    Real.exp (-(InformationTheory.klDiv μ ν).toReal / 2) ≤ bhattacharyya μ ν := by
+  -- Equivalent characterization of `klDiv ≠ ∞` for `μ ≪ ν`.
+  have h_int_llr : Integrable (MeasureTheory.llr μ ν) μ := by
+    rcases (InformationTheory.klDiv_ne_top_iff (μ := μ) (ν := ν)).mp hkl with ⟨_, h⟩
+    exact h
+  -- `(klDiv μ ν).toReal = ∫ llr μ ν dμ` for probability measures.
+  have h_kl_real : (InformationTheory.klDiv μ ν).toReal =
+      ∫ x, MeasureTheory.llr μ ν x ∂μ := by
+    refine InformationTheory.toReal_klDiv_of_measure_eq hμν ?_
+    rw [show μ Set.univ = (1 : ℝ≥0∞) from measure_univ,
+        show ν Set.univ = (1 : ℝ≥0∞) from measure_univ]
+  -- Step A — Jensen on `exp` (convex on `ℝ`) over the probability measure `μ`.
+  -- Let `g x = -(1/2) * llr μ ν x`. Then:
+  --   exp(∫ g dμ) ≤ ∫ exp(g) dμ.
+  have h_int_g : Integrable (fun x => -(1/2 : ℝ) * MeasureTheory.llr μ ν x) μ :=
+    h_int_llr.const_mul _
+  have h_int_exp_g : Integrable
+      (fun x => Real.exp (-(1/2 : ℝ) * MeasureTheory.llr μ ν x)) μ :=
+    integrable_exp_neg_half_llr μ ν hμν
+  have h_jensen :
+      Real.exp (∫ x, -(1/2 : ℝ) * MeasureTheory.llr μ ν x ∂μ) ≤
+        ∫ x, Real.exp (-(1/2 : ℝ) * MeasureTheory.llr μ ν x) ∂μ := by
+    have h := ConvexOn.map_integral_le (μ := μ) (E := ℝ)
+      (s := Set.univ) (g := Real.exp)
+      (f := fun x => -(1/2 : ℝ) * MeasureTheory.llr μ ν x)
+      convexOn_exp Real.continuous_exp.continuousOn isClosed_univ
+      (Filter.Eventually.of_forall (fun _ => Set.mem_univ _))
+      h_int_g h_int_exp_g
+    exact h
+  -- Step B — Evaluate the LHS of Jensen.
+  have h_lhs_int :
+      ∫ x, -(1/2 : ℝ) * MeasureTheory.llr μ ν x ∂μ =
+        -(1/2) * (InformationTheory.klDiv μ ν).toReal := by
+    rw [MeasureTheory.integral_const_mul, ← h_kl_real]
+  have h_lhs_eq :
+      Real.exp (∫ x, -(1/2 : ℝ) * MeasureTheory.llr μ ν x ∂μ) =
+        Real.exp (-(InformationTheory.klDiv μ ν).toReal / 2) := by
+    rw [h_lhs_int]; congr 1; ring
+  -- Step C — Evaluate the RHS via the change-of-measure + asymmetric-form bridge.
+  have h_rhs_eq :
+      ∫ x, Real.exp (-(1/2 : ℝ) * MeasureTheory.llr μ ν x) ∂μ =
+        bhattacharyya μ ν := by
+    rw [integral_exp_neg_half_llr_eq_integral_sqrt_rnDeriv μ ν hμν,
+      ← bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac μ ν hμν]
+  -- Combine.
+  rw [← h_lhs_eq, ← h_rhs_eq]
+  exact h_jensen
+
 /-! ### Bretagnolle--Huber bridge — restatement in terms of the new
 definition
 
@@ -853,19 +1209,13 @@ end Examples
 * `bhattacharyya_self : [IsProbabilityMeasure μ] → bhattacharyya μ μ = 1`.
   Blocked on a clean computation of `rnDeriv μ (μ + μ)`; expected to
   follow from `Measure.rnDeriv_self` plus a `(μ + μ) = 2 • μ` rewrite.
-* `bhattacharyya_eq_sqrt_rnDeriv_int_of_ac :
-  μ ≪ ν → bhattacharyya μ ν = ∫ x, √((μ.rnDeriv ν x).toReal) ∂ν`.
-  The classical asymmetric form; reduces the symmetric definition
-  above when `μ ≪ ν`.
-* `bhattacharyya_ge_exp_neg_half_klDiv :
-  klDiv μ ν ≠ ∞ → Real.exp (-(klDiv μ ν).toReal / 2) ≤ bhattacharyya μ ν`.
-  The Jensen step (Step 2 of the BH proof). With the Le Cam step now
-  discharged here, this is the last remaining bridge hypothesis on the
-  route to the textbook Bretagnolle--Huber bound.
-* When the Jensen step lands, the carrier
-  `tvDist_le_sqrt_one_sub_exp_neg` in
-  `LTFP/Ch15_LowerBounds/Statistical.lean` upgrades from
-  `bridge-hypothesis` to A-class.
+* When `μ` is not absolutely continuous with respect to `ν`, the
+  asymmetric-form bridge `bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac`
+  fails (the singular part of `μ` is invisible to `μ.rnDeriv ν`). A
+  full upstreaming would replace `hμν` by the weaker hypothesis
+  `μ ≪ ν + singular part of ν w.r.t. μ`; this requires a Lebesgue
+  decomposition of `ν` against `μ` and lands more naturally in the
+  proposed `Mathlib/Probability/Distance/Bhattacharyya.lean`.
 -/
 
 end LTFP.MathlibExt.Probability

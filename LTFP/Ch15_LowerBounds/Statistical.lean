@@ -254,6 +254,7 @@ hypothesis becomes a one-line `klDiv`-only corollary. -/
 section MeasureBretagnolleHuber
 
 open LTFP.MathlibExt.Probability MeasureTheory
+open scoped ENNReal
 
 variable {α : Type*} [MeasurableSpace α]
 
@@ -409,6 +410,35 @@ theorem tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya_kl
     (LTFP.MathlibExt.Probability.tvDist_sq_le_one_sub_bhattacharyya_sq μ ν)
     h_kl_bridge
 
+/-- §15.1 — **Bretagnolle--Huber inequality (A-class, fully discharged).**
+
+The textbook Bretagnolle--Huber inequality, with **both** the Le Cam step
+(`tvDist² ≤ 1 - bhattacharyya²`) and the Jensen step
+(`exp(-(klDiv μ ν).toReal / 2) ≤ bhattacharyya μ ν`) now discharged
+locally:
+
+  `(tvDist μ ν).toReal ≤ √(1 - exp(-(klDiv μ ν).toReal))`
+
+for two probability measures `μ ≪ ν` with finite KL divergence
+(`klDiv μ ν ≠ ∞`). Composes
+`tvDist_sq_le_one_sub_bhattacharyya_sq` (Le Cam, in
+`LTFP/MathlibExt/Probability/Distance/Bhattacharyya.lean`) with
+`bhattacharyya_ge_exp_neg_half_klDiv` (Jensen step, same file) and
+`tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya_def`. -/
+theorem tvDist_le_sqrt_one_sub_exp_neg_klDiv
+    (μ ν : Measure α) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+    (hμν : μ ≪ ν) (hkl : InformationTheory.klDiv μ ν ≠ ∞) :
+    (tvDist μ ν).toReal ≤
+      Real.sqrt (1 - Real.exp (-(InformationTheory.klDiv μ ν).toReal)) := by
+  -- The Jensen step is now an unconditional theorem in `Bhattacharyya.lean`.
+  have h_kl_bridge :
+      Real.exp (-(InformationTheory.klDiv μ ν).toReal / 2) ≤
+        LTFP.MathlibExt.Probability.bhattacharyya μ ν :=
+    LTFP.MathlibExt.Probability.bhattacharyya_ge_exp_neg_half_klDiv μ ν hμν hkl
+  -- Compose with the Le Cam step.
+  exact tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya_kl μ ν
+    ENNReal.toReal_nonneg h_kl_bridge
+
 end MeasureBretagnolleHuber
 
 /-! ### §15.1 — Fano / Le Cam / Assouad algebraic cores
@@ -519,30 +549,25 @@ theorem fano_dpi_strengthens {M I_pre I_post : ℝ}
   fano_lower_bound_antitone hM h_post_le_pre
 
 /-
-Remaining Mathlib gap:
+Both steps of the textbook Bretagnolle--Huber proof are now discharged
+locally:
 
-`tvDist_le_sqrt_one_sub_exp_neg` and `tvDist_le_sqrt_divergence` are
-*abstract* in the divergence value `D`: the user supplies the
-"BH bridge" `tvDist² ≤ 1 - exp(-D)` as a hypothesis. The Hellinger /
-Bhattacharyya factorization of that bridge is now discharged in
-`tvDist_sq_le_one_sub_exp_neg_of_bhattacharyya` (and its Hellinger-form
-variant). The measure-theoretic Le Cam step
-`tvDist² ≤ 1 - bhattacharyya²` is now discharged in
-`LTFP.MathlibExt.Probability.Distance.Bhattacharyya` via
-`tvDist_sq_le_one_sub_bhattacharyya_sq`. The remaining residual
-hypothesis is the **Bhattacharyya--KL Jensen bridge**
-`exp(-KL/2) ≤ bhattacharyya μ ν`. Specializing to
-`D = (klDiv μ ν).toReal` therefore reduces to discharging that single
-integral inequality — the classical Jensen step on `-log` against the
-Bhattacharyya affinity.
+* the **Le Cam estimate** `tvDist² ≤ 1 - bhattacharyya²` in
+  `LTFP.MathlibExt.Probability.Distance.Bhattacharyya` via
+  `tvDist_sq_le_one_sub_bhattacharyya_sq`, and
+* the **Jensen step**
+  `Real.exp (-(klDiv μ ν).toReal / 2) ≤ bhattacharyya μ ν` (under
+  `μ ≪ ν`, `klDiv μ ν ≠ ∞`), same file, via
+  `bhattacharyya_ge_exp_neg_half_klDiv`.
 
-When upstream lands the `klDiv → bhattacharyya` Jensen bridge, the
-last abstract input collapses to a one-liner derived from `klDiv`,
-and the wrappers `tvDist_le_sqrt_one_sub_exp_neg_of_bhattacharyya` /
-`tvDist_le_sqrt_one_sub_exp_neg_of_hellinger` immediately give the
-classical Bretagnolle--Huber bound in terms of `klDiv`. The sharper
-textbook Pinsker `tvDist ≤ √(KL/2)` factor of `1/2` still needs a finer
-convex analysis than the `1 - exp(-x) ≤ x` anchor used here.
+The composition is `tvDist_le_sqrt_one_sub_exp_neg_klDiv` in this file:
+for two probability measures `μ ≪ ν` with finite KL divergence,
+`(tvDist μ ν).toReal ≤ √(1 - exp(-(klDiv μ ν).toReal))` is now an
+**A-class theorem**, with no bridge hypothesis remaining.
+
+The sharper textbook Pinsker `tvDist ≤ √(KL/2)` factor of `1/2` still
+needs a finer convex analysis than the `1 - exp(-x) ≤ x` anchor used
+here.
 -/
 
 end LTFP
