@@ -619,6 +619,163 @@ theorem ols_minimax_lower_bound_via_quantified_finite_average
       (d := d) (n := n) (sigmaSq := sigmaSq) hσ hn sample excessRisk
       h_bayes_quantified)
 
+/-- §3.7 — **Finite-`τ²` family ⇒ improper-limit ε-approximation**
+    (the Codex-prescribed *limit bridge*, 2026-05-21).
+
+    Honest scope: this lemma closes one of the two honest gaps flagged in
+    `ols_minimax_lower_bound_via_quantified_finite_average`'s docstring —
+    the bridge from finite-`τ²` Gaussian-conjugate Bayes-risk inequalities
+    to the `λ = 0` improper-prior limit. It does NOT close the other gap
+    (producing the actual finite-`τ²` witnessing priors from the
+    multivariate Gaussian posterior calculus); that requires the Mathlib
+    posterior infrastructure flagged by Codex.
+
+    Statement: suppose that for every estimator `A` and every `N > 0` the
+    finite-`τ²` Gaussian conjugacy delivers a finite prior `(θ_N, w_N)`
+    whose averaged excess risk dominates the Bayes-risk shrinkage at
+    `λ_N = 1 / N`:
+
+    `gaussianBayesRiskScalar σ² d n (1/N) ≤ ∑ k, w_N k · excessRisk
+       (A (sample (θ_N k))) (θ_N k)`.
+
+    Since
+    `gaussianBayesRiskScalar σ² d n (1/N) → σ² · d / n =
+       mourtada_lower_bound d n σ²` (this is
+    `bayes_trace_limit_discharged`), for every ε > 0 there exists `N`
+    such that `mourtada_lower_bound d n σ² - ε ≤ gaussianBayesRiskScalar
+       σ² d n (1/N)`. Combined with the per-`N` finite-prior averaging
+    via `sup_ge_bayes_average`, this yields the ε-relaxed carrier
+    conclusion: for every estimator there exists a parameter forcing
+    excess risk above `mourtada_lower_bound − ε`.
+
+    This is the strongest *exact* conclusion derivable from the finite-`τ²`
+    family without a compactness / continuity assumption on the
+    parameter space. The full carrier conclusion (no ε) would require
+    a uniform witness across the family, which is a real-analysis
+    extraction problem orthogonal to the Gaussian-conjugate content. -/
+theorem ols_minimax_bayes_prior_finite_tau_squared_family
+    {d n : ℕ} {sigmaSq : ℝ} (hσ : 0 ≤ sigmaSq) (hn : 0 < n)
+    (sample : (Fin d → ℝ) → (Fin n → ℝ))
+    (excessRisk : (Fin d → ℝ) → (Fin d → ℝ) → ℝ)
+    (h_bayes_family :
+      ∀ A : (Fin n → ℝ) → (Fin d → ℝ),
+        ∀ N : ℕ, 0 < N →
+        ∃ (m : ℕ) (_hm : 0 < m) (θ : Fin m → (Fin d → ℝ)) (w : Fin m → ℝ),
+          (∀ k, 0 ≤ w k) ∧ (∑ k, w k = 1) ∧
+          LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+              sigmaSq d n (1 / (N : ℝ)) ≤
+            ∑ k, w k * excessRisk (A (sample (θ k))) (θ k)) :
+    ∀ A : (Fin n → ℝ) → (Fin d → ℝ),
+      ∀ ε : ℝ, 0 < ε →
+      ∃ θ_star : Fin d → ℝ,
+        mourtada_lower_bound d n sigmaSq - ε ≤ excessRisk (A (sample θ_star)) θ_star := by
+  intro A ε hε
+  -- Step 1: extract a finite `N` for which
+  -- `mourtada - ε ≤ gaussianBayesRiskScalar σ² d n (1/N)`.
+  -- This uses `bayes_trace_limit_discharged` and the standard
+  -- ε-definition of convergence.
+  have h_tendsto :
+      Filter.Tendsto
+        (fun N : ℕ => LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+          sigmaSq d n (1 / (N : ℝ)))
+        Filter.atTop (nhds (sigmaSq * d / n)) :=
+    bayes_trace_limit_discharged sigmaSq d n
+  -- The Mourtada lower bound equals `σ² · d / n` by definition.
+  have h_mourtada : mourtada_lower_bound d n sigmaSq = sigmaSq * d / n := rfl
+  -- ε-translation of `Tendsto` at the metric-space level: the set
+  -- `{x | mourtada - ε ≤ x}` is a neighborhood of `mourtada` (it contains
+  -- `(mourtada - ε, mourtada + ε)`), so eventually the sequence enters it.
+  have h_nhds : Set.Ioo (sigmaSq * d / n - ε) (sigmaSq * d / n + ε) ∈
+      nhds (sigmaSq * d / n) :=
+    Ioo_mem_nhds (by linarith) (by linarith)
+  have h_event_ioo : ∀ᶠ N : ℕ in Filter.atTop,
+      LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+          sigmaSq d n (1 / (N : ℝ)) ∈
+        Set.Ioo (sigmaSq * d / n - ε) (sigmaSq * d / n + ε) :=
+    h_tendsto h_nhds
+  have h_event :
+      ∀ᶠ N : ℕ in Filter.atTop,
+        mourtada_lower_bound d n sigmaSq - ε ≤
+          LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+            sigmaSq d n (1 / (N : ℝ)) := by
+    refine h_event_ioo.mono (fun N hN => ?_)
+    rw [h_mourtada]
+    exact le_of_lt hN.1
+  -- Also eventually `N > 0`.
+  have h_pos_event : ∀ᶠ N : ℕ in Filter.atTop, 0 < N :=
+    Filter.eventually_atTop.mpr ⟨1, fun _ h1 => Nat.lt_of_lt_of_le Nat.zero_lt_one h1⟩
+  -- Combine both eventuallies.
+  have h_both : ∀ᶠ N : ℕ in Filter.atTop,
+      0 < N ∧
+        mourtada_lower_bound d n sigmaSq - ε ≤
+          LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+            sigmaSq d n (1 / (N : ℝ)) :=
+    h_pos_event.and h_event
+  obtain ⟨N, hN_pos, hN_bound⟩ := h_both.exists
+  -- Step 2: apply the finite-`τ²` hypothesis at this `N`.
+  obtain ⟨m, hm, θ, w, hw_nn, hw_sum, h_avg⟩ := h_bayes_family A N hN_pos
+  haveI : Nonempty (Fin m) := ⟨⟨0, hm⟩⟩
+  -- Step 3: chain `mourtada - ε ≤ gaussianBayesRiskScalar ... ≤ ∑ w · risk`
+  -- and apply `sup_ge_bayes_average` to extract a single witness.
+  have h_chain :
+      mourtada_lower_bound d n sigmaSq - ε ≤
+        ∑ k, w k * excessRisk (A (sample (θ k))) (θ k) :=
+    le_trans hN_bound h_avg
+  obtain ⟨k, hk⟩ :=
+    sup_ge_bayes_average (K := Fin m) w
+      (fun k => excessRisk (A (sample (θ k))) (θ k))
+      (mourtada_lower_bound d n sigmaSq - ε)
+      hw_nn hw_sum h_chain
+  exact ⟨θ k, hk⟩
+
+/-- §3.7 — **Wired ε-approximated carrier from the finite-`τ²` family**.
+
+    This is the direct downstream consumer of
+    `ols_minimax_bayes_prior_finite_tau_squared_family`. It composes the
+    limit bridge with the same `ols_minimax_lower_bound_for_all_estimators`
+    carrier shape, except the conclusion is the ε-relaxed form
+    `mourtada_lower_bound - ε ≤ excessRisk ...` rather than the exact
+    `mourtada_lower_bound ≤ excessRisk ...`.
+
+    The ε-relaxation is the *real-analysis cost* of the improper-limit
+    bridge: without compactness or continuity on the parameter
+    space, you cannot extract a single witness that achieves the exact
+    `λ = 0` Bayes-risk bound from a sequence of witnesses at
+    `λ_N = 1/N → 0`. The ε-form is the strongest exact statement that
+    follows.
+
+    Combined with the `λ = 0`-direct carrier
+    `ols_minimax_lower_bound_via_quantified_finite_average`, the project
+    now offers BOTH downstream consumer shapes:
+
+    * exact-rate conclusion from a `λ = 0`-direct hypothesis
+      (`..._quantified_finite_average`);
+    * ε-rate conclusion from a finite-`τ²` family hypothesis
+      (`..._finite_tau_squared_family`), which is the form Gaussian
+      conjugacy actually produces.
+
+    Whichever Mathlib posterior calculus arrives first will plug into the
+    matching consumer shape. -/
+theorem ols_minimax_lower_bound_via_finite_tau_squared_family
+    {d n : ℕ} {sigmaSq : ℝ} (hσ : 0 ≤ sigmaSq) (hn : 0 < n)
+    (sample : (Fin d → ℝ) → (Fin n → ℝ))
+    (excessRisk : (Fin d → ℝ) → (Fin d → ℝ) → ℝ)
+    (h_bayes_family :
+      ∀ A : (Fin n → ℝ) → (Fin d → ℝ),
+        ∀ N : ℕ, 0 < N →
+        ∃ (m : ℕ) (_hm : 0 < m) (θ : Fin m → (Fin d → ℝ)) (w : Fin m → ℝ),
+          (∀ k, 0 ≤ w k) ∧ (∑ k, w k = 1) ∧
+          LTFP.MathlibExt.Probability.Distributions.gaussianBayesRiskScalar
+              sigmaSq d n (1 / (N : ℝ)) ≤
+            ∑ k, w k * excessRisk (A (sample (θ k))) (θ k)) :
+    ∀ A : (Fin n → ℝ) → (Fin d → ℝ),
+      ∀ ε : ℝ, 0 < ε →
+      ∃ θ_star : Fin d → ℝ,
+        mourtada_lower_bound d n sigmaSq - ε ≤
+          excessRisk (A (sample θ_star)) θ_star :=
+  ols_minimax_bayes_prior_finite_tau_squared_family
+    (d := d) (n := n) (sigmaSq := sigmaSq) hσ hn sample excessRisk h_bayes_family
+
 /-- §3.5 — Sum of squared residuals is nonneg (any residual vector). -/
 theorem sum_sq_residuals_nonneg {n : ℕ} (r : Fin n → ℝ) :
     0 ≤ ∑ i, (r i)^2 :=
@@ -652,5 +809,7 @@ theorem all_zero_of_sum_sq_eq_zero {n : ℕ} (r : Fin n → ℝ)
 #check @LTFP.ols_minimax_bayes_prior_finite_average_at_improper_limit
 #check @LTFP.ols_minimax_bayes_prior_via_quantified_finite_average
 #check @LTFP.ols_minimax_lower_bound_via_quantified_finite_average
+#check @LTFP.ols_minimax_bayes_prior_finite_tau_squared_family
+#check @LTFP.ols_minimax_lower_bound_via_finite_tau_squared_family
 
 end LTFP
