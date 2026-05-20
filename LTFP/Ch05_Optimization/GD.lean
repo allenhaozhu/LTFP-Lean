@@ -165,7 +165,7 @@ not yet packaged in Mathlib. The **second** step of the chain — from
 the quadratic upper bound to the descent lemma — is fully formalized
 here, parametrized by the L-smooth upper bound as hypothesis. -/
 
-/-- §5.1 — Abstract L-smoothness descent lemma.
+/-- §5.1 — Abstract L-smoothness descent lemma (intermediate form).
 
 If `f : E → ℝ` satisfies the L-smooth quadratic upper bound
 (Bach 2024 §5.1, eqn 5.4) and the step size `η ≥ 0` is admissible
@@ -175,7 +175,19 @@ strictly decreases `f` by at least `η (1 − L η / 2) · ‖∇f(x)‖²`:
 
 The hypothesis `hQ` is the L-smooth quadratic upper bound, which
 follows from `LipschitzWith L (gradient f)` via Taylor's theorem
-(Mathlib gap, see file docstring). -/
+(now discharged below in `lSmooth_quadratic_upper_bound`).
+
+**Intermediate form.** This statement takes the quadratic upper
+bound as a hypothesis rather than deriving it from Lipschitz of the
+gradient. For the canonical fully-discharged statement that takes
+`LipschitzWith L (gradient f)` (plus a differentiability witness)
+as its only structural hypothesis, use
+`gd_descent_lemma_of_lipschitz_gradient_diff`. This intermediate
+form is kept because it remains a useful entry point when the
+quadratic upper bound is established by other means (e.g., a
+hand-written algebraic argument on a specific `f`, as in
+`gd_descent_lemma_const`), and because it factors the proof of the
+canonical form cleanly. -/
 theorem gd_descent_lemma_of_quadratic_bound
     (f : E → ℝ) (L η : ℝ) (x : E)
     (hQ : ∀ y : E,
