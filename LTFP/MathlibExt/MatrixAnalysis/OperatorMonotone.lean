@@ -87,4 +87,73 @@ theorem OperatorMonotone.const_smul {c : ℝ} (hc : 0 ≤ c)
     cfc_smul (p := IsSelfAdjoint) c f B (continuousOn_spectrum_matrix B f)]
   exact smul_le_smul_of_nonneg_left (hf A B hA hB hAB) hc
 
+/-- A real-valued function `f : ℝ → ℝ` is operator antitone on finite Hermitian
+matrices if `A ≤ B` in Löwner order implies `f(B) ≤ f(A)` under the continuous
+functional calculus. -/
+def OperatorAntitone (f : ℝ → ℝ) : Prop :=
+  ∀ {𝕜 : Type uomk} [RCLike 𝕜] {n : Type uomn} [Fintype n] [DecidableEq n]
+    (A B : Matrix n n 𝕜) (_hA : A.IsHermitian) (_hB : B.IsHermitian),
+    A ≤ B →
+      cfc (R := ℝ) (p := IsSelfAdjoint) f B ≤
+        cfc (R := ℝ) (p := IsSelfAdjoint) f A
+
+/-- Negating a function flips operator antitonicity into operator monotonicity. -/
+theorem operatorAntitone_iff_neg_operatorMonotone (f : ℝ → ℝ) :
+    OperatorAntitone.{uomk, uomn} f ↔ OperatorMonotone.{uomk, uomn} (-f) := by
+  constructor
+  · intro hf 𝕜 _ n _ _ A B hA hB hAB
+    change cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x) A ≤
+      cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x) B
+    rw [cfc_neg (p := IsSelfAdjoint) f A, cfc_neg (p := IsSelfAdjoint) f B]
+    exact neg_le_neg (hf A B hA hB hAB)
+  · intro hf 𝕜 _ n _ _ A B hA hB hAB
+    have h := hf A B hA hB hAB
+    change cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x) A ≤
+      cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x) B at h
+    rw [cfc_neg (p := IsSelfAdjoint) f A, cfc_neg (p := IsSelfAdjoint) f B] at h
+    exact neg_le_neg_iff.mp h
+
+/-- Negating a function flips operator monotonicity into operator antitonicity. -/
+theorem operatorMonotone_neg_iff_operatorAntitone (f : ℝ → ℝ) :
+    OperatorMonotone.{uomk, uomn} (-f) ↔ OperatorAntitone.{uomk, uomn} f :=
+  (operatorAntitone_iff_neg_operatorMonotone.{uomk, uomn} f).symm
+
+/-- Constants are operator antitone. -/
+theorem operatorAntitone_const (c : ℝ) : OperatorAntitone.{uomk, uomn} (fun _ => c) := by
+  intro 𝕜 _ n _ _ A B hA hB _hAB
+  rw [cfc_const (R := ℝ) (p := IsSelfAdjoint) c B (show IsSelfAdjoint B from hB),
+    cfc_const (R := ℝ) (p := IsSelfAdjoint) c A (show IsSelfAdjoint A from hA)]
+
+/-- Sum of two operator-antitone functions is operator antitone. -/
+theorem OperatorAntitone.add {f g : ℝ → ℝ} (hf : OperatorAntitone.{uomk, uomn} f)
+    (hg : OperatorAntitone.{uomk, uomn} g) : OperatorAntitone.{uomk, uomn} (f + g) := by
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  rw [Pi.add_def]
+  rw [cfc_add (p := IsSelfAdjoint) B f g
+      (continuousOn_spectrum_matrix B f) (continuousOn_spectrum_matrix B g),
+    cfc_add (p := IsSelfAdjoint) A f g
+      (continuousOn_spectrum_matrix A f) (continuousOn_spectrum_matrix A g)]
+  exact add_le_add (hf A B hA hB hAB) (hg A B hA hB hAB)
+
+/-- Nonnegative scalar multiples of operator-antitone functions are operator antitone. -/
+theorem OperatorAntitone.const_smul {f : ℝ → ℝ} {c : ℝ} (hc : 0 ≤ c)
+    (hf : OperatorAntitone.{uomk, uomn} f) : OperatorAntitone.{uomk, uomn} (c • f) := by
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  rw [Pi.smul_def]
+  rw [cfc_smul (p := IsSelfAdjoint) c f B (continuousOn_spectrum_matrix B f),
+    cfc_smul (p := IsSelfAdjoint) c f A (continuousOn_spectrum_matrix A f)]
+  exact smul_le_smul_of_nonneg_left (hf A B hA hB hAB) hc
+
+/-- Negating an operator-monotone function gives an operator-antitone function. -/
+theorem OperatorMonotone.neg_antitone {f : ℝ → ℝ}
+    (hf : OperatorMonotone.{uomk, uomn} f) :
+    OperatorAntitone.{uomk, uomn} (fun t => -f t) := by
+  refine (operatorAntitone_iff_neg_operatorMonotone.{uomk, uomn} (fun t => -f t)).2 ?_
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  have hfun : -(fun t => -f t) = f := by
+    funext t
+    simp
+  rw [hfun]
+  exact hf A B hA hB hAB
+
 end LTFP.MathlibExt.MatrixAnalysis
