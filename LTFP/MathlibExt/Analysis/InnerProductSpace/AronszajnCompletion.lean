@@ -323,17 +323,101 @@ theorem inner_feature_feature (x y : 𝒳) :
 
 end KernelRKHSQuotient
 
-/-! ### Stage 3 / Hilbert-completion handoff
+/-! ### Stage 3 — Hilbert completion via `UniformSpace.Completion`
 
-The full Aronszajn theorem requires one more stage: applying
-`UniformSpace.Completion` to `KernelRKHSQuotient K` to obtain a
-`CompleteSpace` and hence a Hilbert space. That stage is left to the
-companion module
-`LTFP.MathlibExt.Analysis.InnerProductSpace.AronszajnHilbert` (Phase
-3a-2). The infrastructure exposed here — type synonym,
-`PreInnerProductSpace.Core`, separation quotient, inherited
-`NormedAddCommGroup` and `InnerProductSpace`, quotient feature map,
-and quotient reproducing identity — is everything that stage needs to
-consume from Stage 2. -/
+The Stage-2 quotient `KernelRKHSQuotient K` is an honest
+`InnerProductSpace ℝ` and a `NormedAddCommGroup`, but it is not yet
+known to be a `CompleteSpace`. The final step of the Moore–Aronszajn
+construction passes through `UniformSpace.Completion`: applying it to
+the quotient lands a `CompleteSpace` that automatically inherits the
+inner-product structure via
+`UniformSpace.Completion.innerProductSpace` (Mathlib,
+`Mathlib.Analysis.InnerProductSpace.Completion`). The result is a real
+Hilbert space — the RKHS of the kernel `K`.
+
+This section exposes:
+
+* `KernelRKHS K` : the Hilbert completion as an `abbrev` over
+  `UniformSpace.Completion (KernelRKHSQuotient K)`, picking up
+  `NormedAddCommGroup`, `InnerProductSpace ℝ`, and `CompleteSpace`
+  automatically.
+* `KernelRKHS.feature` : the Aronszajn feature map at the Hilbert
+  level, obtained by coercing the quotient feature.
+* `KernelRKHS.inner_feature_feature` : the reproducing identity
+  `⟪feature x, feature y⟫ = K x y` at the Hilbert level.
+* `KernelRKHS.denseRange_coe` : density of the image of the quotient
+  in the completion — the analytic content of the Moore–Aronszajn
+  passage.
+-/
+
+/-- **The Aronszajn RKHS as a Hilbert space.** The completion of
+`KernelRKHSQuotient K` under its kernel-induced norm. Because
+`KernelRKHSQuotient K` is already an `InnerProductSpace ℝ`, Mathlib's
+`UniformSpace.Completion.innerProductSpace` auto-resolves a
+`NormedAddCommGroup`, an `InnerProductSpace ℝ`, and a `CompleteSpace`
+on `KernelRKHS K`. The result is a real Hilbert space in the standard
+sense.
+
+We use `abbrev` so the typeclass system can transparently unfold to
+`UniformSpace.Completion (KernelRKHSQuotient K)` and locate the
+inherited analytic instances. -/
+abbrev KernelRKHS (K : 𝒳 → 𝒳 → ℝ) [IsRKHSKernel K] : Type _ :=
+  UniformSpace.Completion (KernelRKHSQuotient K)
+
+/-! ### Sanity checks: inherited analytic instances
+
+The following `example` blocks confirm that `KernelRKHS K` inherits a
+`NormedAddCommGroup`, `InnerProductSpace ℝ`, and `CompleteSpace`
+purely via typeclass synthesis from `UniformSpace.Completion`. They
+add no API; they document the success of instance resolution. -/
+
+noncomputable example {K : 𝒳 → 𝒳 → ℝ} [IsRKHSKernel K] :
+    NormedAddCommGroup (KernelRKHS K) := inferInstance
+
+noncomputable example {K : 𝒳 → 𝒳 → ℝ} [IsRKHSKernel K] :
+    InnerProductSpace ℝ (KernelRKHS K) := inferInstance
+
+example {K : 𝒳 → 𝒳 → ℝ} [IsRKHSKernel K] :
+    CompleteSpace (KernelRKHS K) := inferInstance
+
+namespace KernelRKHS
+
+/-- **The Aronszajn feature map at the Hilbert level.** Sends a point
+`x : 𝒳` to the image in `KernelRKHS K` of the quotient feature class.
+Concretely, this is the composition of `KernelRKHSQuotient.feature`
+with the canonical coercion `KernelRKHSQuotient K → KernelRKHS K`
+supplied by `UniformSpace.Completion`. -/
+noncomputable def feature (K : 𝒳 → 𝒳 → ℝ) [IsRKHSKernel K] [DecidableEq 𝒳]
+    (x : 𝒳) : KernelRKHS K :=
+  ((KernelRKHSQuotient.feature (K := K) x : KernelRKHSQuotient K) : KernelRKHS K)
+
+/-- **Reproducing identity in the Hilbert RKHS.** The inner product of
+two Hilbert-level feature vectors equals the original kernel value
+`K x y`. This is the final form of the Aronszajn reproducing
+property: the inner product is honestly typed against the
+Hilbert-space inner product, with both sides honest reals. -/
+theorem inner_feature_feature {K : 𝒳 → 𝒳 → ℝ} [IsRKHSKernel K]
+    [DecidableEq 𝒳] (x y : 𝒳) :
+    inner ℝ (feature K x) (feature K y) = K x y := by
+  -- Unfold both feature maps and rewrite by the Mathlib lemma
+  -- `UniformSpace.Completion.inner_coe`, which collapses the
+  -- completion-level inner product on coerced points to the
+  -- underlying-space inner product. Then conclude by the Stage-2
+  -- reproducing identity at the quotient level.
+  unfold feature
+  rw [UniformSpace.Completion.inner_coe]
+  exact KernelRKHSQuotient.inner_feature_feature x y
+
+/-- **Density of the quotient inside the Hilbert completion.** The
+canonical coercion `KernelRKHSQuotient K → KernelRKHS K` has dense
+range; equivalently, every element of the Hilbert RKHS is a limit of
+quotient feature combinations. This is the analytic content of the
+Moore–Aronszajn passage from the algebraic pre-RKHS to the Hilbert
+RKHS. -/
+theorem denseRange_coe (K : 𝒳 → 𝒳 → ℝ) [IsRKHSKernel K] :
+    DenseRange ((↑) : KernelRKHSQuotient K → KernelRKHS K) :=
+  UniformSpace.Completion.denseRange_coe
+
+end KernelRKHS
 
 end LTFP.MathlibExt.Analysis
