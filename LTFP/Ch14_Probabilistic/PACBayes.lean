@@ -1303,4 +1303,401 @@ theorem pac_bayes_mcallester_bach_path
     field_simp
   linarith [h_final, h_split.le, h_split.ge]
 
+/-! ### A-class Bach §14.4.2 PAC-Bayes McAllester bound (Phase 3b PIVOT iter 2)
+
+The carrier `pac_bayes_mcallester_bach_path` (above) takes
+`h_per_S_DV` and `hMGF_joint_le` as parametric hypotheses. The two
+A-class helpers below derive both from primitives:
+
+* **Step 1** (`pac_bayes_bach_step1_hoeffding_per_theta`) — Bach's
+  per-θ Hoeffding linear-MGF bound:
+  `∀ θ, ∫_S exp(s · (R(θ) - R̂_n(θ)(S))) ∂Dⁿ ≤ exp(s² · ℓ∞² / (8n))`,
+  derived from Mathlib's `hasSubgaussianMGF_of_mem_Icc_of_integral_eq_zero`
+  applied per-coordinate + `sum_of_iIndepFun` over iid samples + scaling
+  by `1/n` via `HasSubgaussianMGF.const_mul`.
+
+* **A-class wrapper** (`pac_bayes_mcallester_bach_path_a_class`) —
+  composes Step 1 with `pac_bayes_bach_step2_integrate_prior` and a
+  Fubini swap to discharge `hMGF_joint_le`, and applies
+  `donsker_varadhan_inequality` per-sample via `Integrable.prod_*_ae` to
+  discharge `h_per_S_DV`. The result is the in-expectation
+  McAllester PAC-Bayes bound (Bach Eq. 14.6) with no remaining
+  parametric hypotheses other than bounded-loss + iid + measurability
+  + standard Fubini/DV integrability regularity. -/
+
+/-- §14.4.2 (Bach Step 1) — **Per-θ Hoeffding linear-MGF bound.**
+
+For a single fixed hypothesis `θ` with loss `ℓ_θ : 𝒳 → ℝ` taking values
+in `[0, ℓ∞]` a.e. under the data distribution `D`, the moment-generating
+function of the centered empirical-process random variable
+`gap(S) := R(θ) - R̂_n(θ, S) = (∫ ℓ_θ dD) - (1/n) ∑ᵢ ℓ_θ(Sᵢ)` under
+the product measure `Dⁿ` is bounded by the Hoeffding exponential:
+
+  `∫_S exp(s · gap(S)) dDⁿ(S) ≤ exp(s² · ℓ∞² / (8 n))`.
+
+This is **Bach (2024) Eq. (14.4)**, the first of the four steps in
+§14.4.2 (per-θ Hoeffding + integrate-over-prior + Donsker-Varadhan +
+Chernoff). It is derived in Mathlib from
+`hasSubgaussianMGF_of_mem_Icc_of_integral_eq_zero` applied to each
+centered summand `Yᵢ(S) = R(θ) - ℓ_θ(S_i)`, combined via
+`HasSubgaussianMGF.sum_of_iIndepFun` and scaled via
+`HasSubgaussianMGF.const_mul`. -/
+theorem pac_bayes_bach_step1_hoeffding_per_theta
+    {𝒳 : Type*} [MeasurableSpace 𝒳]
+    (D : MeasureTheory.Measure 𝒳) [MeasureTheory.IsProbabilityMeasure D]
+    (ℓ : 𝒳 → ℝ) (hℓ_meas : Measurable ℓ)
+    (linf : ℝ)
+    (hbdd : ∀ᵐ x ∂D, ℓ x ∈ Set.Icc (0 : ℝ) linf)
+    {n : ℕ} (hn : 0 < n)
+    (s : ℝ) :
+    ∫ S, Real.exp (s * ((∫ x, ℓ x ∂D) -
+            (1 / (n : ℝ)) * ∑ i : Fin n, ℓ (S i)))
+          ∂(MeasureTheory.Measure.pi (fun _ : Fin n => D))
+      ≤ Real.exp (s ^ 2 * (linf ^ 2 / (8 * (n : ℝ)))) := by
+  classical
+  -- Notation: `R := ∫ ℓ dD`, and the iid sample family on the product
+  -- space `Fin n → 𝒳` is `X i ω := ℓ (ω i)`.
+  set R : ℝ := ∫ x, ℓ x ∂D with hR_def
+  let μ : MeasureTheory.Measure (Fin n → 𝒳) :=
+    MeasureTheory.Measure.pi (fun _ : Fin n => D)
+  haveI hμ_prob : MeasureTheory.IsProbabilityMeasure μ := by
+    show MeasureTheory.IsProbabilityMeasure
+      (MeasureTheory.Measure.pi (fun _ : Fin n => D))
+    infer_instance
+  set X : Fin n → (Fin n → 𝒳) → ℝ := fun i ω => ℓ (ω i) with hX_def
+  -- Measurability of each `X i`.
+  have hX_meas : ∀ i, Measurable (X i) := by
+    intro i
+    exact hℓ_meas.comp (measurable_pi_apply i)
+  -- Boundedness of each `X i`: pulled back from `D` via `Measure.pi_map_eval`.
+  have hX_bdd : ∀ i, ∀ᵐ ω ∂μ, X i ω ∈ Set.Icc (0 : ℝ) linf := by
+    intro i
+    -- `(μ.map (fun ω => ω i)) = D` (since `μ = Measure.pi`).
+    have h_meas_proj : Measurable (fun ω : Fin n → 𝒳 => ω i) :=
+      measurable_pi_apply i
+    have h_map_pres :
+        MeasureTheory.MeasurePreserving (fun ω : Fin n → 𝒳 => ω i) μ D :=
+      MeasureTheory.measurePreserving_eval (μ := fun _ : Fin n => D) i
+    have h_map : μ.map (fun ω : Fin n → 𝒳 => ω i) = D := h_map_pres.map_eq
+    -- Pull back `hbdd` along the projection using `ae_map_iff`.
+    have h_pull : ∀ᵐ ω ∂μ, ℓ (ω i) ∈ Set.Icc (0 : ℝ) linf := by
+      have h_ae_d : ∀ᵐ x ∂(μ.map (fun ω : Fin n → 𝒳 => ω i)),
+          ℓ x ∈ Set.Icc (0 : ℝ) linf := by rw [h_map]; exact hbdd
+      exact (MeasureTheory.ae_map_iff h_meas_proj.aemeasurable
+        (measurableSet_Icc.preimage hℓ_meas)).mp h_ae_d
+    exact h_pull
+  -- Independence of `(X i)` via `iIndepFun_pi` applied to the constant family `ℓ`.
+  have hℓ_aemeas : ∀ _i : Fin n, AEMeasurable ℓ D := fun _ => hℓ_meas.aemeasurable
+  have hX_indep : ProbabilityTheory.iIndepFun X μ :=
+    ProbabilityTheory.iIndepFun_pi hℓ_aemeas
+  -- Each `X i` is integrable (bounded a.e. on a probability measure).
+  have hX_int : ∀ i, MeasureTheory.Integrable (X i) μ := by
+    intro i
+    exact MeasureTheory.Integrable.of_mem_Icc 0 linf (hX_meas i).aemeasurable (hX_bdd i)
+  -- Each `X i` has mean `R` (since the pushforward is `D` and `R = ∫ ℓ dD`).
+  have hX_mean : ∀ i, ∫ ω, X i ω ∂μ = R := by
+    intro i
+    have h_map : μ.map (fun ω : Fin n → 𝒳 => ω i) = D :=
+      (MeasureTheory.measurePreserving_eval (μ := fun _ : Fin n => D) i).map_eq
+    have h_meas_proj : Measurable (fun ω : Fin n → 𝒳 => ω i) :=
+      measurable_pi_apply i
+    have h_change :
+        ∫ ω, ℓ (ω i) ∂μ = ∫ x, ℓ x ∂(μ.map (fun ω : Fin n → 𝒳 => ω i)) := by
+      rw [MeasureTheory.integral_map h_meas_proj.aemeasurable
+            hℓ_meas.aestronglyMeasurable]
+    show ∫ ω, ℓ (ω i) ∂μ = R
+    rw [h_change, h_map]
+  -- Step A: centered summands `Y i ω := X i ω - R`.
+  set Y : Fin n → (Fin n → 𝒳) → ℝ := fun i ω => X i ω - R with hY_def
+  have hY_mean : ∀ i, ∫ ω, Y i ω ∂μ = 0 := by
+    intro i
+    have h_int := hX_int i
+    have h_int' : MeasureTheory.Integrable (fun _ : Fin n → 𝒳 => R) μ :=
+      MeasureTheory.integrable_const _
+    have h_sub :
+        ∫ ω, X i ω - R ∂μ = ∫ ω, X i ω ∂μ - R := by
+      rw [MeasureTheory.integral_sub h_int h_int']
+      simp
+    show ∫ ω, X i ω - R ∂μ = 0
+    rw [h_sub, hX_mean i, sub_self]
+  -- `Y i ω ∈ [-R, linf - R]` a.e.
+  have hY_bdd : ∀ i, ∀ᵐ ω ∂μ, Y i ω ∈ Set.Icc (-R) (linf - R) := by
+    intro i
+    filter_upwards [hX_bdd i] with ω hω
+    refine ⟨?_, ?_⟩
+    · linarith [hω.1]
+    · linarith [hω.2]
+  have hY_meas : ∀ i, Measurable (Y i) := fun i => (hX_meas i).sub_const _
+  -- Step B: per-i Hoeffding sub-Gaussian MGF with proxy `((linf)/2)²`.
+  have hY_subG_hoeff : ∀ i,
+      ProbabilityTheory.HasSubgaussianMGF (Y i)
+        ((‖(linf - R) - (-R)‖₊ / 2) ^ 2) μ := by
+    intro i
+    exact ProbabilityTheory.hasSubgaussianMGF_of_mem_Icc_of_integral_eq_zero
+      (hY_meas i).aemeasurable (hY_bdd i) (hY_mean i)
+  -- We work the proof via `mgf` directly, avoiding intermediate NNReal
+  -- packaging which trips on Lean's elaboration. The strategy is:
+  -- 1. Use `hY_subG_hoeff` to get the per-`i` Hoeffding bound;
+  -- 2. extract `mgf_le` of the sum-of-Y after iid sum, ALL at REAL level;
+  -- 3. divide and conclude.
+  -- Set the central NNReal proxies via `⟨_, _⟩` ascription within a tac.
+  have h_proxy_nn : (0 : ℝ) ≤ linf ^ 2 / 4 := by positivity
+  -- The proxy constant `c_Y := ((linf - R) - (-R)) / 2)² = linf²/4`.
+  set cY : NNReal := ((‖(linf - R) - (-R)‖₊ / 2) ^ 2) with hcY_def
+  have hcY_coe : (cY : ℝ) = linf ^ 2 / 4 := by
+    rw [hcY_def]
+    push_cast
+    have h_diff : (linf - R) - (-R) = linf := by ring
+    rw [h_diff]
+    -- `‖linf‖ = |linf|`, `|linf|² = linf²`.
+    rw [Real.norm_eq_abs, ← sq_abs linf]
+    ring
+  -- Per-i Hoeffding sub-Gaussian MGF with proxy `cY = linf²/4`.
+  have hY_subG : ∀ i, ProbabilityTheory.HasSubgaussianMGF (Y i) cY μ :=
+    hY_subG_hoeff
+  -- Step C: independence of `Y i = (· - R) ∘ X i`.
+  have hY_indep : ProbabilityTheory.iIndepFun Y μ := by
+    have h := hX_indep.comp (fun _ x => x - R)
+      (fun _ => measurable_id.sub_const _)
+    exact h
+  -- Step D: sum of i.i.d. sub-Gaussians.
+  have hSum_subG : ProbabilityTheory.HasSubgaussianMGF
+      (fun ω => ∑ i, Y i ω) (∑ _i : Fin n, cY) μ :=
+    ProbabilityTheory.HasSubgaussianMGF.sum_of_iIndepFun hY_indep
+      (fun i _ => hY_subG i)
+  -- The sum-of-constants coerces to `n * cY = n * linf²/4` in ℝ.
+  have h_sum_coe : ((∑ _i : Fin n, cY : NNReal) : ℝ) = (n : ℝ) * (linf ^ 2 / 4) := by
+    rw [NNReal.coe_sum, Finset.sum_const, Finset.card_univ, Fintype.card_fin,
+      nsmul_eq_mul, hcY_coe]
+  -- Step E: scale by `-1/n` to recover `R - (1/n) ∑ X i = R - R̂` form.
+  have hAvg_subG := hSum_subG.const_mul (-(1 / (n : ℝ)))
+  -- `hAvg_subG : HasSubgaussianMGF (fun ω => (-1/n) * ∑ Yi) (cS * ∑cY) μ`
+  -- where `cS := ⟨(-(1/n))², sq_nonneg _⟩`.
+  -- The composed proxy coerces to `(1/n)² · n · linf²/4 = linf²/(4n)`.
+  have hn_pos : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have hn_ne : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
+  have hAvg_proxy_coe :
+      ((⟨(-(1 / (n : ℝ))) ^ 2, sq_nonneg _⟩ * (∑ _i : Fin n, cY) : NNReal) : ℝ)
+        = linf ^ 2 / (4 * (n : ℝ)) := by
+    rw [NNReal.coe_mul, NNReal.coe_mk, h_sum_coe]
+    field_simp
+  -- Pointwise, `(-1/n) ∑ Y i = R - (1/n) ∑ X i`.
+  have h_pw : ∀ ω,
+      (-(1 / (n : ℝ))) * ∑ i, Y i ω
+        = R - (1 / (n : ℝ)) * ∑ i, ℓ (ω i) := by
+    intro ω
+    have h_sum_split :
+        ∑ i : Fin n, Y i ω = (∑ i, ℓ (ω i)) - (n : ℝ) * R := by
+      show ∑ i : Fin n, (ℓ (ω i) - R) = (∑ i, ℓ (ω i)) - (n : ℝ) * R
+      rw [Finset.sum_sub_distrib, Finset.sum_const, Finset.card_univ,
+          Fintype.card_fin, nsmul_eq_mul]
+    rw [h_sum_split]
+    field_simp
+    ring
+  -- Congruence transfer to the Bach-form gap.
+  have hGap_subG : ProbabilityTheory.HasSubgaussianMGF
+      (fun ω => R - (1 / (n : ℝ)) * ∑ i, ℓ (ω i))
+      (⟨(-(1 / (n : ℝ))) ^ 2, sq_nonneg _⟩ * (∑ _i : Fin n, cY)) μ := by
+    refine hAvg_subG.congr ?_
+    refine Filter.Eventually.of_forall (fun ω => ?_)
+    exact h_pw ω
+  -- Apply `mgf_le` at exponent `s`:
+  --   `mgf gap μ s ≤ exp(((-1/n)² · ∑cY) · s²/2)`.
+  have h_mgf_le := hGap_subG.mgf_le s
+  -- Unfold `mgf` to get the integral form (definitional).
+  have h_mgf_eq :
+      ProbabilityTheory.mgf
+          (fun ω : Fin n → 𝒳 => R - (1 / (n : ℝ)) * ∑ i, ℓ (ω i)) μ s
+        = ∫ ω, Real.exp (s * (R - (1 / (n : ℝ)) * ∑ i, ℓ (ω i))) ∂μ := rfl
+  rw [h_mgf_eq] at h_mgf_le
+  -- The proxy constant after simplification: `(1/n)² · n · (linf²/4) · s²/2 = s² · linf²/(8n)`.
+  have h_exp_eq :
+      Real.exp (((⟨(-(1 / (n : ℝ))) ^ 2, sq_nonneg _⟩ * (∑ _i : Fin n, cY) : NNReal) : ℝ)
+                  * s ^ 2 / 2)
+        = Real.exp (s ^ 2 * (linf ^ 2 / (8 * (n : ℝ)))) := by
+    congr 1
+    rw [hAvg_proxy_coe]
+    field_simp
+    ring
+  rw [h_exp_eq] at h_mgf_le
+  exact h_mgf_le
+
+/-- §14.4.2 (Bach A-class) — **McAllester PAC-Bayes bound, Bach Eq. (14.6),
+fully discharged from primitives (Phase 3b PIVOT iter 2).**
+
+This is the A-class version of `pac_bayes_mcallester_bach_path`: the
+two named hypotheses (`h_per_S_DV` and `hMGF_joint_le`) consumed by
+that carrier are here **derived** from primitives —
+
+* `h_per_S_DV` from `donsker_varadhan_inequality` applied per-sample
+  via `Integrable.prod_left_ae` (Fubini-style slice integrability);
+* `hMGF_joint_le` from `pac_bayes_bach_step1_hoeffding_per_theta`
+  composed with `pac_bayes_bach_step2_integrate_prior` and a Fubini
+  swap (`integral_integral_swap`).
+
+The only remaining assumptions are: bounded loss (`hbdd`), iid sample
+structure (`Measure.pi`), joint measurability and standard
+Fubini/DV integrability regularity. No Bach-specific named
+hypotheses remain.
+
+References: Bach 2024 §14.4.2, Eq. (14.6); the proof composes Bach's
+four steps (per-θ Hoeffding + integrate-over-prior + Donsker--Varadhan
++ Chernoff/Jensen-on-log). -/
+theorem pac_bayes_mcallester_bach_path_a_class
+    {𝒳 Θ : Type*} [MeasurableSpace 𝒳] [MeasurableSpace Θ]
+    (D : MeasureTheory.Measure 𝒳) [MeasureTheory.IsProbabilityMeasure D]
+    (q ρ : MeasureTheory.Measure Θ)
+    [MeasureTheory.IsProbabilityMeasure q] [MeasureTheory.IsProbabilityMeasure ρ]
+    (hρq : ρ.AbsolutelyContinuous q)
+    (ℓ : Θ → 𝒳 → ℝ)
+    (hℓ_meas : ∀ θ, Measurable (ℓ θ))
+    (linf : ℝ)
+    (hbdd : ∀ θ, ∀ᵐ x ∂D, ℓ θ x ∈ Set.Icc (0 : ℝ) linf)
+    {n : ℕ} (hn : 0 < n)
+    {s : ℝ} (hs_pos : 0 < s)
+    -- Joint integrability of the exponential under `q ⊗ Dⁿ` (Fubini swap).
+    (h_exp_joint_int :
+      MeasureTheory.Integrable
+        (fun p : Θ × (Fin n → 𝒳) =>
+          Real.exp (s * ((∫ x, ℓ p.1 x ∂D)
+            - (1 / (n : ℝ)) * ∑ i : Fin n, ℓ p.1 (p.2 i))))
+        (q.prod (MeasureTheory.Measure.pi (fun _ : Fin n => D))))
+    -- Joint integrability of the gap itself under `ρ ⊗ Dⁿ` (per-sample DV LHS).
+    (h_gap_joint_int :
+      MeasureTheory.Integrable
+        (fun p : Θ × (Fin n → 𝒳) =>
+          (∫ x, ℓ p.1 x ∂D)
+            - (1 / (n : ℝ)) * ∑ i : Fin n, ℓ p.1 (p.2 i))
+        (ρ.prod (MeasureTheory.Measure.pi (fun _ : Fin n => D))))
+    -- llr integrability for DV.
+    (hllr_int : MeasureTheory.Integrable (MeasureTheory.llr ρ q) ρ)
+    -- Integrability of the per-sample log-MGF under `Dⁿ` (needed for STEP B).
+    (hMGF_int_PS :
+      MeasureTheory.Integrable
+        (fun S : Fin n → 𝒳 =>
+          Real.log (∫ θ, Real.exp (s * ((∫ x, ℓ θ x ∂D)
+              - (1 / (n : ℝ)) * ∑ i : Fin n, ℓ θ (S i))) ∂q))
+        (MeasureTheory.Measure.pi (fun _ : Fin n => D))) :
+    ∫ S, (∫ θ, ((∫ x, ℓ θ x ∂D)
+          - (1 / (n : ℝ)) * ∑ i : Fin n, ℓ θ (S i)) ∂ρ)
+        ∂(MeasureTheory.Measure.pi (fun _ : Fin n => D))
+      ≤ (InformationTheory.klDiv ρ q).toReal / s
+          + s * (linf ^ 2 / (8 * (n : ℝ))) := by
+  classical
+  -- Notation.
+  let P_S : MeasureTheory.Measure (Fin n → 𝒳) :=
+    MeasureTheory.Measure.pi (fun _ : Fin n => D)
+  haveI hP_S_prob : MeasureTheory.IsProbabilityMeasure P_S := by
+    show MeasureTheory.IsProbabilityMeasure
+      (MeasureTheory.Measure.pi (fun _ : Fin n => D))
+    infer_instance
+  let gap : Θ → (Fin n → 𝒳) → ℝ :=
+    fun θ S => (∫ x, ℓ θ x ∂D) - (1 / (n : ℝ)) * ∑ i : Fin n, ℓ θ (S i)
+  let K : ℝ := linf ^ 2 / (8 * (n : ℝ))
+  have hK_nn : 0 ≤ K := by positivity
+  -- STEP 1: per-θ Hoeffding MGF bound (Bach Step 1).
+  have h_per_θ_MGF : ∀ θ,
+      ∫ S, Real.exp (s * gap θ S) ∂P_S ≤ Real.exp (s ^ 2 * K) := by
+    intro θ
+    -- `gap θ S` unfolds to `(∫ x, ℓ θ x ∂D) - (1/n) ∑ ℓ θ (S i)`
+    -- and `K` unfolds to `linf² / (8 n)`; `P_S` unfolds to `Measure.pi`.
+    -- These let-bindings are definitionally transparent.
+    exact pac_bayes_bach_step1_hoeffding_per_theta D (ℓ θ) (hℓ_meas θ)
+      linf (hbdd θ) hn s
+  -- STEP 2: integrate per-θ MGF over the prior `q` (Bach Step 2).
+  -- We need inner integrability over `q`. Direction: for outer-θ
+  -- integrability, the function `θ ↦ ∫ S exp(s·gap) dP_S` should be
+  -- q-integrable. `Integrable.integral_prod_left` integrates the
+  -- right-hand variable out (here `S`) and returns a function of the
+  -- left variable (here `θ`) that is integrable over the left measure
+  -- (`q`). So this is the correct direction.
+  have h_inner_int_q :
+      MeasureTheory.Integrable
+        (fun θ => ∫ S, Real.exp (s * gap θ S) ∂P_S) q := by
+    have h := h_exp_joint_int.integral_prod_left
+    -- The result has type `Integrable (fun θ => ∫ S, f (θ, S) ∂P_S) q`,
+    -- where `f` is the joint exponential. Show it matches the goal.
+    convert h using 1
+  -- Pre-Fubini integrated MGF bound (Step 2 form: `∫_θ ∫_S ≤ exp(s² K)`).
+  have h_step2 :
+      ∫ θ, (∫ S, Real.exp (s * gap θ S) ∂P_S) ∂q
+        ≤ Real.exp (s ^ 2 * K) :=
+    pac_bayes_bach_step2_integrate_prior (S := Fin n → 𝒳)
+      q P_S gap s K h_per_θ_MGF h_inner_int_q
+  -- Apply Fubini swap to convert `∫_θ ∫_S` to `∫_S ∫_θ`.
+  have h_swap :
+      ∫ θ, (∫ S, Real.exp (s * gap θ S) ∂P_S) ∂q
+        = ∫ S, (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S := by
+    apply MeasureTheory.integral_integral_swap (μ := q) (ν := P_S)
+      (f := fun θ S => Real.exp (s * gap θ S))
+    -- Joint integrability of the uncurried form.
+    exact h_exp_joint_int
+  -- Post-Fubini joint MGF bound (the form consumed by the carrier).
+  have hMGF_joint_le :
+      ∫ S, (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S
+        ≤ Real.exp (s ^ 2 * K) := by
+    rw [← h_swap]; exact h_step2
+  -- STEP 3: per-sample DV (a.e. in S).
+  -- For a.e. S, both `θ ↦ gap θ S` is ρ-integrable and
+  -- `θ ↦ exp(s · gap θ S)` is q-integrable; combined with `ρ ≪ q` and
+  -- `llr ρ q` ρ-integrable, DV gives the per-sample inequality.
+  -- `Integrable.prod_left_ae` on `f : Θ × (Fin n → 𝒳) → ℝ` integrable
+  -- under `ρ.prod P_S` gives `∀ᵐ S ∂P_S, Integrable (fun θ => f (θ, S)) ρ`
+  -- (the LEFT-variable is integrable for a.e. RIGHT-variable).
+  have h_gap_ρ_ae : ∀ᵐ S ∂P_S,
+      MeasureTheory.Integrable (fun θ => gap θ S) ρ :=
+    h_gap_joint_int.prod_left_ae
+  have h_exp_q_ae : ∀ᵐ S ∂P_S,
+      MeasureTheory.Integrable (fun θ => Real.exp (s * gap θ S)) q :=
+    h_exp_joint_int.prod_left_ae
+  -- Per-sample DV.
+  have h_per_S_DV : ∀ᵐ S ∂P_S,
+      ∫ θ, s * gap θ S ∂ρ
+        ≤ (InformationTheory.klDiv ρ q).toReal
+          + Real.log (∫ θ, Real.exp (s * gap θ S) ∂q) := by
+    filter_upwards [h_gap_ρ_ae, h_exp_q_ae] with S hS_gap_int hS_exp_int
+    -- `s * gap` is ρ-integrable since `gap` is.
+    have hS_score_int :
+        MeasureTheory.Integrable (fun θ => s * gap θ S) ρ :=
+      hS_gap_int.const_mul s
+    -- Apply DV with `f := fun θ => s * gap θ S`.
+    have h_dv :
+        ∫ θ, s * gap θ S ∂ρ
+          ≤ (InformationTheory.klDiv ρ q).toReal
+            + Real.log (∫ θ, Real.exp (s * gap θ S) ∂q) :=
+      LTFP.MathlibExt.Probability.donsker_varadhan_inequality
+        (μ := ρ) (ν := q) (f := fun θ => s * gap θ S)
+        hρq hS_score_int hS_exp_int hllr_int
+    exact h_dv
+  -- STEP 4: positivity of the per-sample MGF (a.e. in S).
+  -- `MeasureTheory.integral_exp_pos` gives `0 < ∫ exp(f) dq` whenever
+  -- `exp ∘ f` is q-integrable and `q ≠ 0` (auto-derived from `q` a
+  -- probability measure, which gives `[NeZero q]`).
+  haveI : NeZero q := ⟨IsProbabilityMeasure.ne_zero q⟩
+  have hMGF_expS_pos : ∀ᵐ S ∂P_S,
+      0 < ∫ θ, Real.exp (s * gap θ S) ∂q := by
+    filter_upwards [h_exp_q_ae] with S hS_exp_int
+    exact MeasureTheory.integral_exp_pos hS_exp_int
+  -- Integrability hypotheses for the outer S-integration in the carrier.
+  -- `Integrable.integral_prod_right` integrates the LEFT variable out
+  -- (here `θ`) and returns a function of the RIGHT variable (here `S`)
+  -- that is integrable over the right measure (`P_S`).
+  -- `S ↦ ∫_θ gap dρ` is integrable: from joint integrability over `ρ.prod P_S`.
+  have hgap_int_ρS :
+      MeasureTheory.Integrable (fun S => ∫ θ, gap θ S ∂ρ) P_S := by
+    have h := h_gap_joint_int.integral_prod_right
+    convert h using 1
+  -- `S ↦ ∫_θ exp(s·gap) dq` is integrable: from joint integrability over q.prod P_S.
+  have hMGF_int_inner_PS :
+      MeasureTheory.Integrable
+        (fun S => ∫ θ, Real.exp (s * gap θ S) ∂q) P_S := by
+    have h := h_exp_joint_int.integral_prod_right
+    convert h using 1
+  -- Apply the carrier `pac_bayes_mcallester_bach_path`.
+  exact pac_bayes_mcallester_bach_path
+    (Θ := Θ) (𝒮 := Fin n → 𝒳)
+    q ρ P_S hρq gap hs_pos K hK_nn
+    hgap_int_ρS hMGF_int_PS h_per_S_DV hMGF_expS_pos hMGF_int_inner_PS
+    hMGF_joint_le
+
 end LTFP
