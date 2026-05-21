@@ -509,4 +509,510 @@ theorem boundedMeanSqExpMoment_pi_of_catoni_alquier
     (∫ x, ℓ x ∂D)).1 h_catoni
   simpa [piSampleFamily] using h
 
+/-! ### Bernoulli KL method-of-types spine (Phase 3b-2)
+
+This subsection sets up the alternative route to Bach Eq. 14.21 that
+goes through the Bernoulli KL divergence and the method-of-types
+identity, as identified by the 2026-05-21 Codex pre-audit. The
+McDiarmid-via-sub-Gaussian-MGF route (above) diverges at the critical
+exponent `c = 2 n`; the Bernoulli/KL route gives the sharp `2 √n`
+constant for Bernoulli random variables directly.
+
+**Mathematical outline (Bernoulli case of Bach Eq. 14.21):**
+
+1. For `p ∈ (0, 1)` and `q ∈ [0, 1]`, define
+   `bernoulliKL q p := q · log(q/p) + (1 - q) · log((1 - q)/(1 - p))`
+   with the convention `0 · log(0/x) = 0`.
+
+2. **Method-of-types identity.** For an iid `Bernoulli(p)` family
+   `X 0, …, X (n - 1)` on `(Ω, μ)` with empirical mean
+   `q̂ ω := (1/n) ∑ X i ω`,
+   ```
+   ∫ exp(n · bernoulliKL (q̂ ω) p) ∂μ
+     = ∑_{k = 0}^{n} C(n, k) · (k/n)^k · (1 - k/n)^(n - k).
+   ```
+   The proof: expand the integral as a weighted sum over the
+   `{0, 1}`-valued joint outcomes, use that the joint pmf is
+   `p^k (1-p)^(n-k)` for any `k`-of-`n`-successes outcome, observe
+   that `exp(n · bernoulliKL (k/n) p) = (k/(np))^k · ((n-k)/(n(1-p)))^(n-k)`,
+   and the `p`-dependent factors cancel cleanly with the pmf.
+
+3. **Stirling/Robbins finite-sum bound.**
+   `∑_{k = 0}^{n} C(n, k) (k/n)^k (1 - k/n)^(n - k) ≤ 2 √n`.
+   This is a classical estimate sometimes attributed to Robbins or
+   derived from the entropy form of the Stirling bound. Mathlib has
+   `le_factorial_stirling` (the lower bound `√(2πn) (n/e)^n ≤ n!`)
+   but the corresponding Robbins UPPER bound on `n!` is explicitly
+   noted as *not yet formalised* (see
+   `Mathlib.Analysis.SpecialFunctions.Stirling`, comment at line 264).
+   Formalizing this upper bound is a 1–2 week Mathlib project on its
+   own.
+
+4. **Pinsker for Bernoulli.**
+   `2 (q - p)^2 ≤ bernoulliKL q p` for `q ∈ [0, 1]`, `p ∈ (0, 1)`.
+   A classical 1D convex-analysis lemma. Mathlib has no direct form
+   (as of 2026-05-21 snapshot — no hits on `Pinsker` or
+   `tv_dist_le_sqrt_klDiv`).
+
+5. **Composition.** Pinsker gives `exp(2 n · (q̂ - p)^2) ≤
+   exp(n · bernoulliKL q̂ p)`. Integrating both sides and applying
+   the method-of-types identity + Stirling bound yields
+   `∫ exp(2 n · (q̂ - p)^2) ∂μ ≤ 2 √n` — the Bernoulli case of
+   Bach Eq. 14.21.
+
+The general `[0, 1]` case (extending Bernoulli to general bounded
+variables via convex-order reduction) is **out of scope** for this
+phase; it is the harder Phase 3b-3 piece. The Codex pre-audit
+confirmed: "Convex domination from `[0,1]` variables to Bernoulli
+endpoints is not in mathlib and may be the real hard part." -/
+
+/-- The Bernoulli Kullback-Leibler divergence at parameters `q, p ∈ [0, 1]`:
+
+  `bernoulliKL q p := q · log(q / p) + (1 - q) · log((1 - q) / (1 - p))`.
+
+With the standard convention `0 · log(0/x) = 0` (since `Real.log 0 = 0`
+and `0 * anything = 0`, this convention is automatically respected
+when `q = 0` or `q = 1`).
+
+For `p ∈ (0, 1)` and `q ∈ [0, 1]` this is the KL divergence between
+the Bernoulli distributions `Bernoulli(q)` and `Bernoulli(p)`, viewed
+as PMFs on `{0, 1}`. -/
+noncomputable def bernoulliKL (q p : ℝ) : ℝ :=
+  q * Real.log (q / p) + (1 - q) * Real.log ((1 - q) / (1 - p))
+
+@[simp]
+lemma bernoulliKL_def (q p : ℝ) :
+    bernoulliKL q p
+      = q * Real.log (q / p) + (1 - q) * Real.log ((1 - q) / (1 - p)) := rfl
+
+/-- At `q = p`, the Bernoulli KL divergence vanishes. -/
+lemma bernoulliKL_self {p : ℝ} (hp : p ∈ Set.Ioo (0 : ℝ) 1) :
+    bernoulliKL p p = 0 := by
+  unfold bernoulliKL
+  have hp_pos : 0 < p := hp.1
+  have hp_lt : p < 1 := hp.2
+  have hp_ne : p ≠ 0 := ne_of_gt hp_pos
+  have h1p_pos : 0 < 1 - p := sub_pos.mpr hp_lt
+  have h1p_ne : (1 : ℝ) - p ≠ 0 := ne_of_gt h1p_pos
+  rw [div_self hp_ne, div_self h1p_ne, Real.log_one, mul_zero, mul_zero, add_zero]
+
+/-- At `q = 0`, the Bernoulli KL divergence reduces to `log(1 / (1 - p))`. -/
+lemma bernoulliKL_zero {p : ℝ} (_hp : p ∈ Set.Ioo (0 : ℝ) 1) :
+    bernoulliKL 0 p = Real.log (1 / (1 - p)) := by
+  unfold bernoulliKL
+  simp
+
+/-- At `q = 1`, the Bernoulli KL divergence reduces to `log(1 / p)`. -/
+lemma bernoulliKL_one {p : ℝ} (_hp : p ∈ Set.Ioo (0 : ℝ) 1) :
+    bernoulliKL 1 p = Real.log (1 / p) := by
+  unfold bernoulliKL
+  simp
+
+/-! ### Named residuals for the Bernoulli/KL spine
+
+We expose three `Prop`-valued residuals capturing the technical
+content of the Bernoulli/KL method-of-types route. Each is
+mathematically standard and provable in principle from Mathlib's
+existing infrastructure plus a moderate amount of additional work,
+but the work is substantial enough (Stirling upper bound: 1–2 weeks;
+Pinsker: 1–2 days; method-of-types identity: 2–4 days of careful
+discrete-measure integration) that we factor it out cleanly so the
+composition (Bernoulli case of Bach Eq. 14.21) can be stated
+unconditionally modulo the residuals.
+
+The residuals are designed to compose: discharging all three gives
+the Bernoulli case of Bach Eq. 14.21 mechanically.
+-/
+
+/-- **Named residual: Bernoulli method-of-types identity.**
+
+For an iid `Bernoulli(p)` family `X 0, …, X (n - 1)` realized as
+`{0, 1}`-valued random variables on a probability space `(Ω, μ)`,
+the expectation of `exp(n · bernoulliKL (empirical mean) p)`
+equals the `p`-free finite sum on the right-hand side.
+
+**Mathematical content:** Write `Σ X := ∑ X i ω`. Since each `X i ω`
+is `{0, 1}`-valued, the random variable `Σ X` takes values in
+`{0, 1, …, n}`, and `P(Σ X = k) = C(n, k) p^k (1 - p)^(n - k)`. Then
+```
+exp(n · bernoulliKL (k/n) p)
+  = (k/n)^k · (1 - k/n)^(n - k) · p^(-k) · (1 - p)^(-(n - k))
+```
+(by expanding the `log` terms in `bernoulliKL`). The expectation
+becomes
+```
+∑_{k = 0}^{n} C(n, k) p^k (1 - p)^(n - k) · exp(n · bernoulliKL (k/n) p)
+  = ∑_{k = 0}^{n} C(n, k) (k/n)^k (1 - k/n)^(n - k)
+```
+with the `p^k (1 - p)^(n - k)` factors canceling exactly.
+
+**Provability:** Standard discrete-measure integration argument.
+Estimated 2–4 days of Mathlib-style work using `PMF.bernoulli`,
+`integral_fintype_prod_eq_prod`, and `Finset.sum_pow_mul_pow`. Not
+attempted in the current dispatch.
+-/
+def BernoulliMethodOfTypesIdentity
+    (μ : Measure Ω) [IsProbabilityMeasure μ]
+    {n : ℕ} (X : Fin n → Ω → ℝ) (p : ℝ) : Prop :=
+  ∫ ω, Real.exp ((n : ℝ) * bernoulliKL ((1 / (n : ℝ)) * ∑ i, X i ω) p) ∂μ
+    = ∑ k : Fin (n + 1), (Nat.choose n k : ℝ)
+        * (((k : ℝ) / (n : ℝ)) ^ (k : ℕ))
+        * ((1 - (k : ℝ) / (n : ℝ)) ^ (n - (k : ℕ)))
+
+/-- **Named residual: Stirling/Robbins method-of-types finite-sum bound.**
+
+The `p`-free finite sum produced by the method-of-types identity is
+bounded by `2 √n`:
+```
+∑_{k = 0}^{n} C(n, k) (k/n)^k (1 - k/n)^(n - k) ≤ 2 √n.
+```
+
+**Mathematical content:** A classical estimate, sometimes called the
+Robbins entropy bound for the binomial coefficient. It can be derived
+from Stirling's approximation with the explicit Robbins constants:
+```
+n! ≤ √(2πn) (n/e)^n · exp(1/(12n))
+```
+(i.e., the Robbins UPPER bound matching the lower bound). The
+maximum of the integrand at `k = n/2` is `C(n, n/2) · 2^(-n)`, which
+Stirling estimates as `≤ √(2/(πn))`; the sum over all `k` adds a
+factor of `n + 1`, but a sharper bound via concentration of the
+binomial gives the `2 √n` form directly.
+
+**Mathlib status (2026-05-21):**
+`Mathlib.Analysis.SpecialFunctions.Stirling` provides
+`le_factorial_stirling : √(2πn) · (n/e)^n ≤ n!`
+(the LOWER bound) but the matching Robbins UPPER bound is explicitly
+documented as not yet formalised
+("Sharper bounds due to Robbins are available, but are not yet
+formalised", `Stirling.lean:264`). Formalizing the Robbins upper
+bound is an estimated 1–2 week Mathlib project on its own.
+
+**Provability:** Conditional on the Robbins upper bound, the sum
+estimate is a 1–2 day Lean exercise. Not attempted in the current
+dispatch.
+-/
+def MethodOfTypesStirlingBound (n : ℕ) : Prop :=
+  ∑ k : Fin (n + 1), (Nat.choose n k : ℝ)
+      * (((k : ℝ) / (n : ℝ)) ^ (k : ℕ))
+      * ((1 - (k : ℝ) / (n : ℝ)) ^ (n - (k : ℕ)))
+    ≤ 2 * Real.sqrt (n : ℝ)
+
+/-- **Named residual: Pinsker inequality for Bernoulli distributions.**
+
+For `q ∈ [0, 1]` and `p ∈ (0, 1)`,
+`2 (q - p)^2 ≤ bernoulliKL q p`.
+
+**Mathematical content:** A classical 1D convex-analysis lemma; the
+standard proof considers the function
+`f(q) := bernoulliKL q p - 2 (q - p)^2`
+on `[0, 1]`, shows `f(p) = 0`, `f'(p) = 0`, and `f''(q) ≥ 0` for all
+`q ∈ (0, 1)`. The second derivative bound uses
+```
+f''(q) = 1/q + 1/(1 - q) - 4 = (1 - 4q(1 - q))/(q(1 - q)) ≥ 0
+```
+since `4 q (1 - q) ≤ 1` for all `q ∈ [0, 1]` (AM-GM applied to
+`q + (1 - q) = 1`).
+
+**Mathlib status:** No direct Pinsker lemma in the 2026-05-21
+snapshot (no hits on `Pinsker` or `tv_dist_le_sqrt_klDiv`). The
+general Pinsker inequality between measures is sometimes available
+via `InformationTheory.klDiv` but specialization to the Bernoulli
+case requires a separate elementary proof.
+
+**Provability:** 1–2 days of Lean using `Mathlib.Analysis.Convex.Slope`
+and the explicit second-derivative computation. Not attempted in the
+current dispatch.
+-/
+def BernoulliPinsker : Prop :=
+  ∀ ⦃q p : ℝ⦄, q ∈ Set.Icc (0 : ℝ) 1 → p ∈ Set.Ioo (0 : ℝ) 1 →
+    2 * (q - p) ^ 2 ≤ bernoulliKL q p
+
+/-! ### Composition: Bernoulli case of Bach Eq. 14.21 via the named residuals -/
+
+/-- **Bernoulli E[exp(n · KL)] bound from the named residuals.**
+
+Composing `BernoulliMethodOfTypesIdentity` (sub-goal 2) and
+`MethodOfTypesStirlingBound` (sub-goal 3) gives the moment bound on
+the exponentiated Bernoulli KL of the empirical mean. -/
+theorem expectation_exp_n_bernoulliKL_le_two_sqrt
+    (μ : Measure Ω) [IsProbabilityMeasure μ]
+    {n : ℕ} (_hn : 0 < n) (X : Fin n → Ω → ℝ) (p : ℝ)
+    (h_id : BernoulliMethodOfTypesIdentity μ X p)
+    (h_stirling : MethodOfTypesStirlingBound n) :
+    ∫ ω, Real.exp ((n : ℝ) * bernoulliKL ((1 / (n : ℝ)) * ∑ i, X i ω) p) ∂μ
+      ≤ 2 * Real.sqrt (n : ℝ) := by
+  unfold BernoulliMethodOfTypesIdentity at h_id
+  unfold MethodOfTypesStirlingBound at h_stirling
+  rw [h_id]
+  exact h_stirling
+
+/-- A handy algebraic identity for the composition step:
+for any `n : ℝ` and `Z : ℝ`, we have `2 * n * Z ^ 2 = n * (2 * Z ^ 2)`. -/
+private lemma two_n_sq_eq (n Z : ℝ) : 2 * n * Z ^ 2 = n * (2 * Z ^ 2) := by ring
+
+/-- **Bernoulli case of Bach 2024 Eq. 14.21, conditional on the three
+named residuals.**
+
+For an iid `Bernoulli(p)` family `X 0, …, X (n - 1)` on `(Ω, μ)` with
+common mean `p ∈ (0, 1)`, the squared-exponential moment of the
+centered empirical average at the critical exponent `2 n` is bounded
+by `2 √n` — *modulo* the three named residuals:
+
+* `BernoulliMethodOfTypesIdentity` (sub-goal 2): expansion of the
+  expectation as a `p`-free finite sum.
+* `MethodOfTypesStirlingBound` (sub-goal 3): Stirling/Robbins estimate
+  on the finite sum.
+* `BernoulliPinsker` (sub-goal 5): Pinsker `2 (q - p)^2 ≤ KL(q, p)`.
+
+This is the **Bernoulli case** of Bach Eq. 14.21. The extension to
+general `[0, 1]`-bounded variables via convex-order reduction is
+**out of scope** for Phase 3b-2 (it is the Phase 3b-3 piece, and
+Codex's pre-audit confirms "convex domination from `[0,1]` variables
+to Bernoulli endpoints is not in mathlib and may be the real hard
+part"). -/
+theorem bernoulli_case_bach_eq_14_21
+    (μ : Measure Ω) [IsProbabilityMeasure μ]
+    {n : ℕ} (hn : 0 < n) (X : Fin n → Ω → ℝ) {p : ℝ}
+    (hp : p ∈ Set.Ioo (0 : ℝ) 1)
+    (hX_bdd : ∀ i, ∀ᵐ ω ∂μ, X i ω ∈ Set.Icc (0 : ℝ) 1)
+    (hX_meas : ∀ i, Measurable (X i))
+    (h_id : BernoulliMethodOfTypesIdentity μ X p)
+    (h_stirling : MethodOfTypesStirlingBound n)
+    (h_pinsker : BernoulliPinsker) :
+    ∫ ω, Real.exp (2 * (n : ℝ)
+            * ((1 / (n : ℝ)) * ∑ i : Fin n, X i ω - p) ^ 2) ∂μ
+      ≤ 2 * Real.sqrt (n : ℝ) := by
+  -- Step 1: a.e. boundedness of the empirical mean.
+  have hn_pos : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have hn_ne : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
+  -- The empirical mean is in [0, 1] a.e.
+  have h_emp_bdd : ∀ᵐ ω ∂μ,
+      (1 / (n : ℝ)) * ∑ i, X i ω ∈ Set.Icc (0 : ℝ) 1 := by
+    have h_all : ∀ᵐ ω ∂μ, ∀ i, X i ω ∈ Set.Icc (0 : ℝ) 1 :=
+      ae_all_iff.mpr hX_bdd
+    filter_upwards [h_all] with ω hω
+    refine ⟨?_, ?_⟩
+    · -- 0 ≤ (1/n) · ∑ X i ω
+      apply mul_nonneg
+      · positivity
+      · exact Finset.sum_nonneg (fun i _ => (hω i).1)
+    · -- (1/n) · ∑ X i ω ≤ 1
+      rw [one_div, inv_mul_le_iff₀ hn_pos, mul_one]
+      calc ∑ i, X i ω
+          ≤ ∑ _i : Fin n, (1 : ℝ) :=
+            Finset.sum_le_sum (fun i _ => (hω i).2)
+        _ = (n : ℝ) := by simp
+  -- Step 2: pointwise (a.e.) inequality from Pinsker.
+  --   exp(2 n · (q̂ - p)^2) ≤ exp(n · bernoulliKL q̂ p)
+  have h_pw : ∀ᵐ ω ∂μ,
+      Real.exp (2 * (n : ℝ) * ((1 / (n : ℝ)) * ∑ i, X i ω - p) ^ 2)
+        ≤ Real.exp ((n : ℝ) *
+            bernoulliKL ((1 / (n : ℝ)) * ∑ i, X i ω) p) := by
+    filter_upwards [h_emp_bdd] with ω hω
+    -- Use Pinsker: 2 (q - p)^2 ≤ bernoulliKL q p
+    have h_pinsker_apply := h_pinsker hω hp
+    -- Multiply both sides by n (≥ 0)
+    have h_n_nonneg : (0 : ℝ) ≤ (n : ℝ) := le_of_lt hn_pos
+    have h_mul : (n : ℝ) * (2 * ((1 / (n : ℝ)) * ∑ i, X i ω - p) ^ 2)
+        ≤ (n : ℝ) * bernoulliKL ((1 / (n : ℝ)) * ∑ i, X i ω) p :=
+      mul_le_mul_of_nonneg_left h_pinsker_apply h_n_nonneg
+    -- Rewrite the LHS to match the goal
+    rw [← two_n_sq_eq] at h_mul
+    exact Real.exp_le_exp.mpr h_mul
+  -- Step 3: integrate the inequality and apply the method-of-types bound.
+  have h_kl_bound :
+      ∫ ω, Real.exp ((n : ℝ) *
+            bernoulliKL ((1 / (n : ℝ)) * ∑ i, X i ω) p) ∂μ
+        ≤ 2 * Real.sqrt (n : ℝ) :=
+    expectation_exp_n_bernoulliKL_le_two_sqrt μ hn X p h_id h_stirling
+  -- For the integral comparison we need integrability of the upper bound.
+  -- Both sides are nonneg, exp is nonneg; we use `integral_mono_ae` carefully.
+  -- A clean route: take the LHS ≤ RHS via `integral_mono_of_nonneg` if both
+  -- are integrable, OR use the simpler fact that
+  -- `∫ f ∂μ ≤ ∫ g ∂μ` when `f ≤ g` a.e. AND `g` is integrable.
+  -- We use the version that handles non-integrable LHS gracefully.
+  have h_int_le :
+      ∫ ω, Real.exp (2 * (n : ℝ) * ((1 / (n : ℝ)) * ∑ i, X i ω - p) ^ 2) ∂μ
+        ≤ ∫ ω, Real.exp ((n : ℝ) *
+              bernoulliKL ((1 / (n : ℝ)) * ∑ i, X i ω) p) ∂μ := by
+    -- Both integrands are nonneg; we use `integral_mono_ae` modulo integrability.
+    -- A safe path: cast to ENNReal via `lintegral` and use `lintegral_mono_ae`.
+    -- But the simpler `integral_mono_ae` requires both integrable.
+    -- We split on integrability of the RHS.
+    by_cases h_RHS_int : Integrable
+        (fun ω => Real.exp ((n : ℝ) *
+            bernoulliKL ((1 / (n : ℝ)) * ∑ i, X i ω) p)) μ
+    · -- LHS is dominated a.e. by an integrable function, hence integrable.
+      have h_LHS_int : Integrable
+          (fun ω => Real.exp (2 * (n : ℝ)
+              * ((1 / (n : ℝ)) * ∑ i, X i ω - p) ^ 2)) μ := by
+        refine h_RHS_int.mono' ?_ ?_
+        · -- AEStronglyMeasurable
+          have : Measurable (fun ω => Real.exp (2 * (n : ℝ)
+              * ((1 / (n : ℝ)) * ∑ i, X i ω - p) ^ 2)) := by
+            refine Real.measurable_exp.comp ?_
+            refine Measurable.mul measurable_const ?_
+            refine Measurable.pow_const ?_ _
+            refine Measurable.sub ?_ measurable_const
+            refine Measurable.mul measurable_const ?_
+            exact Finset.measurable_sum _ (fun i _ => hX_meas i)
+          exact this.aestronglyMeasurable
+        · -- Norm bound: |exp(LHS)| ≤ exp(RHS) a.e.
+          filter_upwards [h_pw] with ω hω
+          rw [Real.norm_eq_abs, abs_of_nonneg (Real.exp_pos _).le]
+          exact hω
+      exact integral_mono_ae h_LHS_int h_RHS_int h_pw
+    · -- If the RHS is not integrable, then `h_kl_bound` is a bound on 0
+      -- (Bochner integral of non-integrable function is 0), and `2 √n ≥ 0`,
+      -- so any nonneg LHS bound also gives the inequality.
+      -- Use the integral expression: `∫ f = 0` when f is not integrable.
+      rw [integral_undef h_RHS_int] at h_kl_bound
+      -- So `2 √n ≥ 0`. We need LHS ≤ 0... but LHS could be positive.
+      -- Fall back to lintegral comparison:
+      -- Actually, since both sides are nonneg, we use the ENNReal-valued
+      -- integral version which doesn't require integrability.
+      -- Use `MeasureTheory.integral_le_lintegral_real_or_similar`.
+      -- Simpler: rule out this case by integrability of the LHS.
+      -- The LHS exp(2n · (q̂ - p)^2) where q̂ ∈ [0,1] a.e. and p ∈ (0,1),
+      -- so (q̂ - p)^2 ≤ 1 a.e. and exp(2n · 1) = exp(2n) (bounded), hence
+      -- the LHS IS integrable (μ is a probability measure).
+      -- But then the RHS-via-Pinsker is bounded by an integrable function
+      -- on the dominating side, giving RHS integrable too — contradiction
+      -- with h_RHS_int. So this branch is vacuous.
+      exfalso
+      apply h_RHS_int
+      -- Show the RHS function is integrable.
+      -- A.e., (1/n) ∑ X i ω ∈ [0, 1], so bernoulliKL (·, p) is bounded
+      -- by (a finite explicit bound depending only on p). But this bound
+      -- requires Pinsker-converse-like estimates we don't want to develop.
+      -- Easier: directly bound exp(n · KL) ≤ (1/p)^n + (1/(1-p))^n
+      -- (since KL ≤ log(1/p) + log(1/(1-p)) for q ∈ [0,1])... still requires
+      -- a fact about KL.
+      -- Cleanest: dominate by a constant via the LHS-integrability route.
+      -- exp(n · KL) is *measurable* and the integral is the lintegral
+      -- (it's nonneg), so we can use lintegral comparison directly without
+      -- assuming RHS integrable.
+      -- Bypass: use `integral_eq_lintegral_of_nonneg_ae` to convert both
+      -- to lintegrals, then `lintegral_mono_ae`, which is unconditional.
+      -- Construct integrability of RHS from this.
+      have h_RHS_meas : AEStronglyMeasurable
+          (fun ω => Real.exp ((n : ℝ) *
+              bernoulliKL ((1 / (n : ℝ)) * ∑ i, X i ω) p)) μ := by
+        have : Measurable (fun ω => Real.exp ((n : ℝ) *
+            bernoulliKL ((1 / (n : ℝ)) * ∑ i, X i ω) p)) := by
+          refine Real.measurable_exp.comp ?_
+          refine Measurable.mul measurable_const ?_
+          unfold bernoulliKL
+          refine Measurable.add ?_ ?_
+          · refine Measurable.mul ?_ ?_
+            · refine Measurable.mul measurable_const ?_
+              exact Finset.measurable_sum _ (fun i _ => hX_meas i)
+            · refine Real.measurable_log.comp ?_
+              refine Measurable.div ?_ measurable_const
+              refine Measurable.mul measurable_const ?_
+              exact Finset.measurable_sum _ (fun i _ => hX_meas i)
+          · refine Measurable.mul ?_ ?_
+            · refine Measurable.sub measurable_const ?_
+              refine Measurable.mul measurable_const ?_
+              exact Finset.measurable_sum _ (fun i _ => hX_meas i)
+            · refine Real.measurable_log.comp ?_
+              refine Measurable.div ?_ measurable_const
+              refine Measurable.sub measurable_const ?_
+              refine Measurable.mul measurable_const ?_
+              exact Finset.measurable_sum _ (fun i _ => hX_meas i)
+        exact this.aestronglyMeasurable
+      -- The LHS is bounded by exp(2n) a.e. (since (q̂ - p)^2 ≤ 1).
+      -- And LHS ≤ RHS a.e. is NOT directly usable for RHS integrability;
+      -- we'd need an upper bound on the RHS itself.
+      -- Actually: we know `h_kl_bound` is `∫ RHS ∂μ ≤ 2 √n` after the
+      -- `integral_undef` rewrite says `∫ RHS = 0` due to non-integrability.
+      -- But `0 ≤ 2 √n` always; so `h_kl_bound` after the rewrite gives
+      -- no info. We genuinely need RHS to be integrable.
+      -- The cleanest discharge: bound `exp(n · bernoulliKL q p)` uniformly
+      -- on `q ∈ [0, 1]` (it's continuous on the compact interval ... but
+      -- log explodes at endpoints, so KL itself can be unbounded).
+      -- At q = 0: KL = log(1/(1-p)), finite.
+      -- At q = 1: KL = log(1/p), finite.
+      -- For p ∈ (0, 1), KL is continuous and bounded on [0, 1] by an
+      -- explicit constant; the function ω ↦ KL((1/n) ∑ X i ω, p) is
+      -- therefore bounded a.e. on (q̂ ∈ [0, 1] a.e.), and exp(n · KL)
+      -- is a.e. bounded by an explicit constant.
+      have h_KL_bound : ∀ᵐ ω ∂μ,
+          bernoulliKL ((1 / (n : ℝ)) * ∑ i, X i ω) p
+            ≤ Real.log (1 / p) + Real.log (1 / (1 - p)) := by
+        filter_upwards [h_emp_bdd] with ω hω
+        unfold bernoulliKL
+        set q : ℝ := (1 / (n : ℝ)) * ∑ i, X i ω with hq
+        have hq_mem : q ∈ Set.Icc (0 : ℝ) 1 := hω
+        have hq0 : 0 ≤ q := hq_mem.1
+        have hq1 : q ≤ 1 := hq_mem.2
+        have hp_pos : 0 < p := hp.1
+        have hp_lt : p < 1 := hp.2
+        have h1q : 0 ≤ 1 - q := by linarith
+        have h1p_pos : 0 < 1 - p := by linarith
+        -- q * log(q/p) ≤ log(1/p):
+        --   if q = 0: 0 ≤ log(1/p) (log(1/p) ≥ 0 since p ≤ 1).
+        --   if 0 < q ≤ 1: q · log(q/p) ≤ q · log(1/p) ≤ 1 · log(1/p) = log(1/p)
+        --     since log(q/p) ≤ log(1/p) when q ≤ 1 (and 1/p > 0).
+        -- Similarly for the second term.
+        have h_log_inv_p_nonneg : 0 ≤ Real.log (1 / p) := by
+          apply Real.log_nonneg
+          rw [le_div_iff₀ hp_pos]
+          linarith
+        have h_log_inv_1p_nonneg : 0 ≤ Real.log (1 / (1 - p)) := by
+          apply Real.log_nonneg
+          rw [le_div_iff₀ h1p_pos]
+          linarith
+        have h1 : q * Real.log (q / p) ≤ Real.log (1 / p) := by
+          by_cases hq_zero : q = 0
+          · rw [hq_zero, zero_mul]; exact h_log_inv_p_nonneg
+          · have hq_pos : 0 < q := lt_of_le_of_ne hq0 (Ne.symm hq_zero)
+            have h_log_le : Real.log (q / p) ≤ Real.log (1 / p) := by
+              apply Real.log_le_log
+              · exact div_pos hq_pos hp_pos
+              · exact div_le_div_of_nonneg_right hq1 hp_pos.le
+            calc q * Real.log (q / p)
+                ≤ q * Real.log (1 / p) :=
+                  mul_le_mul_of_nonneg_left h_log_le hq0
+              _ ≤ Real.log (1 / p) :=
+                  mul_le_of_le_one_left h_log_inv_p_nonneg hq1
+        have h2 : (1 - q) * Real.log ((1 - q) / (1 - p))
+              ≤ Real.log (1 / (1 - p)) := by
+          by_cases h1q_zero : 1 - q = 0
+          · rw [h1q_zero, zero_mul]; exact h_log_inv_1p_nonneg
+          · have h1q_pos : 0 < 1 - q := lt_of_le_of_ne h1q (Ne.symm h1q_zero)
+            have h1q_le : 1 - q ≤ 1 := by linarith
+            have h_log_le : Real.log ((1 - q) / (1 - p))
+                ≤ Real.log (1 / (1 - p)) := by
+              apply Real.log_le_log
+              · exact div_pos h1q_pos h1p_pos
+              · exact div_le_div_of_nonneg_right h1q_le h1p_pos.le
+            calc (1 - q) * Real.log ((1 - q) / (1 - p))
+                ≤ (1 - q) * Real.log (1 / (1 - p)) :=
+                  mul_le_mul_of_nonneg_left h_log_le h1q
+              _ ≤ Real.log (1 / (1 - p)) :=
+                  mul_le_of_le_one_left h_log_inv_1p_nonneg h1q_le
+        linarith
+      -- Now RHS = exp(n · KL) ≤ exp(n · (log(1/p) + log(1/(1-p)))) a.e.
+      have h_RHS_const_bound : ∀ᵐ ω ∂μ,
+          Real.exp ((n : ℝ) *
+              bernoulliKL ((1 / (n : ℝ)) * ∑ i, X i ω) p)
+            ≤ Real.exp ((n : ℝ) *
+                (Real.log (1 / p) + Real.log (1 / (1 - p)))) := by
+        filter_upwards [h_KL_bound] with ω hω
+        apply Real.exp_le_exp.mpr
+        exact mul_le_mul_of_nonneg_left hω hn_pos.le
+      -- And exp(n · const) is integrable on a probability measure (it's a constant).
+      have h_const_int : Integrable
+          (fun _ : Ω => Real.exp ((n : ℝ) *
+              (Real.log (1 / p) + Real.log (1 / (1 - p))))) μ :=
+        integrable_const _
+      -- Hence RHS is integrable (dominated by an integrable constant).
+      refine h_const_int.mono' h_RHS_meas ?_
+      filter_upwards [h_RHS_const_bound] with ω hω
+      rw [Real.norm_eq_abs, abs_of_nonneg (Real.exp_pos _).le]
+      exact hω
+  exact le_trans h_int_le h_kl_bound
+
 end LTFP.MathlibExt.Probability
