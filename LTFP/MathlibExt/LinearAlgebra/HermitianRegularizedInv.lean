@@ -136,6 +136,15 @@ theorem regularizedInv_eq_conj_diagonal_of_posDef
   have hsum : (0 : ℝ) < hPos.1.eigenvalues i + lam := by linarith
   exact ne_of_gt hsum
 
+end
+
+end Matrix.IsHermitian
+
+noncomputable section
+
+open Matrix Unitary
+open scoped ComplexOrder
+
 /-- **Bayes-risk trace identity (complex form).**
 For a positive-definite Hermitian matrix `M` and any `0 ≤ lam`,
 `tr((M + lam • 1)⁻¹ * M) = ∑ i, eigᵢ / (eigᵢ + lam)`.
@@ -144,57 +153,49 @@ This is the key linear-algebra reduction in Bach (2024) §3.7: the Bayes
 excess risk for ridge regression under a Gaussian prior on `θ` rewrites
 as a per-eigenvalue sum, exposing the bias-variance balance at the
 spectral level. -/
-theorem trace_regularizedInv_mul_eq_eigenvalue_sum
-    (M : Matrix n n ℂ) (hPos : M.PosDef) (lam : ℝ) (hlam : 0 ≤ lam) :
-    ((M + (lam : ℂ) • (1 : Matrix n n ℂ))⁻¹ * M).trace
-      = ∑ i, (hPos.1.eigenvalues i : ℂ) /
-              ((hPos.1.eigenvalues i : ℂ) + lam) := by
+theorem Matrix.IsHermitian.trace_regularizedInv_mul_eq_eigenvalue_sum
+    {𝕜 : Type*} [RCLike 𝕜]
+    {n : Type*} [Fintype n] [DecidableEq n]
+    (M : Matrix n n 𝕜) (hM : M.IsHermitian) (hPos : M.PosDef)
+    (lam : ℝ) (hlam : 0 ≤ lam) :
+    ((M + (lam : 𝕜) • (1 : Matrix n n 𝕜))⁻¹ * M).trace
+      = ∑ i, ((hM.eigenvalues i : 𝕜)) / ((hM.eigenvalues i : 𝕜) + lam) := by
   classical
-  have hM : M.IsHermitian := hPos.1
-  -- Step 1: positivity of eigᵢ + lam (used several times below).
   have h_pos_shift : ∀ i, (0 : ℝ) < hM.eigenvalues i + lam := by
     intro i
+    have hEq : hM.eigenvalues i = hPos.1.eigenvalues i := by
+      congr
+    rw [hEq]
     have := hPos.eigenvalues_pos i
     linarith
   have h_ne_shift_real : ∀ i, hM.eigenvalues i + lam ≠ 0 := by
     intro i
     exact ne_of_gt (h_pos_shift i)
-  have h_ne_shift : ∀ i, ((hM.eigenvalues i : ℂ) + (lam : ℂ)) ≠ 0 := by
-    intro i
-    have h := h_pos_shift i
-    exact_mod_cast ne_of_gt h
-  -- Step 2: diagonalize the inverse via the spectral lift theorem.
   have h_inv :
-      (M + (lam : ℂ) • (1 : Matrix n n ℂ))⁻¹
-        = (hM.eigenvectorUnitary : Matrix n n ℂ) *
-          diagonal (fun i => ((hM.eigenvalues i : ℂ) + lam)⁻¹) *
-          star (hM.eigenvectorUnitary : Matrix n n ℂ) :=
+      (M + (lam : 𝕜) • (1 : Matrix n n 𝕜))⁻¹
+        = (hM.eigenvectorUnitary : Matrix n n 𝕜) *
+          diagonal (fun i => ((hM.eigenvalues i : 𝕜) + lam)⁻¹) *
+          star (hM.eigenvectorUnitary : Matrix n n 𝕜) :=
     Matrix.IsHermitian.regularizedInv_eq_conj_diagonal hM lam h_ne_shift_real
-  -- Step 3: identify the spectral form of `M`.
-  have h_M : (hM.eigenvectorUnitary : Matrix n n ℂ) *
-        diagonal ((↑) ∘ hM.eigenvalues : n → ℂ) *
-        star (hM.eigenvectorUnitary : Matrix n n ℂ) = M := by
+  have h_M : (hM.eigenvectorUnitary : Matrix n n 𝕜) *
+        diagonal ((↑) ∘ hM.eigenvalues : n → 𝕜) *
+        star (hM.eigenvectorUnitary : Matrix n n 𝕜) = M := by
     have := hM.spectral_theorem
     rw [Unitary.conjStarAlgAut_apply] at this
     exact this.symm
-  -- Set up the diagonal pieces.
-  set U : Matrix n n ℂ := (hM.eigenvectorUnitary : Matrix n n ℂ) with hU_def
-  set Dinv : Matrix n n ℂ :=
-    diagonal (fun i => ((hM.eigenvalues i : ℂ) + lam)⁻¹) with hDinv_def
-  set D : Matrix n n ℂ :=
-    diagonal ((↑) ∘ hM.eigenvalues : n → ℂ) with hD_def
-  -- Step 4: compose and simplify (M + lam•1)⁻¹ * M.
+  set U : Matrix n n 𝕜 := (hM.eigenvectorUnitary : Matrix n n 𝕜) with hU_def
+  set Dinv : Matrix n n 𝕜 :=
+    diagonal (fun i => ((hM.eigenvalues i : 𝕜) + lam)⁻¹) with hDinv_def
+  set D : Matrix n n 𝕜 :=
+    diagonal ((↑) ∘ hM.eigenvalues : n → 𝕜) with hD_def
   have h_prod :
-      (M + (lam : ℂ) • (1 : Matrix n n ℂ))⁻¹ * M
+      (M + (lam : 𝕜) • (1 : Matrix n n 𝕜))⁻¹ * M
         = U * (Dinv * D) * star U := by
     rw [h_inv, ← h_M]
-    -- Five-fold product: (U * Dinv * star U) * (U * D * star U).
-    -- The star U * U pair in the middle collapses.
     have hstarU_U : star U * U = 1 := by
       simp [U,
         Unitary.coe_star_mul_self
-          (hM.eigenvectorUnitary : Matrix.unitaryGroup n ℂ)]
-    -- Push through associativity.
+          (hM.eigenvectorUnitary : Matrix.unitaryGroup n 𝕜)]
     calc
       (U * Dinv * star U) * (U * D * star U)
           = U * Dinv * (star U * U) * D * star U := by
@@ -202,38 +203,22 @@ theorem trace_regularizedInv_mul_eq_eigenvalue_sum
       _ = U * Dinv * 1 * D * star U := by rw [hstarU_U]
       _ = U * Dinv * D * star U := by simp [Matrix.mul_assoc]
       _ = U * (Dinv * D) * star U := by simp [Matrix.mul_assoc]
-  -- Step 5: peel off the conjugation by `trace_mul_cycle`.
   have h_starU_U : star U * U = 1 := by
     simp [U,
       Unitary.coe_star_mul_self
-        (hM.eigenvectorUnitary : Matrix.unitaryGroup n ℂ)]
+        (hM.eigenvectorUnitary : Matrix.unitaryGroup n 𝕜)]
   have h_trace_peel :
       (U * (Dinv * D) * star U).trace = (Dinv * D).trace := by
     rw [Matrix.trace_mul_cycle, ← Matrix.mul_assoc, h_starU_U, Matrix.one_mul]
-  -- Step 6: Dinv * D is diagonal with entries eigᵢ * (eigᵢ + lam)⁻¹.
   have h_diag_prod :
       Dinv * D = diagonal (fun i =>
-        ((hM.eigenvalues i : ℂ) + lam)⁻¹ * (hM.eigenvalues i : ℂ)) := by
+        ((hM.eigenvalues i : 𝕜) + lam)⁻¹ * (hM.eigenvalues i : 𝕜)) := by
     rw [hDinv_def, hD_def, Matrix.diagonal_mul_diagonal]
     rfl
-  -- Combine.
   rw [h_prod, h_trace_peel, h_diag_prod, Matrix.trace_diagonal]
   refine Finset.sum_congr rfl (fun i _ => ?_)
-  -- ((eigᵢ + lam)⁻¹ * eigᵢ) = eigᵢ / (eigᵢ + lam)
   rw [mul_comm]
   exact (div_eq_mul_inv _ _).symm
-
-end
-
-end Matrix.IsHermitian
-
-namespace Matrix
-
-noncomputable section
-
-open Matrix
-
-variable {n : Type*} [Fintype n] [DecidableEq n]
 
 /-- **Bayes-risk trace identity (real form).**
 Real-symmetric specialization of
@@ -243,79 +228,13 @@ For a positive-definite (hence symmetric) real matrix `M` and any
 `0 ≤ lam`, the trace of `(M + lam • 1)⁻¹ * M` equals the per-eigenvalue
 sum `∑ i, eigᵢ / (eigᵢ + lam)`. This is the form consumed by Bach
 (2024) §3.7's Bayes excess-risk identity for ridge regression. -/
-theorem trace_regularizedInv_mul_eq_eigenvalue_sum_real
+theorem Matrix.trace_regularizedInv_mul_eq_eigenvalue_sum_real
+    {n : Type*} [Fintype n] [DecidableEq n]
     (M : Matrix n n ℝ) (hPos : M.PosDef) (lam : ℝ) (hlam : 0 ≤ lam) :
     ((M + lam • (1 : Matrix n n ℝ))⁻¹ * M).trace
       = ∑ i, hPos.1.eigenvalues i / (hPos.1.eigenvalues i + lam) := by
-  classical
-  have hM : M.IsHermitian := hPos.1
-  -- Step 1: positivity of eigᵢ + lam.
-  have h_pos_shift : ∀ i, (0 : ℝ) < hM.eigenvalues i + lam := by
-    intro i
-    have := hPos.eigenvalues_pos i
-    linarith
-  have h_ne_shift_real : ∀ i, hM.eigenvalues i + lam ≠ 0 := by
-    intro i
-    exact ne_of_gt (h_pos_shift i)
-  -- Step 2: spectral form of the inverse via the RCLike generalization
-  -- (`𝕜 = ℝ` specialization). The coercion `(lam : ℝ) → ℝ` is identity.
-  have h_inv :
-      (M + lam • (1 : Matrix n n ℝ))⁻¹
-        = (hM.eigenvectorUnitary : Matrix n n ℝ) *
-          diagonal (fun i => (hM.eigenvalues i + lam)⁻¹) *
-          star (hM.eigenvectorUnitary : Matrix n n ℝ) := by
-    have h : (M + ((lam : ℝ) : ℝ) • (1 : Matrix n n ℝ))⁻¹
-        = (hM.eigenvectorUnitary : Matrix n n ℝ) *
-          diagonal (fun i => ((hM.eigenvalues i : ℝ) + lam)⁻¹) *
-          star (hM.eigenvectorUnitary : Matrix n n ℝ) :=
-      Matrix.IsHermitian.regularizedInv_eq_conj_diagonal (𝕜 := ℝ) hM lam
-        h_ne_shift_real
-    simpa using h
-  -- Step 3: spectral form of M.
-  have h_M : (hM.eigenvectorUnitary : Matrix n n ℝ) *
-        diagonal hM.eigenvalues *
-        star (hM.eigenvectorUnitary : Matrix n n ℝ) = M := by
-    have hsp := hM.spectral_theorem
-    rw [Unitary.conjStarAlgAut_apply] at hsp
-    -- `RCLike.ofReal` on `ℝ` is the identity, so the coerced eigenvalue
-    -- vector equals `hM.eigenvalues` directly.
-    simp only [RCLike.ofReal_real_eq_id, Function.id_comp] at hsp
-    exact hsp.symm
-  -- Set up diagonal pieces.
-  set U : Matrix n n ℝ := (hM.eigenvectorUnitary : Matrix n n ℝ) with hU_def
-  set Dinv : Matrix n n ℝ :=
-    diagonal (fun i => (hM.eigenvalues i + lam)⁻¹) with hDinv_def
-  set D : Matrix n n ℝ := diagonal hM.eigenvalues with hD_def
-  -- Step 4: product factorization with unitary cancellation.
-  have h_starU_U : star U * U = 1 := by
-    simp [U,
-      Unitary.coe_star_mul_self
-        (hM.eigenvectorUnitary : Matrix.unitaryGroup n ℝ)]
-  have h_prod :
-      (M + lam • (1 : Matrix n n ℝ))⁻¹ * M = U * (Dinv * D) * star U := by
-    rw [h_inv, ← h_M]
-    calc
-      (U * Dinv * star U) * (U * D * star U)
-          = U * Dinv * (star U * U) * D * star U := by
-              simp [Matrix.mul_assoc]
-      _ = U * Dinv * 1 * D * star U := by rw [h_starU_U]
-      _ = U * Dinv * D * star U := by simp [Matrix.mul_assoc]
-      _ = U * (Dinv * D) * star U := by simp [Matrix.mul_assoc]
-  -- Step 5: peel off the conjugation by `trace_mul_cycle`.
-  have h_trace_peel :
-      (U * (Dinv * D) * star U).trace = (Dinv * D).trace := by
-    rw [Matrix.trace_mul_cycle, ← Matrix.mul_assoc, h_starU_U, Matrix.one_mul]
-  -- Step 6: Dinv * D is diagonal; sum the entries.
-  have h_diag_prod :
-      Dinv * D = diagonal (fun i =>
-        (hM.eigenvalues i + lam)⁻¹ * hM.eigenvalues i) := by
-    rw [hDinv_def, hD_def, Matrix.diagonal_mul_diagonal]
-  -- Combine.
-  rw [h_prod, h_trace_peel, h_diag_prod, Matrix.trace_diagonal]
-  refine Finset.sum_congr rfl (fun i _ => ?_)
-  rw [mul_comm]
-  exact (div_eq_mul_inv _ _).symm
+  simpa only [RCLike.ofReal_real_eq_id] using
+    Matrix.IsHermitian.trace_regularizedInv_mul_eq_eigenvalue_sum
+      (𝕜 := ℝ) M hPos.1 hPos lam hlam
 
 end
-
-end Matrix
