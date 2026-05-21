@@ -20,6 +20,7 @@ weakly decreases the objective; hence any minimizer lies in `S`.
 import LTFP.Foundations.Kernel
 import LTFP.Foundations.RKHS
 import LTFP.MathlibExt.Analysis.InnerProductSpace.RKHS
+import LTFP.MathlibExt.Analysis.InnerProductSpace.AronszajnCompletion
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
 
 namespace LTFP
@@ -446,5 +447,128 @@ noncomputable def RKHS_of_kernel_of_feature_map
   RKHS_of_kernel.ofFeatureMap E φ hφ
 
 end FeatureMapRepresenter
+
+/-! ### General-kernel representer theorem (Phase 3a-1 discharge)
+
+The feature-map representer theorem above takes a feature map
+`(E, φ, h_kernel)` as input — the caller is responsible for supplying
+a reproducing realisation of the kernel. This section closes the
+caller's obligation for *every* symmetric PSD kernel, by using the
+Aronszajn separation-quotient pre-RKHS
+`KernelRKHSQuotient K` (built in
+`LTFP/MathlibExt/Analysis/InnerProductSpace/AronszajnCompletion.lean`)
+as the ambient inner-product space and the canonical Aronszajn feature
+map `KernelRKHSQuotient.feature` as the feature realisation. The
+reproducing identity is supplied by
+`KernelRKHSQuotient.inner_feature_feature`. The
+`HasOrthogonalProjection` hypothesis on the finite-dimensional span of
+the training features is supplied by
+`hasOrthogonalProjection_span_range_of_complete` (finite-dim subspaces
+of a real inner-product space are always complete, hence admit an
+orthogonal projection — no Hilbert-completion is required).
+
+The result is a representer theorem that takes **only** the kernel and
+the training inputs as parametric data: no feature map needs to be
+supplied. This is the classical statement of the representer theorem
+for an abstract kernel, discharged via the Phase 3a-1 separation
+quotient. -/
+
+section GeneralKernelRepresenter
+
+variable {𝒳 : Type*} [DecidableEq 𝒳]
+variable {K : 𝒳 → 𝒳 → ℝ} [LTFP.MathlibExt.Analysis.IsRKHSKernel K]
+
+open LTFP.MathlibExt.Analysis
+
+/-- §7.2 — **Representer theorem for a general symmetric PSD kernel.**
+
+For any `IsRKHSKernel K` (i.e. symmetric and positive semidefinite
+kernel `K : 𝒳 → 𝒳 → ℝ`) and any training inputs `xs : Fin n → 𝒳`,
+consider the regularised empirical-risk objective
+`J(g) := L((⟨g, φ(xⱼ)⟩)ⱼ) + Ω(‖g‖)` on the Phase 3a-1 quotient
+pre-RKHS `KernelRKHSQuotient K`, where `φ := KernelRKHSQuotient.feature`
+is the Aronszajn feature map. If `f` is a global minimiser of `J`,
+then there exists a minimiser `g* ∈ span ℝ {φ(x₁), …, φ(xₙ)}` with
+`J g* = J f`.
+
+This is the classical representer theorem with **no** parametric
+feature-map hypothesis — the kernel alone (under
+`[IsRKHSKernel K]`) determines the ambient space, the feature map,
+and the reproducing identity. The discharge composes the
+orthogonal-projection core (`representer_theorem_minimizer`) with the
+Phase 3a-1 separation-quotient witnesses: the ambient space is the
+quotient pre-RKHS, the feature map is `KernelRKHSQuotient.feature`,
+the reproducing identity is `KernelRKHSQuotient.inner_feature_feature`,
+and the `HasOrthogonalProjection` instance is supplied by
+`hasOrthogonalProjection_span_range_of_complete` (no full Hilbert
+completion is required — finite-dimensional subspaces of a real
+inner-product space are automatically complete). -/
+theorem representer_theorem_general_kernel
+    {n : ℕ} (xs : Fin n → 𝒳)
+    (L : (Fin n → ℝ) → ℝ) (Ω : ℝ → ℝ)
+    (hΩ : ∀ ⦃a b : ℝ⦄, 0 ≤ a → a ≤ b → Ω a ≤ Ω b)
+    {f : KernelRKHSQuotient K}
+    (hf : ∀ g : KernelRKHSQuotient K,
+        L (fun j => inner ℝ f (KernelRKHSQuotient.feature (xs j))) + Ω ‖f‖ ≤
+          L (fun j => inner ℝ g (KernelRKHSQuotient.feature (xs j))) + Ω ‖g‖) :
+    ∃ g ∈ Submodule.span ℝ
+            (Set.range
+              (KernelRKHSQuotient.feature ∘ xs : Fin n → KernelRKHSQuotient K)),
+      L (fun j => inner ℝ g ((KernelRKHSQuotient.feature ∘ xs) j)) + Ω ‖g‖ =
+        L (fun j => inner ℝ f ((KernelRKHSQuotient.feature ∘ xs) j)) + Ω ‖f‖ := by
+  -- The orthogonal-projection instance on the finite-dimensional span of the
+  -- training features follows automatically from `FiniteDimensional.complete`
+  -- (every finite-dimensional subspace of a real normed space is complete,
+  -- hence admits an orthogonal projection).
+  letI φ : 𝒳 → KernelRKHSQuotient K := KernelRKHSQuotient.feature
+  haveI hproj :
+      (Submodule.span ℝ (Set.range (φ ∘ xs))).HasOrthogonalProjection :=
+    hasOrthogonalProjection_span_range_of_complete (φ ∘ xs)
+  -- The reproducing identity at the quotient level is the Phase 3a-1 witness
+  -- `KernelRKHSQuotient.inner_feature_feature` (read in the
+  -- `inner ℝ f (φ (xs j))` direction expected by the orthogonal-projection
+  -- core). Apply `representer_theorem_minimizer` directly on `φ ∘ xs`.
+  exact representer_theorem_minimizer (φ ∘ xs) L Ω hΩ hf
+
+/-- §7.2 — **Representer theorem for a general symmetric PSD kernel**
+(existence form, no minimiser hypothesis).
+
+For any `IsRKHSKernel K` and any training inputs `xs : Fin n → 𝒳`, and
+any candidate `f : KernelRKHSQuotient K`, there exists a point `g` in
+the finite-dimensional span of the Aronszajn features at the training
+inputs whose objective value `L((⟨g, φ(xⱼ)⟩)ⱼ) + Ω(‖g‖)` is no larger
+than `J(f)`. As with `representer_theorem_general_kernel`, no
+parametric feature-map hypothesis is required — the kernel alone
+determines the discharge. -/
+theorem representer_theorem_general_kernel_exists
+    {n : ℕ} (xs : Fin n → 𝒳)
+    (L : (Fin n → ℝ) → ℝ) (Ω : ℝ → ℝ)
+    (hΩ : ∀ ⦃a b : ℝ⦄, 0 ≤ a → a ≤ b → Ω a ≤ Ω b)
+    (f : KernelRKHSQuotient K) :
+    ∃ g ∈ Submodule.span ℝ
+            (Set.range
+              (KernelRKHSQuotient.feature ∘ xs : Fin n → KernelRKHSQuotient K)),
+      L (fun j => inner ℝ g ((KernelRKHSQuotient.feature ∘ xs) j)) + Ω ‖g‖ ≤
+        L (fun j => inner ℝ f ((KernelRKHSQuotient.feature ∘ xs) j)) + Ω ‖f‖ := by
+  letI φ : 𝒳 → KernelRKHSQuotient K := KernelRKHSQuotient.feature
+  haveI hproj :
+      (Submodule.span ℝ (Set.range (φ ∘ xs))).HasOrthogonalProjection :=
+    hasOrthogonalProjection_span_range_of_complete (φ ∘ xs)
+  exact representer_theorem_exists (φ ∘ xs) L Ω hΩ f
+
+/-- §7.2 — **Packaged RKHS witness from any `IsRKHSKernel` hypothesis.**
+
+For any `IsRKHSKernel K`, the typed RKHS interface `RKHS_of_kernel K`
+is inhabited via the Phase 3a-1 quotient pre-RKHS
+`KernelRKHSQuotient K`. This is the kernel-alone counterpart of
+`RKHS_of_kernel_of_feature_map`: no externally-supplied feature map is
+needed — the Aronszajn separation-quotient construction supplies one. -/
+noncomputable def RKHS_of_kernel_of_isRKHSKernel :
+    RKHS_of_kernel K :=
+  RKHS_of_kernel.ofFeatureMap (KernelRKHSQuotient K)
+    (KernelRKHSQuotient.feature)
+    (fun x y => (KernelRKHSQuotient.inner_feature_feature x y).symm)
+
+end GeneralKernelRepresenter
 
 end LTFP
