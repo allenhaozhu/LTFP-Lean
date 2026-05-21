@@ -156,4 +156,40 @@ theorem OperatorMonotone.neg_antitone {f : ℝ → ℝ}
   rw [hfun]
   exact hf A B hA hB hAB
 
+/-- Affine functions `t ↦ a·t + b` with `a ≥ 0` are operator monotone. -/
+theorem operatorMonotone_affine_of_nonneg {a b : ℝ} (ha : 0 ≤ a) :
+    OperatorMonotone.{uomk, uomn} (fun t => a * t + b) := by
+  have hlin : OperatorMonotone.{uomk, uomn} (a • (id : ℝ → ℝ)) :=
+    OperatorMonotone.const_smul ha operatorMonotone_id
+  have hconst : OperatorMonotone.{uomk, uomn} (fun _ : ℝ => b) :=
+    operatorMonotone_const b
+  have hsum : OperatorMonotone.{uomk, uomn} (a • (id : ℝ → ℝ) + fun _ : ℝ => b) :=
+    hlin.add hconst
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  simpa [Pi.add_def, Pi.smul_def, smul_eq_mul] using hsum A B hA hB hAB
+
+/-- Affine functions `t ↦ a·t + b` with `a ≤ 0` are operator antitone. -/
+theorem operatorAntitone_affine_of_nonpos {a b : ℝ} (ha : a ≤ 0) :
+    OperatorAntitone.{uomk, uomn} (fun t => a * t + b) := by
+  refine (operatorAntitone_iff_neg_operatorMonotone.{uomk, uomn} (fun t => a * t + b)).2 ?_
+  have h : OperatorMonotone.{uomk, uomn} (fun t => (-a) * t + (-b)) :=
+    operatorMonotone_affine_of_nonneg (a := -a) (b := -b) (neg_nonneg.mpr ha)
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  simpa [Pi.neg_def, neg_add, neg_mul, add_comm, add_left_comm, add_assoc] using
+    h A B hA hB hAB
+
+/-- Composition of two operator-monotone functions is operator monotone. -/
+theorem OperatorMonotone.comp {f g : ℝ → ℝ}
+    (hf : OperatorMonotone.{uomk, uomn} f) (hg : OperatorMonotone.{uomk, uomn} g) :
+    OperatorMonotone.{uomk, uomn} (f ∘ g) := by
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  rw [cfc_comp (R := ℝ) (p := IsSelfAdjoint) f g A (show IsSelfAdjoint A from hA)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop),
+    cfc_comp (R := ℝ) (p := IsSelfAdjoint) f g B (show IsSelfAdjoint B from hB)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop)]
+  exact hf (cfc g A) (cfc g B) (cfc_predicate g A) (cfc_predicate g B)
+    (hg A B hA hB hAB)
+
 end LTFP.MathlibExt.MatrixAnalysis
