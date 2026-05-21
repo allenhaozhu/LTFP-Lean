@@ -18,6 +18,62 @@ import Mathlib.Probability.Kernel.Composition.Prod
 import Mathlib.Topology.Algebra.Module.FiniteDimension
 
 /-!
+# Multivariate Gaussian Measure (LTFP-local)
+
+This file builds the multivariate Gaussian as a `MeasureTheory.Measure` on
+`EuclideanSpace ℝ (Fin d)`, together with `IsGaussian` instances and a
+Gaussian observation kernel. It was authored in 2026-05 on Mathlib pin
+`80732f7660` (2026-01-09), which predates upstream Mathlib's own
+multivariate Gaussian work.
+
+## Upstream Mathlib equivalent
+
+Mathlib PR #36143 (Degenne/Marion, merged 2026-03-16) added strictly more
+general infrastructure at `Mathlib.Probability.Distributions.Gaussian.Multivariate`:
+
+- `stdGaussian E` for arbitrary finite-dimensional real inner product space `E`
+- `multivariateGaussian μ S` without the `PosSemidef` argument at the type level
+  (fallback to `Measure.dirac μ` for non-PSD `S`)
+- `isGaussian_stdGaussian`, `isGaussian_multivariateGaussian`
+- `integral_id_multivariateGaussian`, `covariance_eval_multivariateGaussian`,
+  `variance_eval_multivariateGaussian`
+- `charFun_multivariateGaussian`, `measurePreserving_eval_multivariateGaussian`,
+  `multivariateGaussian_zero_one`, `stdGaussian_map`,
+  `stdGaussian_eq_map_pi_orthonormalBasis`, `map_pi_eq_stdGaussian`
+
+The PR requires `leanprover/lean4:v4.29.0-rc6` or later. The LTFP-Lean
+project is currently pinned to `v4.27.0-rc1`. When the toolchain bumps
+to `v4.29+` (for any reason — likely needed eventually for other Mathlib
+features), this file should be deleted and replaced with
+`import Mathlib.Probability.Distributions.Gaussian.Multivariate`.
+
+## Migration / rename map
+
+| LTFP-local name | Upstream Mathlib equivalent |
+|---|---|
+| `stdMultivariateGaussian d` | `stdGaussian (EuclideanSpace ℝ (Fin d))` |
+| `multivariateGaussian m S hS` | `multivariateGaussian m S` (drop the PSD argument) |
+| `integral_eval_multivariateGaussian` | `integral_id_multivariateGaussian` + coordinate congruence |
+| `covariance_multivariateGaussian` | `covariance_eval_multivariateGaussian hS i j` |
+| `integral_eval_mul_eval_stdMultivariateGaussian_eq_kron` | derive from `covarianceBilin_stdGaussian` or `covariance_eval_multivariateGaussian` with `μ = 0`, `S = 1` |
+| `instIsGaussianStdMultivariateGaussian` | `isGaussian_stdGaussian` |
+| `instIsGaussianMultivariateGaussian` | `isGaussian_multivariateGaussian` |
+
+## Genuinely LTFP-unique content (likely retain after the upstream switch)
+
+- `gaussianObservationKernel`, `gaussianObservationKernel_apply` and its
+  Markov/s-finite/probability/IsGaussian instances.
+- `jointPriorObservation`, `jointPriorObservation_eq_map_prod` and its
+  probability/IsGaussian instances.
+- `regressionCLM`, `observationJointMap`, `posSemidef_sq_smul_one`.
+
+These should be salvaged into a smaller dedicated file (e.g.,
+`LTFP/MathlibExt/Probability/Distributions/GaussianObservationKernel.lean`)
+that imports from upstream Mathlib.
+
+-/
+
+/-!
 # Multivariate Gaussian distribution as a `Measure` on `EuclideanSpace ℝ (Fin d)`
 
 This file defines the `d`-dimensional Gaussian distribution `N(m, S)` on
