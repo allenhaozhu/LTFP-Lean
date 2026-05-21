@@ -197,6 +197,25 @@ lemma critical_exponent_boundary {n : ℕ} (hn : 0 < n) :
 
 /-! ### Catoni / Alquier bounded-differences moment lemma — named residual
 
+**DEAD-END (2026-05-21):** This section sets up the
+"`E[exp(2n · Z²)] ≤ 2 √n`" squared-gap exponential moment bound that
+was originally believed to be Bach Eq. 14.21. A 2026-05-21 textbook
+re-read established that Bach (2024) Ch 14 ends at **Eq. (14.6)** and
+does NOT contain an Eq. 14.21; the actual Bach §14.4.2 proof uses
+the **linear** Hoeffding MGF `E exp(s(R−R̂)) ≤ exp(s²ℓ∞²/(8n))`
+(cited from §1.2.1), followed by integration over the prior, DV,
+and Chernoff. The A-class theorem `pac_bayes_mcallester_bach_path`
+in `LTFP.Ch14_Probabilistic.PACBayes` follows Bach's actual proof
+directly and does **not** depend on the Catoni/Alquier residual.
+
+The `CatoniAlquierBoundedMoment` predicate (and the rest of this
+section) is retained for backward-compatibility — the original
+`pac_bayes_mcallester_measure_theoretic_with_bounded_moment_assumption`
+carrier still type-checks through it — but it is **not** the active
+proof route for the McAllester PAC-Bayes bound in this library.
+
+**Original docstring (for reference):**
+
 The mathematical content that the PAC-Bayes chain requires but that
 Mathlib does not yet provide. We expose it as a `Prop`-valued
 predicate; the discharge is a self-contained 3–7 person-day Mathlib
@@ -624,7 +643,21 @@ The residuals are designed to compose: discharging all three gives
 the Bernoulli case of Bach Eq. 14.21 mechanically.
 -/
 
-/-- **Named residual: Bernoulli method-of-types identity.**
+/-- **DEAD-END (2026-05-21):** This predicate is part of the
+"Bernoulli KL method-of-types" route that targeted a *squared*-gap
+exponential moment bound `E[exp(2n·Z²)] ≤ 2√n` (the project-internal
+"Eq. 14.21" misnomer). A 2026-05-21 textbook re-read established
+that Bach (2024) §14.4.2 does NOT use this route — Bach's actual
+proof uses the **linear** Hoeffding MGF `E exp(s·(R−R̂)) ≤ exp(s²K)`
+followed by integration over the prior, DV, and Chernoff. The
+A-class theorem `pac_bayes_mcallester_bach_path` in
+`LTFP.Ch14_Probabilistic.PACBayes` follows Bach's actual proof and
+does **not** depend on this predicate. This declaration is retained
+for backward-compatibility only.
+
+**Original docstring (for reference):**
+
+**Named residual: Bernoulli method-of-types identity.**
 
 For an iid `Bernoulli(p)` family `X 0, …, X (n - 1)` realized as
 `{0, 1}`-valued random variables on a probability space `(Ω, μ)`,
@@ -659,7 +692,17 @@ def BernoulliMethodOfTypesIdentity
         * (((k : ℝ) / (n : ℝ)) ^ (k : ℕ))
         * ((1 - (k : ℝ) / (n : ℝ)) ^ (n - (k : ℕ)))
 
-/-- **Named residual: Stirling/Robbins method-of-types finite-sum bound.**
+/-- **DEAD-END (2026-05-21):** Same status as
+`BernoulliMethodOfTypesIdentity` — part of the wrong-direction
+"squared-gap method-of-types" route. The A-class
+`pac_bayes_mcallester_bach_path` in `LTFP.Ch14_Probabilistic.PACBayes`
+follows Bach's actual proof (linear Hoeffding MGF + DV + Chernoff)
+and does NOT depend on this Stirling/Robbins residual. Retained for
+backward-compatibility only.
+
+**Original docstring (for reference):**
+
+**Named residual: Stirling/Robbins method-of-types finite-sum bound.**
 
 The `p`-free finite sum produced by the method-of-types identity is
 bounded by `2 √n`:
@@ -698,7 +741,17 @@ def MethodOfTypesStirlingBound (n : ℕ) : Prop :=
       * ((1 - (k : ℝ) / (n : ℝ)) ^ (n - (k : ℕ)))
     ≤ 2 * Real.sqrt (n : ℝ)
 
-/-- **Named residual: Pinsker inequality for Bernoulli distributions.**
+/-- **DEAD-END (2026-05-21):** Same status as
+`BernoulliMethodOfTypesIdentity` — part of the wrong-direction
+"squared-gap method-of-types" route. The A-class
+`pac_bayes_mcallester_bach_path` in `LTFP.Ch14_Probabilistic.PACBayes`
+follows Bach's actual proof (linear Hoeffding MGF + DV + Chernoff)
+and does NOT depend on Bernoulli Pinsker. Retained for
+backward-compatibility only.
+
+**Original docstring (for reference):**
+
+**Named residual: Pinsker inequality for Bernoulli distributions.**
 
 For `q ∈ [0, 1]` and `p ∈ (0, 1)`,
 `2 (q - p)^2 ≤ bernoulliKL q p`.

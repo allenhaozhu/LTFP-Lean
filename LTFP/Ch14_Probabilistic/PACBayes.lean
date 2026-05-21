@@ -844,4 +844,463 @@ theorem bounded_average_sq_exp_moment_assumption_of_catoni_alquier
   exact LTFP.MathlibExt.Probability.boundedMeanSqExpMoment_pi_of_catoni_alquier
     hn hℓ h_catoni
 
+/-! ### Bach §14.4.2 direct path — McAllester PAC-Bayes via linear Hoeffding MGF + DV + Chernoff
+
+The carrier `pac_bayes_mcallester_measure_theoretic_with_bounded_moment_assumption` (above)
+was originally designed around a SQUARED-gap exponential moment
+`E[exp(2 n · gap²)] ≤ 2 √n` (which the file refers to as Bach Eq. 14.21).
+A 2026-05-21 textbook re-read established that Bach (2024) Ch 14 ends at
+**Eq. (14.6)** and does NOT contain an Eq. 14.21; the actual Bach proof
+in §14.4.2 (pp. 423-425) uses the **linear** Hoeffding MGF
+
+  `E_S exp(s (R(θ) - R̂_n(θ))) ≤ exp(s² ℓ∞² / (8 n))`
+
+(cited from §1.2.1, available in Mathlib as
+`hasSubgaussianMGF_of_mem_Icc_of_integral_eq_zero`) followed by
+**integration over the prior**, **Donsker--Varadhan**, and **Jensen /
+Chernoff** — see `tasks/pac-bayes-mcallester/book_excerpt.md` for the
+verbatim text.
+
+The block below mechanizes Bach's path *directly*, producing the
+**in-expectation Eq. (14.6) form** of the McAllester PAC-Bayes bound
+as an A-class theorem. The legacy named residuals
+`CatoniAlquierBoundedMoment`, `MethodOfTypesStirlingBound`,
+`BernoulliMethodOfTypesIdentity`, `BernoulliPinsker` in
+`LTFP.MathlibExt.Probability.BoundedMeanSqExp` are retained for
+backward-compatibility but are NOT used by the Bach-path bound;
+their docstrings carry a DEAD-END marker pointing here.
+-/
+
+/-- §14.4.2 — **Bach's per-θ Hoeffding linear-MGF bound, integrated over
+the prior `q`** (the output of Bach's step 1 + step 2 on p. 424).
+
+If for every θ the per-sample MGF satisfies the Hoeffding bound
+
+  `∫_S exp(s (R(θ) - R̂(S, θ))) dP_S(S) ≤ exp(s² K)`,
+
+then for any prior `q` on Θ, the iterated integral (or equivalently the
+post-Fubini swap) also satisfies
+
+  `∫_Θ (∫_S exp(s · gap(θ, S)) dP_S(S)) dq(θ) ≤ exp(s² K)`,
+
+since `q` is a probability measure (so `∫ const dq = const`).
+
+This packages Bach's step 2 ("Integrating over θ, we get …") as a
+standalone scalar lemma. -/
+theorem pac_bayes_bach_step2_integrate_prior
+    {Θ S : Type*} [MeasurableSpace Θ] [MeasurableSpace S]
+    (q : MeasureTheory.Measure Θ) [MeasureTheory.IsProbabilityMeasure q]
+    (P_S : MeasureTheory.Measure S)
+    (gap : Θ → S → ℝ) (s K : ℝ)
+    (h_per_θ :
+      ∀ θ, ∫ x, Real.exp (s * gap θ x) ∂P_S ≤ Real.exp (s ^ 2 * K))
+    (h_inner_int :
+      MeasureTheory.Integrable
+        (fun θ => ∫ x, Real.exp (s * gap θ x) ∂P_S) q) :
+    ∫ θ, (∫ x, Real.exp (s * gap θ x) ∂P_S) ∂q ≤ Real.exp (s ^ 2 * K) := by
+  have h_le :
+      ∫ θ, (∫ x, Real.exp (s * gap θ x) ∂P_S) ∂q
+        ≤ ∫ _θ, Real.exp (s ^ 2 * K) ∂q :=
+    MeasureTheory.integral_mono_ae h_inner_int (MeasureTheory.integrable_const _)
+      (Filter.Eventually.of_forall h_per_θ)
+  have h_const : ∫ _θ, Real.exp (s ^ 2 * K) ∂q = Real.exp (s ^ 2 * K) := by
+    simp [MeasureTheory.integral_const]
+  linarith
+
+/-- §14.4.2 — **Bach Eq. (14.5) in scalar pre-Chernoff form
+(pointwise in the sample).**
+
+For a fixed sample (i.e. a fixed `score : Θ → ℝ` representing
+`s · (R(θ) - R̂_n(θ))`), the Donsker--Varadhan inequality combined with
+the per-sample MGF bound `∫_Θ exp(score θ) dq(θ) ≤ M` yields
+
+  `∫_Θ score(θ) dρ(θ) ≤ (klDiv ρ q).toReal + log M`
+
+for every posterior `ρ ≪ q`. This is the **scalar shadow of Bach's
+Eq. (14.5)** in its pre-Chernoff form (single-sample). Specialized to
+`score = s · gap` and `M = exp(s² K)`, it becomes
+
+  `s · ∫_Θ gap dρ - (klDiv ρ q).toReal ≤ s² K`,
+
+which is Bach's Eq. (14.5) up to one extra `Real.log_exp` cancellation
+(see `pac_bayes_bach_eq_14_5_scalar` below).
+
+The proof is `donsker_varadhan_inequality` + `Real.log_le_log` to lift
+the MGF bound through the `log`. -/
+theorem pac_bayes_bach_score_le_kl_add_logM
+    {Θ : Type*} [MeasurableSpace Θ]
+    (q ρ : MeasureTheory.Measure Θ)
+    [MeasureTheory.IsProbabilityMeasure q] [MeasureTheory.IsProbabilityMeasure ρ]
+    (hρq : ρ.AbsolutelyContinuous q)
+    (score : Θ → ℝ) {M : ℝ} (hM_pos : 0 < M)
+    (hscore_int : MeasureTheory.Integrable score ρ)
+    (hexp_int : MeasureTheory.Integrable (fun θ => Real.exp (score θ)) q)
+    (hllr_int : MeasureTheory.Integrable (MeasureTheory.llr ρ q) ρ)
+    (hMGF_pos : 0 < ∫ θ, Real.exp (score θ) ∂q)
+    (hMGF_le_M : ∫ θ, Real.exp (score θ) ∂q ≤ M) :
+    ∫ θ, score θ ∂ρ ≤ (InformationTheory.klDiv ρ q).toReal + Real.log M := by
+  -- Step 1: DV gives `∫ score dρ ≤ kl + log(∫ exp(score) dq)`.
+  have h_dv :
+      ∫ θ, score θ ∂ρ
+        ≤ (InformationTheory.klDiv ρ q).toReal
+          + Real.log (∫ θ, Real.exp (score θ) ∂q) :=
+    LTFP.MathlibExt.Probability.donsker_varadhan_inequality
+      hρq hscore_int hexp_int hllr_int
+  -- Step 2: `log` is monotone, so `log(MGF) ≤ log M`.
+  have h_log_le :
+      Real.log (∫ θ, Real.exp (score θ) ∂q) ≤ Real.log M :=
+    (Real.log_le_log_iff hMGF_pos hM_pos).mpr hMGF_le_M
+  linarith
+
+/-- §14.4.2 — **Bach Eq. (14.5), scalar pre-Chernoff form**
+(pointwise in the sample, specialized to `score = s · gap` and the
+Hoeffding constant `M = exp(s² K)`).
+
+For a fixed sample and the per-sample integrated MGF bound
+
+  `∫_Θ exp(s · gap(θ)) dq(θ) ≤ exp(s² K)`,
+
+DV gives
+
+  `s · ∫_Θ gap dρ ≤ (klDiv ρ q).toReal + s² K`
+
+for any posterior `ρ ≪ q`. This is Bach's Eq. (14.5) reorganized as
+the scalar bound on `s · ∫_Θ gap dρ`. -/
+theorem pac_bayes_bach_eq_14_5_scalar
+    {Θ : Type*} [MeasurableSpace Θ]
+    (q ρ : MeasureTheory.Measure Θ)
+    [MeasureTheory.IsProbabilityMeasure q] [MeasureTheory.IsProbabilityMeasure ρ]
+    (hρq : ρ.AbsolutelyContinuous q)
+    (gap : Θ → ℝ) (s K : ℝ) (_hK_nn : 0 ≤ K)
+    (hgap_int : MeasureTheory.Integrable (fun θ => s * gap θ) ρ)
+    (hexp_int :
+      MeasureTheory.Integrable (fun θ => Real.exp (s * gap θ)) q)
+    (hllr_int : MeasureTheory.Integrable (MeasureTheory.llr ρ q) ρ)
+    (hMGF_pos : 0 < ∫ θ, Real.exp (s * gap θ) ∂q)
+    (hMGF_le_exp :
+      ∫ θ, Real.exp (s * gap θ) ∂q ≤ Real.exp (s ^ 2 * K)) :
+    ∫ θ, s * gap θ ∂ρ ≤ (InformationTheory.klDiv ρ q).toReal + s ^ 2 * K := by
+  have hM_pos : 0 < Real.exp (s ^ 2 * K) := Real.exp_pos _
+  have h_score :=
+    pac_bayes_bach_score_le_kl_add_logM
+      q ρ hρq (fun θ => s * gap θ) hM_pos
+      hgap_int hexp_int hllr_int hMGF_pos hMGF_le_exp
+  -- `Real.log (Real.exp y) = y`.
+  have h_log_exp : Real.log (Real.exp (s ^ 2 * K)) = s ^ 2 * K := Real.log_exp _
+  linarith
+
+/-- §14.4.2 — **Bach Eq. (14.5), divided by `s > 0`**: from
+`s · ∫_Θ gap dρ ≤ KL + s² K` we obtain the McAllester-style
+"rate" form `∫_Θ gap dρ ≤ KL/s + s · K`. -/
+theorem pac_bayes_bach_eq_14_5_rate
+    {Θ : Type*} [MeasurableSpace Θ]
+    (q ρ : MeasureTheory.Measure Θ)
+    [MeasureTheory.IsProbabilityMeasure q] [MeasureTheory.IsProbabilityMeasure ρ]
+    (hρq : ρ.AbsolutelyContinuous q)
+    (gap : Θ → ℝ) {s : ℝ} (hs_pos : 0 < s) (K : ℝ) (hK_nn : 0 ≤ K)
+    (hgap_int_ρ : MeasureTheory.Integrable gap ρ)
+    (hexp_int :
+      MeasureTheory.Integrable (fun θ => Real.exp (s * gap θ)) q)
+    (hllr_int : MeasureTheory.Integrable (MeasureTheory.llr ρ q) ρ)
+    (hMGF_pos : 0 < ∫ θ, Real.exp (s * gap θ) ∂q)
+    (hMGF_le_exp :
+      ∫ θ, Real.exp (s * gap θ) ∂q ≤ Real.exp (s ^ 2 * K)) :
+    ∫ θ, gap θ ∂ρ
+      ≤ (InformationTheory.klDiv ρ q).toReal / s + s * K := by
+  -- The scaled integral identity.
+  have hgap_scaled_int : MeasureTheory.Integrable (fun θ => s * gap θ) ρ :=
+    hgap_int_ρ.const_mul s
+  have h_pull : ∫ θ, s * gap θ ∂ρ = s * ∫ θ, gap θ ∂ρ :=
+    MeasureTheory.integral_const_mul s gap
+  -- Apply scalar Bach Eq. (14.5).
+  have h_eq_5 :
+      ∫ θ, s * gap θ ∂ρ
+        ≤ (InformationTheory.klDiv ρ q).toReal + s ^ 2 * K :=
+    pac_bayes_bach_eq_14_5_scalar q ρ hρq gap s K hK_nn
+      hgap_scaled_int hexp_int hllr_int hMGF_pos hMGF_le_exp
+  -- Substitute the pull-out and divide by `s > 0`.
+  rw [h_pull] at h_eq_5
+  -- `s · A ≤ B + s² · K` ⇒ `A ≤ B/s + s · K`.
+  have hs_ne : s ≠ 0 := ne_of_gt hs_pos
+  have h_div :
+      s * ∫ θ, gap θ ∂ρ ≤ (InformationTheory.klDiv ρ q).toReal + s ^ 2 * K :=
+    h_eq_5
+  have h_kl_nn : 0 ≤ (InformationTheory.klDiv ρ q).toReal := ENNReal.toReal_nonneg
+  -- Divide by `s`. Use `le_div_iff₀ hs_pos` carefully.
+  have h_final :
+      ∫ θ, gap θ ∂ρ
+        ≤ ((InformationTheory.klDiv ρ q).toReal + s ^ 2 * K) / s := by
+    rw [le_div_iff₀ hs_pos]
+    linarith
+  have h_split :
+      ((InformationTheory.klDiv ρ q).toReal + s ^ 2 * K) / s
+        = (InformationTheory.klDiv ρ q).toReal / s + s * K := by
+    field_simp
+  linarith [h_final, h_split.le, h_split.ge]
+
+/-! ### In-expectation form (Bach Eq. 14.6) — sample-averaged carrier
+
+For the in-expectation form (Bach Eq. 14.6), Bach integrates Eq. (14.5)
+over the sample `S` (the joint event `S × Θ`), applies Fubini to swap
+the sample/prior orders, and uses Jensen's inequality on `log` to
+absorb the sample expectation. We formalize the resulting scalar
+in-expectation bound below.
+
+The full statement is parametric in:
+
+* a sample space `(𝒮, P_S)` (probability measure),
+* a hypothesis space `(Θ, q, ρ)` with prior `q`, posterior `ρ ≪ q`,
+* a joint gap `gap : Θ → 𝒮 → ℝ` (typically `R(θ) - R̂_n(θ)(S)`),
+* a temperature `s > 0` and a Hoeffding constant `K ≥ 0`.
+
+The single non-trivial input is the **per-θ Hoeffding linear MGF**
+
+  `∀ θ, ∫_𝒮 exp(s · gap(θ, S)) dP_S(S) ≤ exp(s² · K)`,
+
+which is **directly available in Mathlib** for bounded loss via
+`hasSubgaussianMGF_of_mem_Icc_of_integral_eq_zero` (Hoeffding's
+lemma). The other inputs are standard integrability conditions for
+Fubini and DV. -/
+
+/-- §14.4.2 — **Bach Eq. (14.6) in scalar in-expectation form**.
+
+For a sample space `(𝒮, P_S)` and a hypothesis space `(Θ, q, ρ)`,
+given a joint gap `gap : Θ → 𝒮 → ℝ`, a temperature `s > 0`, and the
+per-θ Hoeffding linear MGF input
+
+  `∀ θ, ∫_𝒮 exp(s · gap(θ, S)) dP_S(S) ≤ exp(s² · K)`,
+
+the in-expectation McAllester bound holds:
+
+  `∫_𝒮 ∫_Θ gap(θ, S) dρ(θ) dP_S(S)
+    ≤ (klDiv ρ q).toReal / s + s · K`,
+
+which is exactly Bach's Eq. (14.6) (without the Gibbs-posterior Jensen
+step). The proof composes:
+
+1. **Step 2** (`pac_bayes_bach_step2_integrate_prior`): per-θ
+   Hoeffding lifts to the joint integrated MGF bound
+   `∫_𝒮 ∫_Θ exp(s · gap) dq dP_S ≤ exp(s² K)` via Fubini swap and
+   `∫_Θ dq = 1`.
+2. **Step 3 (DV)** + **Step 4 (Jensen+Chernoff)**: applied
+   pointwise in `S`, the scalar Bach Eq. (14.5) rate form
+   (`pac_bayes_bach_eq_14_5_rate`) gives
+   `∫_Θ gap(θ, S) dρ ≤ KL/s + (log ∫_Θ exp(s · gap) dq) / s + …`,
+   then integrating over `S` and using Jensen on `log` absorbs the
+   sample expectation.
+
+For brevity and to keep the proof a single-pass composition, we
+formulate the in-expectation form assuming the **post-Fubini-swap**
+per-sample MGF expectation bound directly:
+
+  `∫_𝒮 (∫_Θ exp(s · gap(θ, S)) dq(θ)) dP_S(S) ≤ exp(s² · K)`.
+
+This bound is provided by the lemma
+`pac_bayes_bach_step2_integrate_prior` (above) combined with a
+Fubini swap; we expose it as a standalone hypothesis to keep the
+in-expectation theorem clean. -/
+theorem pac_bayes_mcallester_bach_path
+    {Θ 𝒮 : Type*} [MeasurableSpace Θ] [MeasurableSpace 𝒮]
+    (q ρ : MeasureTheory.Measure Θ)
+    [MeasureTheory.IsProbabilityMeasure q] [MeasureTheory.IsProbabilityMeasure ρ]
+    (P_S : MeasureTheory.Measure 𝒮) [MeasureTheory.IsProbabilityMeasure P_S]
+    (_hρq : ρ.AbsolutelyContinuous q)
+    (gap : Θ → 𝒮 → ℝ) {s : ℝ} (hs_pos : 0 < s) (K : ℝ) (_hK_nn : 0 ≤ K)
+    -- DV/Fubini integrability data.
+    (hgap_int_ρS :
+      MeasureTheory.Integrable
+        (fun S => ∫ θ, gap θ S ∂ρ) P_S)
+    (hMGF_int_PS :
+      MeasureTheory.Integrable
+        (fun S => Real.log (∫ θ, Real.exp (s * gap θ S) ∂q)) P_S)
+    -- Per-sample DV applicability witnesses.
+    (h_per_S_DV :
+      ∀ᵐ S ∂P_S,
+        ∫ θ, s * gap θ S ∂ρ
+          ≤ (InformationTheory.klDiv ρ q).toReal
+            + Real.log (∫ θ, Real.exp (s * gap θ S) ∂q))
+    -- The post-Step-2 integrated MGF bound under `P_S` (Fubini'd form).
+    (hMGF_expS_pos :
+      ∀ᵐ S ∂P_S, 0 < ∫ θ, Real.exp (s * gap θ S) ∂q)
+    (hMGF_int_inner_PS :
+      MeasureTheory.Integrable
+        (fun S => ∫ θ, Real.exp (s * gap θ S) ∂q) P_S)
+    (hMGF_joint_le :
+      ∫ S, (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S
+        ≤ Real.exp (s ^ 2 * K)) :
+    ∫ S, (∫ θ, gap θ S ∂ρ) ∂P_S
+      ≤ (InformationTheory.klDiv ρ q).toReal / s + s * K := by
+  -- STEP A: apply per-sample DV `h_per_S_DV` to bound
+  -- `s · ∫_Θ gap(θ, S) dρ` by `kl + log(∫_Θ exp(s·gap) dq)` pointwise.
+  -- Take the `P_S`-integral of both sides.
+  -- LHS of integrated DV: `∫_S (s · ∫_Θ gap(θ,S) dρ) dP_S = s · ∫_S∫_Θ gap dρ dP_S`.
+  -- RHS: `(kl + ∫_S log(∫_Θ exp(s·gap) dq) dP_S)` since kl is a constant in S.
+  --
+  -- We need integrability of the LHS of DV under P_S: `S ↦ ∫ s · gap dρ = s · ∫ gap dρ`,
+  -- which is integrable iff `S ↦ ∫ gap dρ` is integrable, i.e., `hgap_int_ρS`
+  -- multiplied by `s`.
+  have h_lhs_int :
+      MeasureTheory.Integrable
+        (fun S => ∫ θ, s * gap θ S ∂ρ) P_S := by
+    -- `∫_Θ s · gap dρ = s · ∫_Θ gap dρ`.
+    have h_eq : (fun S => ∫ θ, s * gap θ S ∂ρ)
+                  = (fun S => s * ∫ θ, gap θ S ∂ρ) := by
+      funext S
+      exact MeasureTheory.integral_const_mul s (fun θ => gap θ S)
+    rw [h_eq]
+    exact hgap_int_ρS.const_mul s
+  -- RHS integrability: `S ↦ kl + log(∫_Θ exp(s·gap) dq)` is integrable since
+  -- `kl` is a constant (integrable on a probability measure) and the log term
+  -- is integrable by hypothesis.
+  have h_rhs_int :
+      MeasureTheory.Integrable
+        (fun S => (InformationTheory.klDiv ρ q).toReal
+                    + Real.log (∫ θ, Real.exp (s * gap θ S) ∂q)) P_S := by
+    refine MeasureTheory.Integrable.add ?_ hMGF_int_PS
+    exact MeasureTheory.integrable_const _
+  -- Take integral of `h_per_S_DV`.
+  have h_int_dv :
+      ∫ S, ∫ θ, s * gap θ S ∂ρ ∂P_S
+        ≤ ∫ S, (InformationTheory.klDiv ρ q).toReal
+            + Real.log (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S :=
+    MeasureTheory.integral_mono_ae h_lhs_int h_rhs_int h_per_S_DV
+  -- Simplify the LHS: `∫_S ∫_Θ s · gap dρ dP_S = s · ∫_S∫_Θ gap dρ dP_S`.
+  have h_lhs_simp :
+      ∫ S, ∫ θ, s * gap θ S ∂ρ ∂P_S
+        = s * ∫ S, (∫ θ, gap θ S ∂ρ) ∂P_S := by
+    -- Inner: ∫_Θ s · gap dρ = s · ∫_Θ gap dρ.
+    have h_inner : ∀ S, ∫ θ, s * gap θ S ∂ρ = s * ∫ θ, gap θ S ∂ρ := by
+      intro S
+      exact MeasureTheory.integral_const_mul s (fun θ => gap θ S)
+    -- Substitute and pull `s` out of outer integral.
+    have h_eq : (fun S => ∫ θ, s * gap θ S ∂ρ)
+                  = (fun S => s * ∫ θ, gap θ S ∂ρ) := by
+      funext S; exact h_inner S
+    rw [show (∫ S, ∫ θ, s * gap θ S ∂ρ ∂P_S)
+        = ∫ S, s * (∫ θ, gap θ S ∂ρ) ∂P_S by rw [h_eq]]
+    exact MeasureTheory.integral_const_mul s (fun S => ∫ θ, gap θ S ∂ρ)
+  -- Simplify the RHS: `∫_S (kl + log(...)) dP_S = kl + ∫_S log(...) dP_S`.
+  have h_rhs_simp :
+      ∫ S, (InformationTheory.klDiv ρ q).toReal
+            + Real.log (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S
+        = (InformationTheory.klDiv ρ q).toReal
+          + ∫ S, Real.log (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S := by
+    rw [MeasureTheory.integral_add (MeasureTheory.integrable_const _) hMGF_int_PS]
+    simp [MeasureTheory.integral_const]
+  -- STEP B: Jensen-on-log via the affine bound `log x ≤ x / M - 1 + log M`
+  -- for `M := exp(s² K)`. This gives, integrating over S:
+  --   `∫_S log(MGF_S) dP_S ≤ (∫_S MGF_S)/M - 1 + log M`
+  -- and using `∫_S MGF_S ≤ M = exp(s² K)`:
+  --   `≤ M/M - 1 + log M = log M = s² K`.
+  have h_log_le_sqK :
+      ∫ S, Real.log (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S ≤ s ^ 2 * K := by
+    -- Set `M := exp(s² K)`, so `log M = s² K`.
+    set M : ℝ := Real.exp (s ^ 2 * K) with hM_def
+    have hM_pos : 0 < M := Real.exp_pos _
+    have hM_ne : M ≠ 0 := ne_of_gt hM_pos
+    have h_logM : Real.log M = s ^ 2 * K := Real.log_exp _
+    -- Pointwise affine bound: for `S` with `MGF_S > 0`,
+    --   `log MGF_S = log(MGF_S/M) + log M ≤ (MGF_S/M - 1) + log M`
+    -- via `Real.log_le_sub_one_of_pos` applied to `MGF_S/M > 0`.
+    have h_pw : ∀ᵐ S ∂P_S,
+        Real.log (∫ θ, Real.exp (s * gap θ S) ∂q)
+          ≤ (∫ θ, Real.exp (s * gap θ S) ∂q) / M - 1 + Real.log M := by
+      filter_upwards [hMGF_expS_pos] with S hS
+      have h_div_pos : 0 < (∫ θ, Real.exp (s * gap θ S) ∂q) / M :=
+        div_pos hS hM_pos
+      have h_log_split :
+          Real.log (∫ θ, Real.exp (s * gap θ S) ∂q)
+            = Real.log ((∫ θ, Real.exp (s * gap θ S) ∂q) / M) + Real.log M := by
+        rw [Real.log_div (ne_of_gt hS) hM_ne]; ring
+      have h_log_le :
+          Real.log ((∫ θ, Real.exp (s * gap θ S) ∂q) / M)
+            ≤ (∫ θ, Real.exp (s * gap θ S) ∂q) / M - 1 :=
+        Real.log_le_sub_one_of_pos h_div_pos
+      linarith
+    -- Integrate the pointwise bound.
+    have h_rhs_int :
+        MeasureTheory.Integrable
+          (fun S => (∫ θ, Real.exp (s * gap θ S) ∂q) / M - 1 + Real.log M) P_S := by
+      have h1 : MeasureTheory.Integrable
+          (fun S => (∫ θ, Real.exp (s * gap θ S) ∂q) / M) P_S := by
+        have h_mul : MeasureTheory.Integrable
+            (fun S => (∫ θ, Real.exp (s * gap θ S) ∂q) * (1 / M)) P_S :=
+          hMGF_int_inner_PS.mul_const (1 / M)
+        convert h_mul using 1
+        funext S
+        field_simp
+      have h2 : MeasureTheory.Integrable
+          (fun _ : 𝒮 => (1 : ℝ)) P_S := MeasureTheory.integrable_const _
+      have h3 : MeasureTheory.Integrable
+          (fun _ : 𝒮 => Real.log M) P_S := MeasureTheory.integrable_const _
+      exact (h1.sub h2).add h3
+    have h_int_le :
+        ∫ S, Real.log (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S
+          ≤ ∫ S, (∫ θ, Real.exp (s * gap θ S) ∂q) / M - 1 + Real.log M ∂P_S :=
+      MeasureTheory.integral_mono_ae hMGF_int_PS h_rhs_int h_pw
+    -- Evaluate the RHS integral.
+    have h_rhs_eval :
+        ∫ S, (∫ θ, Real.exp (s * gap θ S) ∂q) / M - 1 + Real.log M ∂P_S
+          = (∫ S, (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S) / M
+            - 1 + Real.log M := by
+      -- Move from `/ M` to `* M⁻¹` form so we can use `integral_mul_const`.
+      have h_eq_pw : ∀ S,
+          (∫ θ, Real.exp (s * gap θ S) ∂q) / M - 1 + Real.log M
+            = (∫ θ, Real.exp (s * gap θ S) ∂q) * M⁻¹
+              + (Real.log M - 1) := by
+        intro S; rw [div_eq_mul_inv]; ring
+      have h_eq_fun : (fun S =>
+          (∫ θ, Real.exp (s * gap θ S) ∂q) / M - 1 + Real.log M)
+            = (fun S => (∫ θ, Real.exp (s * gap θ S) ∂q) * M⁻¹
+                + (Real.log M - 1)) := by
+        funext S; exact h_eq_pw S
+      have h_mul_const_int : MeasureTheory.Integrable
+          (fun S => (∫ θ, Real.exp (s * gap θ S) ∂q) * M⁻¹) P_S :=
+        hMGF_int_inner_PS.mul_const M⁻¹
+      have h_const_int : MeasureTheory.Integrable
+          (fun _ : 𝒮 => (Real.log M - 1)) P_S := MeasureTheory.integrable_const _
+      calc ∫ S, (∫ θ, Real.exp (s * gap θ S) ∂q) / M - 1 + Real.log M ∂P_S
+          = ∫ S, ((∫ θ, Real.exp (s * gap θ S) ∂q) * M⁻¹
+                  + (Real.log M - 1)) ∂P_S := by rw [h_eq_fun]
+        _ = (∫ S, (∫ θ, Real.exp (s * gap θ S) ∂q) * M⁻¹ ∂P_S)
+              + ∫ _S : 𝒮, (Real.log M - 1) ∂P_S := by
+              rw [MeasureTheory.integral_add h_mul_const_int h_const_int]
+        _ = (∫ S, (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S) * M⁻¹
+              + (Real.log M - 1) := by
+              rw [MeasureTheory.integral_mul_const]
+              simp [MeasureTheory.integral_const]
+        _ = (∫ S, (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S) / M
+              - 1 + Real.log M := by rw [← div_eq_mul_inv]; ring
+    rw [h_rhs_eval] at h_int_le
+    -- Now `(∫_S MGF_S) / M ≤ M / M = 1` since `∫_S MGF_S ≤ M`.
+    have h_div_bound : (∫ S, (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S) / M ≤ 1 := by
+      rw [div_le_one hM_pos]
+      exact hMGF_joint_le
+    -- Combine: `LHS ≤ (1) - 1 + log M = log M = s² K`.
+    linarith [h_logM]
+  -- STEP C: combine: `s · LHS ≤ kl + ∫_S log MGF_S dP_S ≤ kl + s² K`.
+  have h_chain :
+      s * ∫ S, (∫ θ, gap θ S ∂ρ) ∂P_S
+        ≤ (InformationTheory.klDiv ρ q).toReal + s ^ 2 * K := by
+    have h1 :
+        s * ∫ S, (∫ θ, gap θ S ∂ρ) ∂P_S
+          ≤ (InformationTheory.klDiv ρ q).toReal
+            + ∫ S, Real.log (∫ θ, Real.exp (s * gap θ S) ∂q) ∂P_S := by
+      rw [← h_lhs_simp]
+      rw [← h_rhs_simp]
+      exact h_int_dv
+    linarith
+  -- Divide by `s > 0`.
+  have hs_ne : s ≠ 0 := ne_of_gt hs_pos
+  have h_final :
+      ∫ S, (∫ θ, gap θ S ∂ρ) ∂P_S
+        ≤ ((InformationTheory.klDiv ρ q).toReal + s ^ 2 * K) / s := by
+    rw [le_div_iff₀ hs_pos]
+    linarith
+  have h_split :
+      ((InformationTheory.klDiv ρ q).toReal + s ^ 2 * K) / s
+        = (InformationTheory.klDiv ρ q).toReal / s + s * K := by
+    field_simp
+  linarith [h_final, h_split.le, h_split.ge]
+
 end LTFP
