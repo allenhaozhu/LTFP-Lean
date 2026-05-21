@@ -1,0 +1,90 @@
+/-
+Copyright (c) 2026 Allen Hao Zhu. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Allen Hao Zhu
+-/
+import Mathlib.Analysis.Matrix.Order
+import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Order
+
+/-!
+# Operator-monotone real functions on Hermitian matrices
+
+This file introduces the predicate `OperatorMonotone f` for real-valued
+`f : ℝ → ℝ`, meaning that `f` is monotone with respect to the Löwner order on
+finite Hermitian matrices over `RCLike 𝕜`, with the matrix value of `f`
+computed via the continuous functional calculus (CFC).
+
+This is the entry point to the operator-monotone / operator-concave tower
+that underlies Lieb's 1973 joint concavity theorem and the downstream
+matrix Bernstein concentration inequality.
+
+The current file is intentionally a *scope probe*: it provides the
+predicate and a few stability lemmas (identity, constant, sum, nonnegative
+scalar multiple). It explicitly does NOT cover:
+
+* Löwner's integral representation of operator-monotone functions on
+  `[0, ∞)`;
+* The operator-concavity equivalent and Jensen-style inequalities;
+* Specific operator-monotone functions such as `t ↦ t^p` for `p ∈ (0, 1]`
+  or `t ↦ log t`.
+
+These belong to later modules in the Lieb tower.
+-/
+
+open scoped MatrixOrder
+
+namespace LTFP.MathlibExt.MatrixAnalysis
+
+universe uomk uomn
+
+/-- A real-valued function `f : ℝ → ℝ` is operator monotone on finite Hermitian
+matrices if `A ≤ B` in Löwner order implies `f(A) ≤ f(B)` under the continuous
+functional calculus. -/
+def OperatorMonotone (f : ℝ → ℝ) : Prop :=
+  ∀ {𝕜 : Type uomk} [RCLike 𝕜] {n : Type uomn} [Fintype n] [DecidableEq n]
+    (A B : Matrix n n 𝕜) (_hA : A.IsHermitian) (_hB : B.IsHermitian),
+    A ≤ B →
+      cfc (R := ℝ) (p := IsSelfAdjoint) f A ≤
+        cfc (R := ℝ) (p := IsSelfAdjoint) f B
+
+private lemma continuousOn_spectrum_matrix {𝕜 : Type uomk} {n : Type uomn}
+    [RCLike 𝕜] [Fintype n] [DecidableEq n] (A : Matrix n n 𝕜) (f : ℝ → ℝ) :
+    ContinuousOn f (spectrum ℝ A) := by
+  rw [continuousOn_iff_continuous_restrict]
+  fun_prop
+
+/-- The identity is operator monotone. -/
+theorem operatorMonotone_id : OperatorMonotone.{uomk, uomn} id := by
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  simpa [cfc_id (R := ℝ) (p := IsSelfAdjoint) A (show IsSelfAdjoint A from hA),
+    cfc_id (R := ℝ) (p := IsSelfAdjoint) B (show IsSelfAdjoint B from hB)] using hAB
+
+/-- Constants are operator monotone. -/
+theorem operatorMonotone_const (c : ℝ) : OperatorMonotone.{uomk, uomn} (fun _ => c) := by
+  intro 𝕜 _ n _ _ A B hA hB _hAB
+  rw [cfc_const (R := ℝ) (p := IsSelfAdjoint) c A (show IsSelfAdjoint A from hA),
+    cfc_const (R := ℝ) (p := IsSelfAdjoint) c B (show IsSelfAdjoint B from hB)]
+
+variable {f g : ℝ → ℝ}
+
+/-- Sum of two operator-monotone functions is operator monotone. -/
+theorem OperatorMonotone.add (hf : OperatorMonotone.{uomk, uomn} f)
+    (hg : OperatorMonotone.{uomk, uomn} g) : OperatorMonotone.{uomk, uomn} (f + g) := by
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  rw [Pi.add_def]
+  rw [cfc_add (p := IsSelfAdjoint) A f g
+      (continuousOn_spectrum_matrix A f) (continuousOn_spectrum_matrix A g),
+    cfc_add (p := IsSelfAdjoint) B f g
+      (continuousOn_spectrum_matrix B f) (continuousOn_spectrum_matrix B g)]
+  exact add_le_add (hf A B hA hB hAB) (hg A B hA hB hAB)
+
+/-- Nonnegative scalar multiples of operator-monotone functions are operator monotone. -/
+theorem OperatorMonotone.const_smul {c : ℝ} (hc : 0 ≤ c)
+    (hf : OperatorMonotone.{uomk, uomn} f) : OperatorMonotone.{uomk, uomn} (c • f) := by
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  rw [Pi.smul_def]
+  rw [cfc_smul (p := IsSelfAdjoint) c f A (continuousOn_spectrum_matrix A f),
+    cfc_smul (p := IsSelfAdjoint) c f B (continuousOn_spectrum_matrix B f)]
+  exact smul_le_smul_of_nonneg_left (hf A B hA hB hAB) hc
+
+end LTFP.MathlibExt.MatrixAnalysis
