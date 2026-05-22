@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Allen Hao Zhu
 -/
 import LTFP.MathlibExt.Calculus.ParameterMovementBoundedDeriv
+import LTFP.MathlibExt.Calculus.FunctionMovementAlongCurve
 
 /-!
 # Gradient-flow movement bound from a globally bounded gradient
@@ -51,6 +52,35 @@ theorem gradientFlow_movement_of_bounded_gradient
     (t t₀ : ℝ) :
     ‖α t - α t₀‖ ≤ (K : ℝ) * |t - t₀| := by
   refine parameter_movement_of_bounded_deriv_norm_form α K hα ?_ t t₀
+  intro s
+  have h := hODE s
+  have hneg : ‖-(gradL (α s))‖₊ = ‖gradL (α s)‖₊ := nnnorm_neg _
+  calc ‖deriv α s‖₊
+      = ‖-(gradL (α s))‖₊ := by rw [h]
+    _ = ‖gradL (α s)‖₊ := hneg
+    _ ≤ K := hbound (α s)
+
+/-- **Function-movement bound along a gradient flow with bounded gradient.**
+For a gradient flow `α` of `L` with `‖gradL‖ ≤ K` and an `L'`-Lipschitz
+function `f`, we have `|f (α t) - f (α t₀)| ≤ L' · K · |t - t₀|`.
+
+This is the natural composition of
+`gradientFlow_movement_of_bounded_gradient` with
+`function_movement_of_lipschitz_along_bounded_curve`, and is the
+bridge step used in B8 N5 (lazy-training loss-tracking): the loss
+value cannot change faster than `L' · K` per unit time along a
+gradient flow whose gradient is globally bounded in norm by `K`. -/
+theorem gradientFlow_function_movement_of_bounded_gradient
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (α : ℝ → E) (L : E → ℝ) (gradL : E → E)
+    (K : NNReal)
+    (hα : Differentiable ℝ α)
+    (hODE : ∀ t : ℝ, deriv α t = -(gradL (α t)))
+    (hbound : ∀ x : E, ‖gradL x‖₊ ≤ K)
+    (f : E → ℝ) (L' : NNReal) (hf : LipschitzWith L' f)
+    (t t₀ : ℝ) :
+    |f (α t) - f (α t₀)| ≤ (L' : ℝ) * (K : ℝ) * |t - t₀| := by
+  apply function_movement_of_lipschitz_along_bounded_curve α K hα ?_ f L' hf t t₀
   intro s
   have h := hODE s
   have hneg : ‖-(gradL (α s))‖₊ = ‖gradL (α s)‖₊ := nnnorm_neg _
