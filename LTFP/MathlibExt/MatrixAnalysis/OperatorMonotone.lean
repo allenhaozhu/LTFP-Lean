@@ -376,4 +376,46 @@ theorem OperatorConcave.const_smul {f : ℝ → ℝ} {c : ℝ} (hc : 0 ≤ c)
   rw [smul_comm t c, smul_comm (1 - t) c, ← smul_add]
   exact smul_le_smul_of_nonneg_left (hf A B hA hB t ht) hc
 
+/-- A real-valued function `f : ℝ → ℝ` is operator convex on finite Hermitian
+matrices if for all `t ∈ [0, 1]` and Hermitian `A B`, the CFC values satisfy
+`f(t · A + (1 - t) · B) ≤ t · f(A) + (1 - t) · f(B)`.
+
+Mirror of `OperatorConcave`. -/
+def OperatorConvex (f : ℝ → ℝ) : Prop :=
+  ∀ {𝕜 : Type uomk} [RCLike 𝕜] {n : Type uomn} [Fintype n] [DecidableEq n]
+    (A B : Matrix n n 𝕜) (_hA : A.IsHermitian) (_hB : B.IsHermitian)
+    (t : ℝ) (_ht : t ∈ Set.Icc (0:ℝ) 1),
+    cfc (R := ℝ) (p := IsSelfAdjoint) f (t • A + (1 - t) • B) ≤
+      t • cfc (R := ℝ) (p := IsSelfAdjoint) f A +
+        (1 - t) • cfc (R := ℝ) (p := IsSelfAdjoint) f B
+
+/-- Negating a function flips operator convexity into operator concavity. -/
+theorem operatorConvex_iff_neg_operatorConcave (f : ℝ → ℝ) :
+    OperatorConvex.{uomk, uomn} f ↔ OperatorConcave.{uomk, uomn} (-f) := by
+  constructor
+  · intro hf 𝕜 _ n _ _ A B hA hB t ht
+    have hAs : IsSelfAdjoint A := hA
+    have hBs : IsSelfAdjoint B := hB
+    have hsum : IsSelfAdjoint (t • A + (1 - t) • B) :=
+      ((IsSelfAdjoint.all t).smul hAs).add
+        ((IsSelfAdjoint.all (1 - t)).smul hBs)
+    change t • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x) A +
+        (1 - t) • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x) B ≤
+        cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x)
+          (t • A + (1 - t) • B)
+    rw [cfc_neg (p := IsSelfAdjoint) f A, cfc_neg (p := IsSelfAdjoint) f B,
+        cfc_neg (p := IsSelfAdjoint) f (t • A + (1 - t) • B),
+        smul_neg, smul_neg, ← neg_add, neg_le_neg_iff]
+    exact hf A B hA hB t ht
+  · intro hf 𝕜 _ n _ _ A B hA hB t ht
+    have h := hf A B hA hB t ht
+    change t • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x) A +
+        (1 - t) • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x) B ≤
+        cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x)
+          (t • A + (1 - t) • B) at h
+    rw [cfc_neg (p := IsSelfAdjoint) f A, cfc_neg (p := IsSelfAdjoint) f B,
+        cfc_neg (p := IsSelfAdjoint) f (t • A + (1 - t) • B),
+        smul_neg, smul_neg, ← neg_add, neg_le_neg_iff] at h
+    exact h
+
 end LTFP.MathlibExt.MatrixAnalysis
