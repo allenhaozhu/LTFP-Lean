@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Allen Hao Zhu
 -/
 import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussianMeasure
+import Mathlib.MeasureTheory.SpecificCodomains.WithLp
 import Mathlib.Probability.Distributions.Gaussian.Fernique
 
 /-!
@@ -54,3 +55,44 @@ theorem gaussianObservationKernel_integral_eval
       _ = (WithLp.ofLp (p := 2) (V := Fin n → ℝ) (regressionCLM X θ)) i := by
               rw [hzero]; simp
   · fun_prop
+
+/-- **Vector form of the Gaussian observation kernel mean.**
+The integral of `y` against the observation kernel `N(X θ, ν² · I)`
+equals `regressionCLM X θ` (i.e., `X θ` viewed as an element of
+`EuclideanSpace ℝ (Fin n)`).
+
+This aggregates the coordinate-wise identity
+`gaussianObservationKernel_integral_eval` over all `i : Fin n`,
+using `PiLp.ext` and `MeasureTheory.eval_integral_piLp` to reduce
+vector equality to per-coordinate equality. Integrability of the
+identity function against the kernel is supplied by Mathlib's
+`IsGaussian.integrable_fun_id`, since the observation kernel is
+Gaussian (`instIsGaussianGaussianObservationKernel`). -/
+theorem gaussianObservationKernel_integral_vector
+    {d n : ℕ} (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ)
+    (θ : EuclideanSpace ℝ (Fin d)) :
+    ∫ y, y ∂(gaussianObservationKernel X ν θ) = regressionCLM X θ := by
+  classical
+  set μ : Measure (EuclideanSpace ℝ (Fin n)) :=
+    gaussianObservationKernel X ν θ with hμ
+  -- `μ` is Gaussian, so the identity function is integrable, and so are
+  -- all coordinates by `integrable_piLp_iff`.
+  have hIntId : Integrable (fun y : EuclideanSpace ℝ (Fin n) => y) μ :=
+    ProbabilityTheory.IsGaussian.integrable_fun_id (μ := μ)
+  have hIntCoord : ∀ i, Integrable
+      (fun y : EuclideanSpace ℝ (Fin n) =>
+        (y : EuclideanSpace ℝ (Fin n)) i) μ := by
+    intro i
+    exact (MeasureTheory.integrable_piLp_iff (q := 2)
+        (E := fun _ : Fin n => ℝ) (f := fun y => y)).mp hIntId i
+  -- Reduce vector equality to coordinate-wise equality via `PiLp.ext`.
+  refine PiLp.ext (fun i => ?_)
+  rw [MeasureTheory.eval_integral_piLp (q := 2) (E := fun _ : Fin n => ℝ)
+      (f := fun y : EuclideanSpace ℝ (Fin n) => y) hIntCoord i]
+  -- Goal: `∫ y, y i ∂μ = (regressionCLM X θ) i`.
+  -- `y i = (WithLp.ofLp y) i` definitionally, so the scalar lemma applies.
+  show ∫ y, (WithLp.ofLp (p := 2) (V := Fin n → ℝ) y) i
+          ∂(gaussianObservationKernel X ν θ)
+        = (regressionCLM X θ) i
+  -- And `(regressionCLM X θ) i = (WithLp.ofLp (regressionCLM X θ)) i`.
+  exact gaussianObservationKernel_integral_eval X ν θ i
