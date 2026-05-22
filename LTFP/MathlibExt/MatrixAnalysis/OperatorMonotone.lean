@@ -330,4 +330,16 @@ theorem operatorConcave_const (c : ℝ) : OperatorConcave.{uomk, uomn} (fun _ =>
   have ht_sum : t + (1 - t) = 1 := by ring
   rw [ht_sum, one_smul]
 
+/-- The identity is operator concave (with equality — affine in t). -/
+theorem operatorConcave_id : OperatorConcave.{uomk, uomn} id := by
+  intro 𝕜 _ n _ _ A B hA hB t _ht
+  have hAs : IsSelfAdjoint A := hA
+  have hBs : IsSelfAdjoint B := hB
+  have hsum : IsSelfAdjoint (t • A + (1 - t) • B) :=
+    ((IsSelfAdjoint.all t).smul hAs).add
+      ((IsSelfAdjoint.all (1 - t)).smul hBs)
+  rw [cfc_id (R := ℝ) (p := IsSelfAdjoint) A hAs,
+      cfc_id (R := ℝ) (p := IsSelfAdjoint) B hBs,
+      cfc_id (R := ℝ) (p := IsSelfAdjoint) (t • A + (1 - t) • B) hsum]
+
 end LTFP.MathlibExt.MatrixAnalysis
