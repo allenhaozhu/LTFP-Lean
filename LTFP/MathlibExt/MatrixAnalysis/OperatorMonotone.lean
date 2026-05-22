@@ -299,6 +299,36 @@ theorem OperatorAntitone.const_add {f : ℝ → ℝ}
     operatorAntitone_const c
   exact @OperatorAntitone.add.{uomk, uomn} (fun _ : ℝ => c) f hconst hf
 
+/-- Adding a constant on the right preserves operator monotonicity:
+`OperatorMonotone (fun t => f t + c)`. Mirror of `const_add` via
+commutativity of addition on `ℝ`. -/
+theorem OperatorMonotone.add_const {f : ℝ → ℝ}
+    (hf : OperatorMonotone.{uomk, uomn} f) (c : ℝ) :
+    OperatorMonotone.{uomk, uomn} (fun t => f t + c) := by
+  have h : OperatorMonotone.{uomk, uomn} (fun t => c + f t) :=
+    @OperatorMonotone.const_add.{uomk, uomn} f hf c
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  have hraw := h A B hA hB hAB
+  have hfun : (fun t : ℝ => c + f t) = (fun t : ℝ => f t + c) := by
+    funext s; exact add_comm c (f s)
+  rw [← hfun]
+  exact hraw
+
+/-- Adding a constant on the right preserves operator antitonicity:
+`OperatorAntitone (fun t => f t + c)`. Mirror of `const_add` via
+commutativity of addition on `ℝ`. -/
+theorem OperatorAntitone.add_const {f : ℝ → ℝ}
+    (hf : OperatorAntitone.{uomk, uomn} f) (c : ℝ) :
+    OperatorAntitone.{uomk, uomn} (fun t => f t + c) := by
+  have h : OperatorAntitone.{uomk, uomn} (fun t => c + f t) :=
+    @OperatorAntitone.const_add.{uomk, uomn} f hf c
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  have hraw := h A B hA hB hAB
+  have hfun : (fun t : ℝ => c + f t) = (fun t : ℝ => f t + c) := by
+    funext s; exact add_comm c (f s)
+  rw [← hfun]
+  exact hraw
+
 /-- A real-valued function `f : ℝ → ℝ` is operator concave on finite Hermitian
 matrices if for all `t ∈ [0, 1]` and Hermitian `A B`, the CFC values satisfy
 `t · f(A) + (1 - t) · f(B) ≤ f(t · A + (1 - t) · B)`.
