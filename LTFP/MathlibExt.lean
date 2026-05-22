@@ -18,6 +18,7 @@ import LTFP.MathlibExt.Probability.Adversary
 import LTFP.MathlibExt.Probability.TotalVariation
 import LTFP.MathlibExt.Probability.Distance.Bhattacharyya
 import LTFP.MathlibExt.Probability.Distance.Pinsker
+import LTFP.MathlibExt.Probability.Distributions.GaussianObservationKernelMean
 import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussian
 import LTFP.MathlibExt.Probability.DonskerVaradhan
 import LTFP.MathlibExt.Probability.FunctionClassConcentration
