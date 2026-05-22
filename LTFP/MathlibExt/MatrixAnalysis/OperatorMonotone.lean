@@ -555,4 +555,21 @@ theorem OperatorConvex.add_const {f : ℝ → ℝ}
   rw [← hfun]
   exact hraw
 
+/-- The function `t ↦ -t` is operator antitone.
+
+This is the simplest concrete operator-antitone instance. It is dual,
+via `operatorAntitone_iff_neg_operatorMonotone`, to the fact that the
+identity `t ↦ t` is operator monotone (`operatorMonotone_id`). -/
+theorem operatorAntitone_neg_id :
+    OperatorAntitone.{uomk, uomn} (fun t : ℝ => -t) := by
+  refine (operatorAntitone_iff_neg_operatorMonotone.{uomk, uomn}
+      (fun t : ℝ => -t)).2 ?_
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  have hraw := operatorMonotone_id.{uomk, uomn} A B hA hB hAB
+  have hfun : (-(fun t : ℝ => -t)) = (id : ℝ → ℝ) := by
+    funext t
+    simp
+  rw [hfun]
+  exact hraw
+
 end LTFP.MathlibExt.MatrixAnalysis
