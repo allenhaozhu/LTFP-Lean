@@ -23,6 +23,7 @@ import LTFP.MathlibExt.Probability.TotalVariation
 import LTFP.MathlibExt.Probability.Distance.Bhattacharyya
 import LTFP.MathlibExt.Probability.Distance.Pinsker
 import LTFP.MathlibExt.Probability.Distributions.GaussianObservationKernelMean
+import LTFP.MathlibExt.Probability.Distributions.JointPriorObservationCrossCovariance
 import LTFP.MathlibExt.Probability.Distributions.JointPriorObservationSndCovariance
 import LTFP.MathlibExt.Probability.Distributions.JointPriorObservationSndMean
 import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussian
