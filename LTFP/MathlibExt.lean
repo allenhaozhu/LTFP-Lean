@@ -23,6 +23,7 @@ import LTFP.MathlibExt.Probability.FunctionClassConcentration
 import LTFP.MathlibExt.Probability.KullbackLeibler
 import LTFP.MathlibExt.Probability.Moments.SubExponential
 import LTFP.MathlibExt.Probability.LeCam
+import LTFP.MathlibExt.Probability.LinearizedRiskLipschitz
 import LTFP.MathlibExt.MatrixAnalysis.Lieb
 import LTFP.MathlibExt.MatrixAnalysis.OperatorConcaveScalarBridge
 import LTFP.MathlibExt.Topology.UAT
