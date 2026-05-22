@@ -89,4 +89,29 @@ theorem gradientFlow_function_movement_of_bounded_gradient
     _ = ‖gradL (α s)‖₊ := hneg
     _ ≤ K := hbound (α s)
 
+/-- **Norm-of-iterate bound along a gradient flow with bounded gradient.**
+For a gradient flow `α` of `L` with `‖gradL‖ ≤ K` everywhere, the norm
+of the iterate cannot change by more than `K · |t - t₀|`:
+
+`|‖α t‖ - ‖α t₀‖| ≤ K · |t - t₀|`.
+
+This is a direct corollary of
+`gradientFlow_function_movement_of_bounded_gradient` applied to the
+1-Lipschitz function `‖·‖` (cf. `lipschitzWith_one_norm`), and is the
+bridge step used to bound norm-drift of the iterate in B8 N5
+(lazy-training / wide-network analysis). -/
+theorem gradientFlow_norm_movement_of_bounded_gradient
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (α : ℝ → E) (L : E → ℝ) (gradL : E → E)
+    (K : NNReal)
+    (hα : Differentiable ℝ α)
+    (hODE : ∀ t : ℝ, deriv α t = -(gradL (α t)))
+    (hbound : ∀ x : E, ‖gradL x‖₊ ≤ K)
+    (t t₀ : ℝ) :
+    |‖α t‖ - ‖α t₀‖| ≤ (K : ℝ) * |t - t₀| := by
+  have hLip : LipschitzWith 1 (fun x : E => ‖x‖) := lipschitzWith_one_norm
+  have h := gradientFlow_function_movement_of_bounded_gradient
+    α L gradL K hα hODE hbound (fun x : E => ‖x‖) 1 hLip t t₀
+  simpa using h
+
 end LTFP.MathlibExt.Calculus
