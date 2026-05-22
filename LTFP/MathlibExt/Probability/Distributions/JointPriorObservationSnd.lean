@@ -37,3 +37,16 @@ theorem jointPriorObservation_fst
       = multivariateGaussian (0 : EuclideanSpace ℝ (Fin d)) priorCov hPrior := by
   unfold jointPriorObservation
   rw [Measure.fst_compProd]
+
+/-- The first marginal of the joint prior-observation measure is Gaussian.
+
+The first marginal equals the multivariate Gaussian prior at mean `0`
+(by `jointPriorObservation_fst`), whose `IsGaussian` instance is
+provided by `instIsGaussianMultivariateGaussian`. -/
+instance jointPriorObservation_fst_isGaussian
+    {d n : ℕ}
+    (priorCov : Matrix (Fin d) (Fin d) ℝ) (hPrior : priorCov.PosSemidef)
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) :
+    IsGaussian (jointPriorObservation priorCov hPrior X ν).fst := by
+  rw [jointPriorObservation_fst]
+  infer_instance
