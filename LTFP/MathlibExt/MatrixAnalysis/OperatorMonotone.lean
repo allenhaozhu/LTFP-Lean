@@ -361,4 +361,19 @@ theorem OperatorConcave.add {f g : ℝ → ℝ}
   convert add_le_add (hf A B hA hB t ht) (hg A B hA hB t ht) using 1
   abel
 
+/-- Nonnegative scalar multiple of an operator-concave function is operator concave. -/
+theorem OperatorConcave.const_smul {f : ℝ → ℝ} {c : ℝ} (hc : 0 ≤ c)
+    (hf : OperatorConcave.{uomk, uomn} f) : OperatorConcave.{uomk, uomn} (c • f) := by
+  intro 𝕜 _ n _ _ A B hA hB t ht
+  change t • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => c • f x) A +
+      (1 - t) • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => c • f x) B ≤
+      cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => c • f x)
+        (t • A + (1 - t) • B)
+  rw [cfc_smul (p := IsSelfAdjoint) c f A (continuousOn_spectrum_matrix A f),
+      cfc_smul (p := IsSelfAdjoint) c f B (continuousOn_spectrum_matrix B f),
+      cfc_smul (p := IsSelfAdjoint) c f (t • A + (1 - t) • B)
+        (continuousOn_spectrum_matrix _ f)]
+  rw [smul_comm t c, smul_comm (1 - t) c, ← smul_add]
+  exact smul_le_smul_of_nonneg_left (hf A B hA hB t ht) hc
+
 end LTFP.MathlibExt.MatrixAnalysis
