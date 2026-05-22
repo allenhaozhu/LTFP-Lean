@@ -13,6 +13,7 @@ import LTFP.MathlibExt.Analysis.Subgradient.SumRule
 import LTFP.MathlibExt.Analysis.InnerProductSpace.RKHS
 import LTFP.MathlibExt.Calculus.FunctionMovementAlongCurve
 import LTFP.MathlibExt.Calculus.GradientFlow
+import LTFP.MathlibExt.Calculus.GradientFlowMovementBound
 import LTFP.MathlibExt.Calculus.GradientFlowRandomInit
 import LTFP.MathlibExt.Calculus.ParameterMovementBoundedDeriv
 import LTFP.MathlibExt.Probability.Adversary
