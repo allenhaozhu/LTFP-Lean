@@ -1,0 +1,43 @@
+/-
+Copyright (c) 2026 Allen Hao Zhu. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Allen Hao Zhu
+-/
+import Mathlib.Analysis.CStarAlgebra.CStarMatrix
+import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.Rpow.Order
+
+/-!
+# Operator-monotone powers on nonnegative CStarMatrix type copies
+
+This file records a finite-matrix-facing wrapper around Mathlib's C⋆-algebra
+operator-monotonicity theorem for powers `t ↦ t ^ p`, `p ∈ [0, 1]`.
+
+The existing universal `OperatorMonotone` predicate for `Matrix n n 𝕜`
+quantifies over all Hermitian matrices, with no positivity/domain hypothesis.
+That predicate is intentionally not used for `Real.rpow`, since `Real.rpow`
+is not monotone on all of `ℝ`.
+-/
+
+namespace LTFP.MathlibExt.MatrixAnalysis
+
+universe uA un
+
+/-- A real function is operator monotone on the nonnegative cone of finite
+`CStarMatrix` type copies if real CFC by that function preserves spectral order
+there. -/
+def CStarOperatorMonotoneOnNonneg (f : ℝ → ℝ) : Prop :=
+  ∀ {A : Type uA} [CStarAlgebra A] [PartialOrder A] [StarOrderedRing A]
+    {n : Type un} [Fintype n] [DecidableEq n],
+    MonotoneOn (fun M : CStarMatrix n n A => cfc f M) {M | 0 ≤ M}
+
+/-- `t ↦ t ^ p` is operator monotone on the nonnegative cone of finite
+`CStarMatrix` type copies for `p ∈ [0, 1]`. -/
+theorem cStarOperatorMonotoneOnNonneg_rpow {p : ℝ} (hp : p ∈ Set.Icc 0 1) :
+    CStarOperatorMonotoneOnNonneg.{uA, un} (fun t : ℝ => t ^ p) := by
+  intro A _ _ _ n _ _ M hM N hN hMN
+  change cfc (fun t : ℝ => t ^ p) M ≤ cfc (fun t : ℝ => t ^ p) N
+  rw [← CFC.rpow_eq_cfc_real (a := M) (y := p) hM,
+    ← CFC.rpow_eq_cfc_real (a := N) (y := p) hN]
+  exact CFC.monotone_rpow (A := CStarMatrix n n A) hp hMN
+
+end LTFP.MathlibExt.MatrixAnalysis

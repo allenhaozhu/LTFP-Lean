@@ -41,6 +41,7 @@ import LTFP.MathlibExt.Probability.LinearClassSampleCoverCard
 import LTFP.MathlibExt.Probability.LinearizedRiskLipschitz
 import LTFP.MathlibExt.Probability.LinearizedRiskSampleCover
 import LTFP.MathlibExt.MatrixAnalysis.CStarMatrixInvAntiOnPos
+import LTFP.MathlibExt.MatrixAnalysis.CStarOperatorMonotone
 import LTFP.MathlibExt.MatrixAnalysis.InvAntiOnPos
 import LTFP.MathlibExt.MatrixAnalysis.Lieb
 import LTFP.MathlibExt.MatrixAnalysis.OperatorAntitoneScalarBridge
