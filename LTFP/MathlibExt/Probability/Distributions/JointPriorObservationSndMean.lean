@@ -267,4 +267,22 @@ theorem jointPriorObservation_fst_integral_vector
   rw [jointPriorObservation_fst]
   exact integral_id_multivariateGaussian_zero priorCov hPrior
 
+/-- **Coordinate form of the joint prior-observation first-marginal mean.**
+The integral of the `i`-th coordinate of `θ` against the first marginal
+of the joint Gaussian prior-observation measure is zero:
+`∫ θ, θ_i ∂joint.fst = 0`.
+
+Follows by rewriting `joint.fst` as the zero-mean multivariate Gaussian
+prior (via `jointPriorObservation_fst`) and applying
+`integral_eval_multivariateGaussian_zero`. -/
+theorem jointPriorObservation_fst_integral_eval_coord
+    {d n : ℕ}
+    (priorCov : Matrix (Fin d) (Fin d) ℝ) (hPrior : priorCov.PosSemidef)
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) (i : Fin d) :
+    ∫ θ, (WithLp.ofLp (p := 2) (V := Fin d → ℝ) θ) i
+      ∂(jointPriorObservation priorCov hPrior X ν).fst
+      = 0 := by
+  rw [jointPriorObservation_fst]
+  exact integral_eval_multivariateGaussian_zero (d := d) priorCov hPrior i
+
 end ProbabilityTheory
