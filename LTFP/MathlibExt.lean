@@ -27,6 +27,7 @@ import LTFP.MathlibExt.Probability.KullbackLeibler
 import LTFP.MathlibExt.Probability.Moments.SubExponential
 import LTFP.MathlibExt.Probability.LeCam
 import LTFP.MathlibExt.Probability.LinearClassSampleCover
+import LTFP.MathlibExt.Probability.LinearClassSampleCoverCard
 import LTFP.MathlibExt.Probability.LinearizedRiskLipschitz
 import LTFP.MathlibExt.Probability.LinearizedRiskSampleCover
 import LTFP.MathlibExt.MatrixAnalysis.Lieb
