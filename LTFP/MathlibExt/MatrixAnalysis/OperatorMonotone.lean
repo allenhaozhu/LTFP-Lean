@@ -290,4 +290,29 @@ theorem OperatorMonotone.const_add {f : ℝ → ℝ}
     exact operatorMonotone_const c
   exact @OperatorMonotone.add.{uomk, uomn} (fun _ : ℝ => c) f hconst hf
 
+/-- Adding a constant to an operator-antitone function preserves operator antitonicity. -/
+theorem OperatorAntitone.const_add {f : ℝ → ℝ}
+    (hf : OperatorAntitone.{uomk, uomn} f) (c : ℝ) :
+    OperatorAntitone.{uomk, uomn} (fun t => c + f t) := by
+  change OperatorAntitone.{uomk, uomn} ((fun _ : ℝ => c) + f)
+  have hconst : OperatorAntitone.{uomk, uomn} (fun _ : ℝ => c) :=
+    operatorAntitone_const c
+  exact @OperatorAntitone.add.{uomk, uomn} (fun _ : ℝ => c) f hconst hf
+
+/-- A real-valued function `f : ℝ → ℝ` is operator concave on finite Hermitian
+matrices if for all `t ∈ [0, 1]` and Hermitian `A B`, the CFC values satisfy
+`t · f(A) + (1 - t) · f(B) ≤ f(t · A + (1 - t) · B)`.
+
+This is the natural Lieb-tower-L2 entry point: operator-concave functions are
+the right framework for joint concavity statements (Lieb 1973). The full
+operator-concave equivalence with operator-monotone via Löwner's integral
+representation is multi-month Mathlib work and is NOT proved here. -/
+def OperatorConcave (f : ℝ → ℝ) : Prop :=
+  ∀ {𝕜 : Type uomk} [RCLike 𝕜] {n : Type uomn} [Fintype n] [DecidableEq n]
+    (A B : Matrix n n 𝕜) (_hA : A.IsHermitian) (_hB : B.IsHermitian)
+    (t : ℝ) (_ht : t ∈ Set.Icc (0:ℝ) 1),
+    t • cfc (R := ℝ) (p := IsSelfAdjoint) f A +
+      (1 - t) • cfc (R := ℝ) (p := IsSelfAdjoint) f B ≤
+      cfc (R := ℝ) (p := IsSelfAdjoint) f (t • A + (1 - t) • B)
+
 end LTFP.MathlibExt.MatrixAnalysis
