@@ -315,4 +315,19 @@ def OperatorConcave (f : ℝ → ℝ) : Prop :=
       (1 - t) • cfc (R := ℝ) (p := IsSelfAdjoint) f B ≤
       cfc (R := ℝ) (p := IsSelfAdjoint) f (t • A + (1 - t) • B)
 
+/-- Constants are operator concave (with equality). -/
+theorem operatorConcave_const (c : ℝ) : OperatorConcave.{uomk, uomn} (fun _ => c) := by
+  intro 𝕜 _ n _ _ A B hA hB t _ht
+  have hAs : IsSelfAdjoint A := hA
+  have hBs : IsSelfAdjoint B := hB
+  have hsum : IsSelfAdjoint (t • A + (1 - t) • B) :=
+    ((IsSelfAdjoint.all t).smul hAs).add
+      ((IsSelfAdjoint.all (1 - t)).smul hBs)
+  rw [cfc_const (R := ℝ) (p := IsSelfAdjoint) c A hAs,
+    cfc_const (R := ℝ) (p := IsSelfAdjoint) c B hBs,
+    cfc_const (R := ℝ) (p := IsSelfAdjoint) c (t • A + (1 - t) • B) hsum,
+    ← add_smul]
+  have ht_sum : t + (1 - t) = 1 := by ring
+  rw [ht_sum, one_smul]
+
 end LTFP.MathlibExt.MatrixAnalysis
