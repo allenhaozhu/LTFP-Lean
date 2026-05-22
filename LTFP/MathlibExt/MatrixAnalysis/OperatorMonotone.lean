@@ -234,4 +234,51 @@ theorem OperatorAntitone.comp_monotone {f g : ℝ → ℝ}
   exact hf (cfc g A) (cfc g B) (cfc_predicate g A) (cfc_predicate g B)
     (hg A B hA hB hAB)
 
+private lemma algebraMap_matrix_le_of_real_le {x y : ℝ} (hxy : x ≤ y) :
+    (algebraMap ℝ (Matrix Unit Unit ℝ) x) ≤ algebraMap ℝ (Matrix Unit Unit ℝ) y := by
+  rw [Matrix.le_iff]
+  have hnonneg : 0 ≤ y - x := sub_nonneg.mpr hxy
+  simpa [sub_eq_add_neg, Matrix.algebraMap_eq_diagonal, Pi.algebraMap_def] using
+    (Matrix.PosSemidef.diagonal (n := Unit) (d := fun _ : Unit => y - x)
+      (fun _ => hnonneg))
+
+private lemma real_le_of_algebraMap_matrix_le {x y : ℝ}
+    (hxy : (algebraMap ℝ (Matrix Unit Unit ℝ) x) ≤ algebraMap ℝ (Matrix Unit Unit ℝ) y) :
+    x ≤ y := by
+  rw [Matrix.le_iff] at hxy
+  have hdiag : 0 ≤ y - x := by
+    simpa [sub_eq_add_neg, Matrix.algebraMap_eq_diagonal, Pi.algebraMap_def] using
+      (Matrix.posSemidef_diagonal_iff (n := Unit) (d := fun _ : Unit => y - x)).1 hxy ()
+  exact sub_nonneg.mp hdiag
+
+/-- Operator-monotone functions are monotone on scalars. -/
+theorem OperatorMonotone.monotone {f : ℝ → ℝ}
+    (hf : OperatorMonotone.{0, 0} f) : Monotone f := by
+  intro x y hxy
+  have hraw := hf
+    (algebraMap ℝ (Matrix Unit Unit ℝ) x)
+    (algebraMap ℝ (Matrix Unit Unit ℝ) y)
+    (cfc_predicate_algebraMap (R := ℝ) (A := Matrix Unit Unit ℝ) (p := IsSelfAdjoint) x)
+    (cfc_predicate_algebraMap (R := ℝ) (A := Matrix Unit Unit ℝ) (p := IsSelfAdjoint) y)
+    (algebraMap_matrix_le_of_real_le hxy)
+  have hmat : (algebraMap ℝ (Matrix Unit Unit ℝ) (f x)) ≤
+      algebraMap ℝ (Matrix Unit Unit ℝ) (f y) := by
+    simpa only [cfc_algebraMap] using hraw
+  exact real_le_of_algebraMap_matrix_le hmat
+
+/-- Operator-antitone functions are antitone on scalars. -/
+theorem OperatorAntitone.antitone {f : ℝ → ℝ}
+    (hf : OperatorAntitone.{0, 0} f) : Antitone f := by
+  intro x y hxy
+  have hraw := hf
+    (algebraMap ℝ (Matrix Unit Unit ℝ) x)
+    (algebraMap ℝ (Matrix Unit Unit ℝ) y)
+    (cfc_predicate_algebraMap (R := ℝ) (A := Matrix Unit Unit ℝ) (p := IsSelfAdjoint) x)
+    (cfc_predicate_algebraMap (R := ℝ) (A := Matrix Unit Unit ℝ) (p := IsSelfAdjoint) y)
+    (algebraMap_matrix_le_of_real_le hxy)
+  have hmat : (algebraMap ℝ (Matrix Unit Unit ℝ) (f y)) ≤
+      algebraMap ℝ (Matrix Unit Unit ℝ) (f x) := by
+    simpa only [cfc_algebraMap] using hraw
+  exact real_le_of_algebraMap_matrix_le hmat
+
 end LTFP.MathlibExt.MatrixAnalysis
