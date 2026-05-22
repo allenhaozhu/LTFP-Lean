@@ -114,4 +114,31 @@ theorem gradientFlow_norm_movement_of_bounded_gradient
     α L gradL K hα hODE hbound (fun x : E => ‖x‖) 1 hLip t t₀
   simpa using h
 
+/-- **Gradient-flow constancy at identically-zero gradient.**
+If a gradient flow `α` has gradient field `gradL` that vanishes
+everywhere, then the trajectory is constant: `α t = α t₀` for all
+`t, t₀ : ℝ`.
+
+This is a trivial corollary of `gradientFlow_movement_of_bounded_gradient`
+with `K = 0`: the movement bound `‖α t - α t₀‖ ≤ 0 · |t - t₀| = 0`
+forces `α t = α t₀`. The hypothesis `gradL x = 0` for every `x : E`
+captures the qualitative statement that the loss landscape has no
+gradient signal anywhere, so the flow does not move. -/
+theorem gradientFlow_const_of_zero_gradient
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (α : ℝ → E) (gradL : E → E)
+    (hα : Differentiable ℝ α)
+    (hODE : ∀ t : ℝ, deriv α t = -(gradL (α t)))
+    (hzero : ∀ x : E, gradL x = 0)
+    (t t₀ : ℝ) :
+    α t = α t₀ := by
+  have hbound : ∀ x : E, ‖gradL x‖₊ ≤ (0 : NNReal) := by
+    intro x
+    simp [hzero x]
+  have h := gradientFlow_movement_of_bounded_gradient
+    α gradL 0 hα hODE hbound t t₀
+  -- `h : ‖α t - α t₀‖ ≤ (0 : ℝ) * |t - t₀|`
+  rw [← sub_eq_zero, ← norm_eq_zero]
+  exact le_antisymm (by simpa using h) (norm_nonneg _)
+
 end LTFP.MathlibExt.Calculus
