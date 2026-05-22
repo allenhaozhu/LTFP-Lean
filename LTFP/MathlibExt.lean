@@ -30,6 +30,7 @@ import LTFP.MathlibExt.Probability.FunctionClassConcentration
 import LTFP.MathlibExt.Probability.KullbackLeibler
 import LTFP.MathlibExt.Probability.Moments.SubExponential
 import LTFP.MathlibExt.Probability.LeCam
+import LTFP.MathlibExt.Probability.LinearClassClosedBallCover
 import LTFP.MathlibExt.Probability.LinearClassCoveringFinite
 import LTFP.MathlibExt.Probability.LinearClassSampleCover
 import LTFP.MathlibExt.Probability.LinearClassSampleCoverCard
