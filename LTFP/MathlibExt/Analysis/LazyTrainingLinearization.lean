@@ -54,4 +54,27 @@ theorem lazy_training_linearization_from_taylor
   exact le_trans (htaylor x)
     (mul_le_mul_of_nonneg_left hnorm_sq_le hcoef_nonneg)
 
+/-- Lazy-regime event subset: if `ω` is in the event "movement bounded ∧
+Taylor remainder bounded", then `ω` is in the event "linearization error
+bounded by the quadratic lazy scale". Composes the deterministic Taylor
+sub-step pointwise. -/
+theorem lazy_training_linearization_event_subset
+    {Ω : Type*} {p : ℕ} {X : Type*}
+    (f : EuclideanSpace ℝ (Fin p) → X → ℝ)
+    (θ₀ θt : Ω → EuclideanSpace ℝ (Fin p))
+    (grad₀ : Ω → X → EuclideanSpace ℝ (Fin p))
+    (m : ℕ) (A L : ℝ)
+    (hm : 0 < m) (hA : 0 ≤ A) (hL : 0 ≤ L) :
+    {ω : Ω | ‖θt ω - θ₀ ω‖ ≤ A / Real.sqrt (m : ℝ) ∧
+      ∀ x : X, |f (θt ω) x -
+        (f (θ₀ ω) x + inner ℝ (grad₀ ω x) (θt ω - θ₀ ω))|
+          ≤ (L / 2) * ‖θt ω - θ₀ ω‖ ^ 2}
+      ⊆
+    {ω : Ω | ∀ x : X, |f (θt ω) x -
+      (f (θ₀ ω) x + inner ℝ (grad₀ ω x) (θt ω - θ₀ ω))|
+        ≤ (L / 2) * (A / Real.sqrt (m : ℝ)) ^ 2} := by
+  intro ω hω
+  exact lazy_training_linearization_from_taylor f (θ₀ ω) (θt ω) (grad₀ ω) m A L
+    hm hA hL hω.1 hω.2
+
 end LTFP.MathlibExt.Analysis

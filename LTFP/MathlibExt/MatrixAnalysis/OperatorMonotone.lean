@@ -281,4 +281,13 @@ theorem OperatorAntitone.antitone {f : ℝ → ℝ}
     simpa only [cfc_algebraMap] using hraw
   exact real_le_of_algebraMap_matrix_le hmat
 
+/-- Adding a constant to an operator-monotone function preserves operator monotonicity. -/
+theorem OperatorMonotone.const_add {f : ℝ → ℝ}
+    (hf : OperatorMonotone.{uomk, uomn} f) (c : ℝ) :
+    OperatorMonotone.{uomk, uomn} (fun t => c + f t) := by
+  change OperatorMonotone.{uomk, uomn} ((fun _ : ℝ => c) + f)
+  have hconst : OperatorMonotone.{uomk, uomn} (fun _ : ℝ => c) := by
+    exact operatorMonotone_const c
+  exact @OperatorMonotone.add.{uomk, uomn} (fun _ : ℝ => c) f hconst hf
+
 end LTFP.MathlibExt.MatrixAnalysis
