@@ -3,6 +3,7 @@ Copyright (c) 2026 Allen Hao Zhu. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Allen Hao Zhu
 -/
+import Mathlib.Data.Real.Basic
 import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 
 /-!
