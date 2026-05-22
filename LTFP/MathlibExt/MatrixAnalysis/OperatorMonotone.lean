@@ -192,4 +192,46 @@ theorem OperatorMonotone.comp {f g : ℝ → ℝ}
   exact hf (cfc g A) (cfc g B) (cfc_predicate g A) (cfc_predicate g B)
     (hg A B hA hB hAB)
 
+/-- Composition of two operator-antitone functions is operator monotone. -/
+theorem OperatorAntitone.comp {f g : ℝ → ℝ}
+    (hf : OperatorAntitone.{uomk, uomn} f) (hg : OperatorAntitone.{uomk, uomn} g) :
+    OperatorMonotone.{uomk, uomn} (f ∘ g) := by
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  rw [cfc_comp (R := ℝ) (p := IsSelfAdjoint) f g A (show IsSelfAdjoint A from hA)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop),
+    cfc_comp (R := ℝ) (p := IsSelfAdjoint) f g B (show IsSelfAdjoint B from hB)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop)]
+  exact hf (cfc g B) (cfc g A) (cfc_predicate g B) (cfc_predicate g A)
+    (hg A B hA hB hAB)
+
+/-- Composition of an operator-monotone function after an operator-antitone function is operator antitone. -/
+theorem OperatorMonotone.comp_antitone {f g : ℝ → ℝ}
+    (hf : OperatorMonotone.{uomk, uomn} f) (hg : OperatorAntitone.{uomk, uomn} g) :
+    OperatorAntitone.{uomk, uomn} (f ∘ g) := by
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  rw [cfc_comp (R := ℝ) (p := IsSelfAdjoint) f g B (show IsSelfAdjoint B from hB)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop),
+    cfc_comp (R := ℝ) (p := IsSelfAdjoint) f g A (show IsSelfAdjoint A from hA)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop)]
+  exact hf (cfc g B) (cfc g A) (cfc_predicate g B) (cfc_predicate g A)
+    (hg A B hA hB hAB)
+
+/-- Composition of an operator-antitone function after an operator-monotone function is operator antitone. -/
+theorem OperatorAntitone.comp_monotone {f g : ℝ → ℝ}
+    (hf : OperatorAntitone.{uomk, uomn} f) (hg : OperatorMonotone.{uomk, uomn} g) :
+    OperatorAntitone.{uomk, uomn} (f ∘ g) := by
+  intro 𝕜 _ n _ _ A B hA hB hAB
+  rw [cfc_comp (R := ℝ) (p := IsSelfAdjoint) f g B (show IsSelfAdjoint B from hB)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop),
+    cfc_comp (R := ℝ) (p := IsSelfAdjoint) f g A (show IsSelfAdjoint A from hA)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop)
+      (by rw [continuousOn_iff_continuous_restrict]; fun_prop)]
+  exact hf (cfc g A) (cfc g B) (cfc_predicate g A) (cfc_predicate g B)
+    (hg A B hA hB hAB)
+
 end LTFP.MathlibExt.MatrixAnalysis
