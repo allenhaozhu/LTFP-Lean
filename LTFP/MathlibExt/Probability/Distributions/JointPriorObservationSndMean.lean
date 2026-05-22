@@ -181,4 +181,57 @@ theorem jointPriorObservation_snd_integral_eval_coord
   -- `Ltot 0 = 0`.
   exact map_zero Ltot
 
+/-- **Vector form of the joint prior-observation second-marginal mean.**
+The integral of `y` against the second marginal of the joint Gaussian
+prior-observation measure is zero: `∫ y, y ∂joint.snd = 0`.
+
+Aggregates the coordinate-wise identity
+`jointPriorObservation_snd_integral_eval_coord` over all `i : Fin n`,
+using `PiLp.ext` and `MeasureTheory.eval_integral_piLp` to reduce
+vector equality to per-coordinate equality. Integrability of the
+identity function against `joint.snd` is supplied by Mathlib's
+`IsGaussian.integrable_fun_id`, since `joint.snd` is the pushforward
+of the Gaussian joint measure under the continuous linear `Prod.snd`,
+hence Gaussian (`isGaussian_map` instance). -/
+theorem jointPriorObservation_snd_integral_vector
+    {d n : ℕ}
+    (priorCov : Matrix (Fin d) (Fin d) ℝ) (hPrior : priorCov.PosSemidef)
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) :
+    ∫ y, y ∂(jointPriorObservation priorCov hPrior X ν).snd
+      = (0 : EuclideanSpace ℝ (Fin n)) := by
+  classical
+  set μ : Measure (EuclideanSpace ℝ (Fin n)) :=
+    (jointPriorObservation priorCov hPrior X ν).snd with hμ
+  -- `μ` is Gaussian: it is the pushforward of the Gaussian joint measure
+  -- under the continuous linear `Prod.snd`, which preserves Gaussianity
+  -- via `isGaussian_map`.
+  have hJointG : IsGaussian (jointPriorObservation priorCov hPrior X ν) :=
+    inferInstance
+  have hμG : IsGaussian μ := by
+    show IsGaussian ((jointPriorObservation priorCov hPrior X ν).map Prod.snd)
+    exact isGaussian_map
+      (ContinuousLinearMap.snd ℝ (EuclideanSpace ℝ (Fin d)) (EuclideanSpace ℝ (Fin n)))
+  -- Identity is integrable against `μ`, hence so are all coordinates.
+  have hIntId : Integrable (fun y : EuclideanSpace ℝ (Fin n) => y) μ :=
+    ProbabilityTheory.IsGaussian.integrable_fun_id (μ := μ)
+  have hIntCoord : ∀ i, Integrable
+      (fun y : EuclideanSpace ℝ (Fin n) =>
+        (y : EuclideanSpace ℝ (Fin n)) i) μ := by
+    intro i
+    exact (MeasureTheory.integrable_piLp_iff (q := 2)
+        (E := fun _ : Fin n => ℝ) (f := fun y => y)).mp hIntId i
+  -- Reduce vector equality to coordinate-wise equality via `PiLp.ext`.
+  refine PiLp.ext (fun i => ?_)
+  rw [MeasureTheory.eval_integral_piLp (q := 2) (E := fun _ : Fin n => ℝ)
+      (f := fun y : EuclideanSpace ℝ (Fin n) => y) hIntCoord i]
+  -- Goal: `∫ y, y i ∂μ = (0 : EuclideanSpace ℝ (Fin n)) i`.
+  -- The RHS is `0`.
+  have h0 : (0 : EuclideanSpace ℝ (Fin n)) i = (0 : ℝ) := by simp
+  rw [h0]
+  -- And `y i = (WithLp.ofLp y) i` definitionally, so the scalar lemma applies.
+  show ∫ y, (WithLp.ofLp (p := 2) (V := Fin n → ℝ) y) i
+          ∂(jointPriorObservation priorCov hPrior X ν).snd
+        = 0
+  exact jointPriorObservation_snd_integral_eval_coord priorCov hPrior X ν i
+
 end ProbabilityTheory
