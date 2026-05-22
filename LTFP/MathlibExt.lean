@@ -33,4 +33,5 @@ import LTFP.MathlibExt.MatrixAnalysis.Lieb
 import LTFP.MathlibExt.MatrixAnalysis.OperatorAntitoneScalarBridge
 import LTFP.MathlibExt.MatrixAnalysis.OperatorConcaveScalarBridge
 import LTFP.MathlibExt.MatrixAnalysis.OperatorConvexScalarBridge
+import LTFP.MathlibExt.MatrixAnalysis.OperatorMonotoneScalarBridge
 import LTFP.MathlibExt.Topology.UAT
