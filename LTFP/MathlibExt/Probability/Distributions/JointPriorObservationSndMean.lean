@@ -251,4 +251,20 @@ theorem jointPriorObservation_snd_integral_vector
         = 0
   exact jointPriorObservation_snd_integral_eval_coord priorCov hPrior X ν i
 
+/-- **Vector form of the joint prior-observation first-marginal mean.**
+The integral of `θ` against the first marginal of the joint Gaussian
+prior-observation measure is zero: `∫ θ, θ ∂joint.fst = 0`.
+
+Follows by rewriting `joint.fst` as the zero-mean multivariate Gaussian
+prior (via `jointPriorObservation_fst`) and applying
+`integral_id_multivariateGaussian_zero`. -/
+theorem jointPriorObservation_fst_integral_vector
+    {d n : ℕ}
+    (priorCov : Matrix (Fin d) (Fin d) ℝ) (hPrior : priorCov.PosSemidef)
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) :
+    ∫ θ, θ ∂(jointPriorObservation priorCov hPrior X ν).fst
+      = (0 : EuclideanSpace ℝ (Fin d)) := by
+  rw [jointPriorObservation_fst]
+  exact integral_id_multivariateGaussian_zero priorCov hPrior
+
 end ProbabilityTheory
