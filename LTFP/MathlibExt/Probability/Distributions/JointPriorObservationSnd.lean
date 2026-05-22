@@ -50,3 +50,16 @@ instance jointPriorObservation_fst_isGaussian
     IsGaussian (jointPriorObservation priorCov hPrior X ν).fst := by
   rw [jointPriorObservation_fst]
   infer_instance
+
+/-- Sanity instance: the joint prior–observation measure is a probability
+measure. The Gaussian prior is a probability measure and the Gaussian
+observation kernel is a Markov kernel (by
+`instIsMarkovKernelGaussianObservationKernel`), so `Measure.compProd`
+produces a probability measure via Mathlib's typeclass infrastructure. -/
+instance jointPriorObservation_isProbabilityMeasure
+    {d n : ℕ}
+    (priorCov : Matrix (Fin d) (Fin d) ℝ) (hPrior : priorCov.PosSemidef)
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) :
+    IsProbabilityMeasure (jointPriorObservation priorCov hPrior X ν) := by
+  unfold jointPriorObservation
+  infer_instance
