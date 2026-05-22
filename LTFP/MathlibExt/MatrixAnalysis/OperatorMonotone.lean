@@ -418,4 +418,38 @@ theorem operatorConvex_iff_neg_operatorConcave (f : ℝ → ℝ) :
         smul_neg, smul_neg, ← neg_add, neg_le_neg_iff] at h
     exact h
 
+/-- Constants are operator convex (with equality). -/
+theorem operatorConvex_const (c : ℝ) : OperatorConvex.{uomk, uomn} (fun _ => c) := by
+  intro 𝕜 _ n _ _ A B hA hB t _ht
+  have hAs : IsSelfAdjoint A := hA
+  have hBs : IsSelfAdjoint B := hB
+  have hsum : IsSelfAdjoint (t • A + (1 - t) • B) :=
+    ((IsSelfAdjoint.all t).smul hAs).add
+      ((IsSelfAdjoint.all (1 - t)).smul hBs)
+  rw [cfc_const (R := ℝ) (p := IsSelfAdjoint) c A hAs,
+    cfc_const (R := ℝ) (p := IsSelfAdjoint) c B hBs,
+    cfc_const (R := ℝ) (p := IsSelfAdjoint) c (t • A + (1 - t) • B) hsum,
+    ← add_smul]
+  have ht_sum : t + (1 - t) = 1 := by ring
+  rw [ht_sum, one_smul]
+
+/-- Sum of two operator-convex functions is operator convex. -/
+theorem OperatorConvex.add {f g : ℝ → ℝ}
+    (hf : OperatorConvex.{uomk, uomn} f) (hg : OperatorConvex.{uomk, uomn} g) :
+    OperatorConvex.{uomk, uomn} (f + g) := by
+  intro 𝕜 _ n _ _ A B hA hB t ht
+  change cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => f x + g x)
+        (t • A + (1 - t) • B) ≤
+      t • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => f x + g x) A +
+        (1 - t) • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => f x + g x) B
+  rw [cfc_add (p := IsSelfAdjoint) A f g
+      (continuousOn_spectrum_matrix A f) (continuousOn_spectrum_matrix A g),
+    cfc_add (p := IsSelfAdjoint) B f g
+      (continuousOn_spectrum_matrix B f) (continuousOn_spectrum_matrix B g),
+    cfc_add (p := IsSelfAdjoint) (t • A + (1 - t) • B) f g
+      (continuousOn_spectrum_matrix _ f) (continuousOn_spectrum_matrix _ g),
+    smul_add, smul_add]
+  convert add_le_add (hf A B hA hB t ht) (hg A B hA hB t ht) using 1
+  abel
+
 end LTFP.MathlibExt.MatrixAnalysis
