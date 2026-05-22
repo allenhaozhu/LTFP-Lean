@@ -467,4 +467,62 @@ theorem OperatorConvex.const_smul {f : ℝ → ℝ} {c : ℝ} (hc : 0 ≤ c)
   rw [smul_comm t c, smul_comm (1 - t) c, ← smul_add]
   exact smul_le_smul_of_nonneg_left (hf A B hA hB t ht) hc
 
+/-- Adding a constant on the left preserves operator-concavity:
+`OperatorConcave (fun t => c + f t)`. Constants are operator concave
+(by `operatorConcave_const`); the sum of two operator-concave
+functions is operator concave (by `OperatorConcave.add`). -/
+theorem OperatorConcave.const_add {f : ℝ → ℝ}
+    (hf : OperatorConcave.{uomk, uomn} f) (c : ℝ) :
+    OperatorConcave.{uomk, uomn} (fun t => c + f t) := by
+  change OperatorConcave.{uomk, uomn} ((fun _ : ℝ => c) + f)
+  have hconst : OperatorConcave.{uomk, uomn} (fun _ : ℝ => c) :=
+    operatorConcave_const c
+  exact @OperatorConcave.add.{uomk, uomn} (fun _ : ℝ => c) f hconst hf
+
+/-- Adding a constant on the right preserves operator-concavity:
+`OperatorConcave (fun t => f t + c)`. Mirror of `const_add` via
+commutativity of addition on `ℝ`. -/
+theorem OperatorConcave.add_const {f : ℝ → ℝ}
+    (hf : OperatorConcave.{uomk, uomn} f) (c : ℝ) :
+    OperatorConcave.{uomk, uomn} (fun t => f t + c) := by
+  have h : OperatorConcave.{uomk, uomn} (fun t => c + f t) :=
+    @OperatorConcave.const_add.{uomk, uomn} f hf c
+  -- `fun t => c + f t` and `fun t => f t + c` are equal as functions.
+  intro 𝕜 _ n _ _ A B hA hB t ht
+  have hraw := h A B hA hB t ht
+  -- `hraw` knows about `fun t => c + f t`; rewrite the goal using `add_comm`
+  -- pointwise on each cfc call. Since `fun t => c + f t = fun t => f t + c`
+  -- as functions, the underlying cfc expressions are definitionally equal.
+  have hfun : (fun t : ℝ => c + f t) = (fun t : ℝ => f t + c) := by
+    funext s; exact add_comm c (f s)
+  rw [← hfun]
+  exact hraw
+
+/-- Adding a constant on the left preserves operator-convexity:
+`OperatorConvex (fun t => c + f t)`. Constants are operator convex
+(by `operatorConvex_const`); the sum of two operator-convex functions
+is operator convex (by `OperatorConvex.add`). -/
+theorem OperatorConvex.const_add {f : ℝ → ℝ}
+    (hf : OperatorConvex.{uomk, uomn} f) (c : ℝ) :
+    OperatorConvex.{uomk, uomn} (fun t => c + f t) := by
+  change OperatorConvex.{uomk, uomn} ((fun _ : ℝ => c) + f)
+  have hconst : OperatorConvex.{uomk, uomn} (fun _ : ℝ => c) :=
+    operatorConvex_const c
+  exact @OperatorConvex.add.{uomk, uomn} (fun _ : ℝ => c) f hconst hf
+
+/-- Adding a constant on the right preserves operator-convexity:
+`OperatorConvex (fun t => f t + c)`. Mirror of `const_add` via
+commutativity of addition on `ℝ`. -/
+theorem OperatorConvex.add_const {f : ℝ → ℝ}
+    (hf : OperatorConvex.{uomk, uomn} f) (c : ℝ) :
+    OperatorConvex.{uomk, uomn} (fun t => f t + c) := by
+  have h : OperatorConvex.{uomk, uomn} (fun t => c + f t) :=
+    @OperatorConvex.const_add.{uomk, uomn} f hf c
+  intro 𝕜 _ n _ _ A B hA hB t ht
+  have hraw := h A B hA hB t ht
+  have hfun : (fun t : ℝ => c + f t) = (fun t : ℝ => f t + c) := by
+    funext s; exact add_comm c (f s)
+  rw [← hfun]
+  exact hraw
+
 end LTFP.MathlibExt.MatrixAnalysis
