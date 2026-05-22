@@ -342,4 +342,23 @@ theorem operatorConcave_id : OperatorConcave.{uomk, uomn} id := by
       cfc_id (R := ℝ) (p := IsSelfAdjoint) B hBs,
       cfc_id (R := ℝ) (p := IsSelfAdjoint) (t • A + (1 - t) • B) hsum]
 
+/-- Sum of two operator-concave functions is operator concave. -/
+theorem OperatorConcave.add {f g : ℝ → ℝ}
+    (hf : OperatorConcave.{uomk, uomn} f) (hg : OperatorConcave.{uomk, uomn} g) :
+    OperatorConcave.{uomk, uomn} (f + g) := by
+  intro 𝕜 _ n _ _ A B hA hB t ht
+  change t • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => f x + g x) A +
+      (1 - t) • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => f x + g x) B ≤
+      cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => f x + g x)
+        (t • A + (1 - t) • B)
+  rw [cfc_add (p := IsSelfAdjoint) A f g
+      (continuousOn_spectrum_matrix A f) (continuousOn_spectrum_matrix A g),
+    cfc_add (p := IsSelfAdjoint) B f g
+      (continuousOn_spectrum_matrix B f) (continuousOn_spectrum_matrix B g),
+    cfc_add (p := IsSelfAdjoint) (t • A + (1 - t) • B) f g
+      (continuousOn_spectrum_matrix _ f) (continuousOn_spectrum_matrix _ g),
+    smul_add, smul_add]
+  convert add_le_add (hf A B hA hB t ht) (hg A B hA hB t ht) using 1
+  abel
+
 end LTFP.MathlibExt.MatrixAnalysis
