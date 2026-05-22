@@ -29,6 +29,23 @@ open MeasureTheory ProbabilityTheory
 
 namespace ProbabilityTheory
 
+/-- The second marginal of the joint prior-observation measure is Gaussian.
+
+This is the pushforward of the Gaussian joint measure
+`jointPriorObservation priorCov hPrior X ν` (whose Gaussianity is
+provided by `instIsGaussianJointPriorObservation`) under the continuous
+linear projection `ContinuousLinearMap.snd`. Pushforwards of Gaussian
+measures under continuous linear maps are Gaussian (`isGaussian_map`). -/
+instance jointPriorObservation_snd_isGaussian
+    {d n : ℕ}
+    (priorCov : Matrix (Fin d) (Fin d) ℝ) (hPrior : priorCov.PosSemidef)
+    (X : Matrix (Fin n) (Fin d) ℝ) (ν : ℝ) :
+    IsGaussian (jointPriorObservation priorCov hPrior X ν).snd := by
+  show IsGaussian ((jointPriorObservation priorCov hPrior X ν).map Prod.snd)
+  exact isGaussian_map
+    (ContinuousLinearMap.snd ℝ
+      (EuclideanSpace ℝ (Fin d)) (EuclideanSpace ℝ (Fin n)))
+
 /-- Per-coordinate mean of the zero-mean multivariate Gaussian prior:
 `∫ θ, θ_i ∂prior = 0`. This is `integral_eval_multivariateGaussian`
 specialised to mean zero, restated without the `ofLp 0` simp rewrite. -/
