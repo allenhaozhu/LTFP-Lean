@@ -8,6 +8,7 @@ import Mathlib.Analysis.Calculus.ContDiff.Basic
 import Mathlib.Analysis.Calculus.ContDiff.Operations
 import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
 import Mathlib.Analysis.Normed.Module.Multilinear.Basic
+import Mathlib.Analysis.InnerProductSpace.PiL2
 
 /-!
 # Multivariate Hessian Taylor remainder via line-restriction
@@ -191,5 +192,35 @@ theorem hessian_taylor_remainder_along_segment
   rw [hd_def]
   ring_nf
   rfl
+
+/-- Zero-displacement corollary: the Hessian Taylor remainder vanishes at `x₁ = x₀`.
+
+This is an instantiation of `hessian_taylor_remainder_along_segment` at the
+degenerate segment `[x₀, x₀] = {x₀}`. The bound is trivial (both sides are 0),
+but the equality form is sometimes useful for rewriting in downstream callers
+(e.g. base cases of inductive arguments on displacement). -/
+theorem hessian_taylor_remainder_eq_zero
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    {f : E → ℝ} (x₀ : E) :
+    |f x₀ - f x₀ - (fderiv ℝ f x₀) (x₀ - x₀)| = 0 := by
+  simp
+
+/-- Named EuclideanSpace specialization of `hessian_taylor_remainder_along_segment`.
+
+For `f : EuclideanSpace ℝ (Fin n) → ℝ` of class `C²`, if the Hessian operator
+norm is bounded by `L` along the segment `[x₀, x₁]`, then the first-order
+remainder of `f` at `x₀` evaluated at `x₁` is at most `(L/2) * ‖x₁ - x₀‖²`.
+
+Convenience wrapper for downstream NTK lazy-linearization callers that work
+with `EuclideanSpace ℝ (Fin n)` rather than a generic real normed space. -/
+theorem hessian_taylor_remainder_along_segment_euclidean
+    {n : ℕ} {f : EuclideanSpace ℝ (Fin n) → ℝ}
+    {x₀ x₁ : EuclideanSpace ℝ (Fin n)} {L : ℝ}
+    (hf : ContDiff ℝ 2 f)
+    (hH : ∀ z ∈ segment ℝ x₀ x₁,
+        ‖iteratedFDeriv ℝ 2 f z‖ ≤ L) :
+    |f x₁ - f x₀ - (fderiv ℝ f x₀) (x₁ - x₀)|
+      ≤ (L / 2) * ‖x₁ - x₀‖ ^ 2 :=
+  hessian_taylor_remainder_along_segment hf hH
 
 end LTFP.MathlibExt.Calculus
