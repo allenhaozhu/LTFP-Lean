@@ -40,6 +40,9 @@ import LTFP.MathlibExt.Probability.LinearClassSampleCover
 import LTFP.MathlibExt.Probability.LinearClassSampleCoverCard
 import LTFP.MathlibExt.Probability.LinearizedRiskLipschitz
 import LTFP.MathlibExt.Probability.LinearizedRiskSampleCover
+import LTFP.MathlibExt.Probability.CoveringNumberEuclidean
+import LTFP.MathlibExt.Probability.CoveringNumberReal
+import LTFP.MathlibExt.Probability.WideNetworkDudley
 import LTFP.MathlibExt.MatrixAnalysis.CStarMatrixInvAntiOnPos
 import LTFP.MathlibExt.MatrixAnalysis.CStarOperatorMonotone
 import LTFP.MathlibExt.MatrixAnalysis.InvAntiOnPos
