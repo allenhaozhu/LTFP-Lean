@@ -336,6 +336,36 @@ theorem wide_network_param_ball_external_cover_card
 @[deprecated (since := "2026-05-23")] alias wide_network_linearized_risk_explicit_cover_card :=
   wide_network_param_ball_external_cover_card
 
+/-- **Parameter-ball external covering-number bound — tight `(1 + 2B/δ)^d`
+constant.**
+
+Companion to `wide_network_param_ball_external_cover_card` using the
+sharper §64 bound `LTFP.covering_number_euclidean_ball_tight` instead of
+the looser `covering_number_euclidean_ball`. The constant improves from
+`(⌈2√d · B_param / δ⌉₊ + 1)^d` (extraneous `√d^d` factor) to the
+classical Vershynin-style `⌈(1 + 2 B_param / δ)^d⌉₊` (no `√d` factor).
+
+This is the §64 covering tightening flowing through to a wide-network
+bound. Only this one swap is made here; the other two call sites of
+`covering_number_euclidean_ball` in this file (lines ~1807, ~2244 — both
+inside the Dudley-integral polynomial-rate compositions) are left
+unchanged so their downstream constant cascade keeps building. -/
+theorem wide_network_param_ball_external_cover_card_tight
+    {d m : ℕ}
+    (xs : Fin m → EuclideanSpace ℝ (Fin d))
+    (B_param : ℝ) (δ : ℝ≥0) (hd : 1 ≤ d) (hB_param : 0 ≤ B_param)
+    (hδ_ne : δ ≠ 0)
+    (R : ℝ) (hx : ∀ i : Fin m, ‖xs i‖ ≤ R) :
+    Metric.externalCoveringNumber δ
+        (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param) ≤
+      (⌈(1 + 2 * B_param / (δ : ℝ)) ^ d⌉₊ : ℕ∞) ∧
+    -- Sample-prediction-tuple cardinality inherits: same upper bound
+    -- applies to any internal finset cover of the parameter ball.
+    (∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+      ∀ i : Fin m, ‖xs i‖ ≤ R) := by
+  refine ⟨?_, fun _ _ _ => hx _⟩
+  exact LTFP.covering_number_euclidean_ball_tight d B_param δ hd hB_param hδ_ne
+
 /-! ### §35 closure: Rademacher complexity via Dudley + Lipschitz cover bridge
 
 Composes `coveringNumber_image_lipschitz` (from
