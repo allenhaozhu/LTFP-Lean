@@ -41,7 +41,18 @@ namespace LTFP
 /-- The δ-external covering number of the closed Euclidean 2-ball of
 radius `B` is at most `(⌈2 * √2 * B / δ⌉₊ + 1) ^ 2`. Concrete `d = 2`
 instance of the deferred `(C * B / δ) ^ d` bound used by B8 N6
-(wide-network generalization). -/
+(wide-network generalization).
+
+**Note (standalone result).** This theorem is *not* called by the final
+wide-network B8 N6 closure chain in `WideNetworkDudley.lean`. That chain
+threads through the general `d`-dimensional bound
+`covering_number_euclidean_ball` below, which is valid for any `d ≥ 1`
+and therefore subsumes both the `d = 1` (`covering_number_real_interval`
+in `CoveringNumberReal.lean`) and `d = 2` cases. This `d = 2` ball
+bound is kept as a standalone reference / sanity check — it is the
+smallest non-trivial multi-dimensional instance and was useful for
+debugging the Pythagorean spacing argument before generalizing to
+arbitrary `d`. -/
 theorem covering_number_euclidean_two_ball
     (B : ℝ) (δ : ℝ≥0) (hB : 0 ≤ B) (hδ : δ ≠ 0) :
     Metric.externalCoveringNumber δ

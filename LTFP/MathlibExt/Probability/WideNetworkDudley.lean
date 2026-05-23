@@ -1202,8 +1202,20 @@ theorem wide_network_two_rademacher_complexity_via_dudley_paramBall
   have h2_nn : (0 : ℝ) ≤ 2 := by norm_num
   exact mul_le_mul_of_nonneg_left hbase h2_nn
 
-/-- B8 N6 — Abstract i.i.d.-measure parameterised lift of the
-deterministic wide-network Rademacher bound.
+/-- B8 N6 — Abstract measure-lift of the deterministic wide-network
+Rademacher bound.
+
+**Note (honest framing).** This theorem takes an *arbitrary* probability
+measure `ν` on `Fin m → (EuclideanSpace ℝ (Fin d) × ℝ)` together with a
+`ν`-a.e. bundle of bounded-support / parameter-ball / empirical-norm
+hypotheses (`hae`). It is **NOT** specialised to an i.i.d. product
+measure `ν = (μ_x ⊗ μ_y)^m`. The original "i.i.d. lift" framing was
+suggestive (i.i.d. is the canonical use case at the meta-level of the
+B8 N6 chain) but is stronger branding than what the statement proves;
+the accurate description is "abstract measure lift". An i.i.d. product
+measure satisfying the wide-network bounded-support conditions a.s. is
+just one of many instances — see the Dirac concrete instantiation at
+the bottom of this file for the simplest non-trivial case.
 
 Composes `wide_network_two_rademacher_complexity_via_dudley_paramBall`
 (deterministic, per-sample) with a `ν`-almost-everywhere bundle of the
@@ -1222,7 +1234,8 @@ probability measure on `Fin m → (EuclideanSpace ℝ (Fin d) × ℝ)`, with
 the wide-network hypotheses bundled as a single `ν`-a.e. statement and
 the LHS integrability assumed as a hypothesis (`hint`). It does **not**:
 
-* construct the i.i.d. measure on `[−R,R]^d × [−B_Y, B_Y]` from scratch;
+* construct any specific measure (e.g. an i.i.d. product
+  `ν = (μ_x ⊗ μ_y)^m` on `[−R,R]^d × [−B_Y, B_Y]`) from scratch;
 * derive the integrability of the empirical Rademacher complexity from
   the wide-network hypotheses (it could in principle be derived from
   the bounded-loss bound `B²`, but doing so cleanly requires a
@@ -1249,9 +1262,8 @@ on the pair-valued sample `S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ`.
 For an i.i.d. measure obtained as `ν = (μ_x ⊗ μ_y)^m` with `μ_x`
 supported on the closed `R`-ball and `μ_y` supported on the closed
 `B_Y`-ball, `hae` holds with `ν`-probability one once one verifies
-the deterministic bounds on the supports — that verification is the
-remaining piece for full Option A and is genuine measure-theoretic
-plumbing not yet in LTFP/Foundations.
+the deterministic bounds on the supports — but that is one instance
+of the abstract statement, not the statement itself.
 
 The factor `2` placement matches
 `uniform_deviation_expectation_le_two_smul_rademacher_complexity`. -/
@@ -1862,19 +1874,31 @@ theorem wide_network_dudley_integral_explicit_polynomial_bound
             Real.log ((⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 : ℕ) : ℝ)) := by
         rw [hK_def]
 
-/-! ### End-to-end abstract i.i.d. × explicit polynomial-rate bound
+/-! ### End-to-end abstract measure-lift × explicit polynomial-rate bound
 
 Composes `wide_network_expected_two_rademacher_le_dudley_paramBall_of_ae`
-(the abstract i.i.d.-measure lift) with
+(the abstract measure lift — arbitrary probability measure with
+bounded-support a.s.) with
 `wide_network_dudley_integral_explicit_polynomial_bound` (the explicit
 polynomial-rate Dudley bound) to give a fully-closed-form
 measure-theoretic expected-rate bound on the wide-network Rademacher
 complexity. The RHS depends only on `(B_param, R, B, d, ε, m, c)` and
 is measure-independent. -/
 
-/-- **End-to-end abstract i.i.d. × explicit polynomial-rate bound.**
+/-- **End-to-end abstract measure-lift × explicit polynomial-rate bound.**
 
-Under the hypotheses that the i.i.d. sample measure `ν` a.s. satisfies
+**Note (honest framing).** This theorem takes an *arbitrary* probability
+measure `ν` together with a `ν`-a.e. bundle of bounded-support /
+parameter-ball / empirical-norm hypotheses (`hae`). It is **NOT**
+specialised to an i.i.d. product measure `ν = (μ_x ⊗ μ_y)^m`. The
+older "i.i.d." branding was suggestive but is stronger than the
+statement proves; "abstract measure lift" is the accurate description.
+An i.i.d. product measure satisfying the wide-network bounded-support
+conditions a.s. is one instance of `hae`; see the Dirac concrete
+instantiation at the bottom of this file for the simplest non-trivial
+instance.
+
+Under the hypotheses that the sample measure `ν` a.s. satisfies
 the wide-network bounded-support / parameter-ball / empirical-norm
 assumptions, the expected scaled Rademacher complexity
 `∫ 2 · R̂_m ∂ν` is bounded by the closed-form polynomial rate
@@ -1887,7 +1911,7 @@ pointwise bound by the deterministic polynomial rate.
 
 This is the composition of
 `wide_network_expected_two_rademacher_le_dudley_paramBall_of_ae`
-(`5f861d9`, abstract i.i.d. lift) with
+(`5f861d9`, abstract measure lift) with
 `wide_network_dudley_integral_explicit_polynomial_bound`
 (`1bce222`, explicit polynomial Dudley bound). -/
 theorem wide_network_expected_two_rademacher_le_explicit_polynomial_paramBall
@@ -1972,11 +1996,12 @@ theorem wide_network_expected_two_rademacher_le_explicit_polynomial_paramBall
     mul_le_mul_of_nonneg_left h_add (by norm_num)
   exact h_iid.trans h_outer
 
-/-! ### With-abs i.i.d. × explicit polynomial-rate bound
+/-! ### With-abs abstract measure-lift × explicit polynomial-rate bound
 
 The with-abs analogues of
 `wide_network_expected_two_rademacher_le_dudley_paramBall_of_ae`
-(`5f861d9`, the abstract i.i.d. lift) and
+(`5f861d9`, the abstract measure lift — arbitrary probability measure
+with bounded-support a.s., not i.i.d.-specialised) and
 `wide_network_expected_two_rademacher_le_explicit_polynomial_paramBall`
 (`cb6fb3f`, the end-to-end polynomial-rate composition).
 
@@ -2002,11 +2027,20 @@ form
 with `K = ⌈16 √d B R B_param / ε⌉₊ + 1`, matching the without-abs
 form up to the additive `log 2` inside the square root. -/
 
-/-- **With-abs abstract i.i.d. lift.**
+/-- **With-abs abstract measure lift.**
+
+**Note (honest framing).** This theorem takes an *arbitrary* probability
+measure `ν` together with a `ν`-a.e. bundle of bounded-support /
+parameter-ball / empirical-norm hypotheses (`hae`). It is **NOT**
+specialised to an i.i.d. product measure `ν = (μ_x ⊗ μ_y)^m`. The
+older "i.i.d. lift" branding was suggestive but is stronger than the
+statement proves; "abstract measure lift" is the accurate description.
+An i.i.d. product measure satisfying the wide-network bounded-support
+conditions a.s. is one instance of `hae`, not the statement itself.
 
 The with-abs analogue of
 `wide_network_expected_two_rademacher_le_dudley_paramBall_of_ae`
-(`5f861d9`), composing the i.i.d.-measure a.e. bundle of wide-network
+(`5f861d9`), composing the abstract-measure a.e. bundle of wide-network
 hypotheses with
 `wide_network_rademacher_complexity_with_abs_via_dudley_paramBall`
 (`ac3a269`) instead of the without-abs deterministic bound.
@@ -2085,13 +2119,25 @@ theorem wide_network_expected_rademacher_with_abs_le_dudley_paramBall_of_ae
     simp
   linarith [hstep1, hstep2.le, hstep2.ge]
 
-/-- **With-abs end-to-end abstract i.i.d. × explicit polynomial-rate
-bound.**
+/-- **With-abs end-to-end abstract measure-lift × explicit
+polynomial-rate bound.**
+
+**Note (honest framing).** This theorem takes an *arbitrary* probability
+measure `ν` together with a `ν`-a.e. bundle of bounded-support /
+parameter-ball / empirical-norm hypotheses (`hae`). It is **NOT**
+specialised to an i.i.d. product measure `ν = (μ_x ⊗ μ_y)^m`. The
+older "i.i.d." branding was suggestive but is stronger than the
+statement proves; "abstract measure lift" is the accurate description.
+An i.i.d. product measure satisfying the wide-network bounded-support
+conditions a.s. is one instance of `hae`; see the with-abs Dirac
+concrete instantiation
+`wide_network_dirac_concrete_polynomial_paramBall_with_abs` at the
+bottom of this file for the simplest non-trivial instance.
 
 The with-abs analogue of
 `wide_network_expected_two_rademacher_le_explicit_polynomial_paramBall`
-(`cb6fb3f`). Composes the with-abs i.i.d. lift above with the explicit
-Euclidean-cover cardinality bound to give a closed-form
+(`cb6fb3f`). Composes the with-abs abstract-measure lift above with the
+explicit Euclidean-cover cardinality bound to give a closed-form
 measure-theoretic expected-rate bound on the with-abs Rademacher
 complexity.
 
@@ -2102,9 +2148,9 @@ final rate has an additive `log 2` inside the square root:
   `4 ε + (12 / √m) · (c/2 − ε) · √(log 2 + d · log K)`
 
 with `K = ⌈16 √d B R B_param / ε⌉₊ + 1`. The proof composes the
-with-abs i.i.d. lift, the with-abs endpoint bound (`5dcd80f`-analogue,
-already in this file), and the same external-covering bridge used by
-`1bce222`. -/
+with-abs abstract-measure lift, the with-abs endpoint bound
+(`5dcd80f`-analogue, already in this file), and the same
+external-covering bridge used by `1bce222`. -/
 theorem wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall
     {d m : ℕ}
     (ν : MeasureTheory.Measure (Fin m → EuclideanSpace ℝ (Fin d) × ℝ))
@@ -2323,21 +2369,24 @@ theorem wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBa
     rw [hK_def]
   linarith [h_iid'.trans (h_add.trans h_final.le)]
 
-/-! ### Concrete Dirac-measure instantiation of the B8 N6 abstract bound
+/-! ### Concrete Dirac-measure instantiation of the B8 N6 abstract bounds
 
-The abstract i.i.d. theorem
+The abstract measure-lift theorems
 `wide_network_expected_two_rademacher_le_explicit_polynomial_paramBall`
-(`cb6fb3f`) is parameterised over an arbitrary probability measure `ν`
-on the sample type with bounded-support a.e. hypotheses. The smallest
-tractable *concrete* instantiation is the Dirac measure at a fixed
-sample point: the a.e. hypotheses become pointwise statements at that
-single point, and the integral collapses (`integral_dirac`) to a single
-evaluation.
+(`cb6fb3f`, without-abs) and
+`wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall`
+(`34e7347`, with-abs) are parameterised over an arbitrary probability
+measure `ν` on the sample type with bounded-support a.e. hypotheses.
+The smallest tractable *concrete* instantiation of each is the Dirac
+measure at a fixed sample point: the a.e. hypotheses become pointwise
+statements at that single point, and the integral collapses
+(`integral_dirac`) to a single evaluation.
 
-This serves as a sanity check that the abstract framework composes into
-a concrete bound, without requiring the multi-day measure-construction
-work that would be needed for a richer concrete measure (e.g., a
-uniform product measure on `closedBall × Icc`). -/
+These serve as sanity checks that the abstract framework composes into
+concrete bounds (one for each Rademacher-complexity variant), without
+requiring the multi-day measure-construction work that would be needed
+for a richer concrete measure (e.g., a uniform product measure on
+`closedBall × Icc`). -/
 
 /-- **Dirac concrete instantiation of the B8 N6 polynomial bound.**
 
@@ -2452,6 +2501,124 @@ theorem wide_network_dirac_concrete_polynomial_paramBall
       ∫ S, 2 * empiricalRademacherComplexity_without_abs m
               (linearizedRiskFamily (d := d) B_param) S ∂ν =
         2 * empiricalRademacherComplexity_without_abs m
+              (linearizedRiskFamily (d := d) B_param) S₀ := by
+    rw [hν_def, MeasureTheory.integral_dirac]
+  rw [h_integral_eq] at h_abstract
+  exact h_abstract
+
+/-- **With-abs Dirac concrete instantiation of the B8 N6 polynomial
+bound.**
+
+The with-abs analogue of `wide_network_dirac_concrete_polynomial_paramBall`
+above. Given a fixed sample point `(x₀, y₀)` in the bounded support —
+i.e. `‖x₀‖ ≤ R` and, for every parameter `θ` in the closed
+`B_param`-ball, `|⟨θ, x₀⟩ - y₀| ≤ B` — and a normalisation `c` with
+`B^2 ≤ c`, the with-abs end-to-end polynomial-rate bound
+`wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall`
+specialises to the Dirac measure `Measure.dirac (fun _ => (x₀, y₀))`.
+
+Because `∫ S, f S ∂(Measure.dirac S₀) = f S₀`, the conclusion is a
+deterministic polynomial-rate bound on the (with-abs) empirical
+Rademacher complexity at the constant sample `S₀`. Compared to the
+without-abs Dirac instantiation at `d920e60`, there is no leading
+`2 *` factor on the LHS (the with-abs `empiricalRademacherComplexity`
+already absorbs the `2 *` via the absolute-value supremum), and the
+RHS has the additive `log 2` term inside the square root coming from
+the with-abs Dudley integrand `log(2 · coveringNumber)`. -/
+theorem wide_network_dirac_concrete_polynomial_paramBall_with_abs
+    {d m : ℕ}
+    (x₀ : EuclideanSpace ℝ (Fin d)) (y₀ : ℝ)
+    (B_param R B c ε : ℝ)
+    (hd : 1 ≤ d)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
+    (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
+    (hx₀ : ‖x₀‖ ≤ R)
+    (hθx₀ : ∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+      |@inner ℝ _ _ θ x₀ - y₀| ≤ B)
+    (hBsq_le_c : B ^ 2 ≤ c) :
+    empiricalRademacherComplexity m
+          (linearizedRiskFamily (d := d) B_param)
+          ((fun _ => (x₀, y₀)) : Fin m → EuclideanSpace ℝ (Fin d) × ℝ) ≤
+      (4 * ε + (12 / Real.sqrt m) *
+        ((c / 2 - ε) *
+          √(Real.log 2 +
+            (d : ℝ) *
+              Real.log ((⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 : ℕ) : ℝ)))) := by
+  classical
+  -- The constant Dirac sample point.
+  set S₀ : Fin m → EuclideanSpace ℝ (Fin d) × ℝ := fun _ => (x₀, y₀) with hS₀_def
+  -- The Dirac measure at S₀. Mathlib provides `IsProbabilityMeasure` automatically.
+  set ν : MeasureTheory.Measure (Fin m → EuclideanSpace ℝ (Fin d) × ℝ) :=
+    MeasureTheory.Measure.dirac S₀ with hν_def
+  -- Bounded-support a.e. bundle. For Dirac, `∀ᵐ S ∂(dirac S₀), P S ↔ P S₀`.
+  have hBsq_nn : 0 ≤ B ^ 2 := sq_nonneg _
+  have hc_nn : 0 ≤ c := le_trans hBsq_nn hBsq_le_c
+  -- The empiricalNorm-at-θ bound at the constant sample S₀.
+  have h_empNorm : ∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+      empiricalNorm (linearizedRiskSample (fun _ : Fin m => x₀) (fun _ : Fin m => y₀))
+        (linearizedRiskFamily (d := d) B_param θ) ≤ c := by
+    intro θ
+    have h_pt : ∀ i : Fin m,
+        |linearizedRiskFamily (d := d) B_param θ
+            (linearizedRiskSample (fun _ : Fin m => x₀) (fun _ : Fin m => y₀) i)| ≤ B ^ 2 := by
+      intro i
+      have hθ_in : ‖θ.val‖ ≤ B_param := θ.property
+      have h_inner_abs : |@inner ℝ _ _ θ.val x₀ - y₀| ≤ B := hθx₀ θ.val hθ_in
+      show |(@inner ℝ _ _ θ.val x₀ - y₀) ^ 2| ≤ B ^ 2
+      have habs_sq : |(@inner ℝ _ _ θ.val x₀ - y₀) ^ 2| =
+          (@inner ℝ _ _ θ.val x₀ - y₀) ^ 2 := abs_of_nonneg (sq_nonneg _)
+      rw [habs_sq, sq_abs (@inner ℝ _ _ θ.val x₀ - y₀) |>.symm]
+      exact pow_le_pow_left₀ (abs_nonneg _) h_inner_abs 2
+    have h_le_Bsq :
+        empiricalNorm (linearizedRiskSample (fun _ : Fin m => x₀) (fun _ : Fin m => y₀))
+          (linearizedRiskFamily (d := d) B_param θ) ≤ B ^ 2 :=
+      empiricalNorm_le_of_pointwise_bound _ _ (B ^ 2) hBsq_nn h_pt
+    linarith
+  -- The bundled a.e. statement, instantiated at the Dirac point.
+  have h_at_S₀ :
+      (∀ i, ‖(S₀ i).1‖ ≤ R) ∧
+      (∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+        ∀ i, |@inner ℝ _ _ θ (S₀ i).1 - (S₀ i).2| ≤ B) ∧
+      (∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+        empiricalNorm (linearizedRiskSample (fun i => (S₀ i).1) (fun i => (S₀ i).2))
+          (linearizedRiskFamily (d := d) B_param θ) ≤ c) := by
+    refine ⟨?_, ?_, ?_⟩
+    · intro i; simpa [hS₀_def] using hx₀
+    · intro θ hθ i; simpa [hS₀_def] using hθx₀ θ hθ
+    · intro θ
+      have := h_empNorm θ
+      simpa [hS₀_def, linearizedRiskSample] using this
+  -- Lift to ae via `ae_dirac_eq`.
+  have hae :
+      ∀ᵐ (S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ) ∂ν,
+        (∀ i, ‖(S i).1‖ ≤ R) ∧
+        (∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+          ∀ i, |@inner ℝ _ _ θ (S i).1 - (S i).2| ≤ B) ∧
+        (∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+          empiricalNorm (linearizedRiskSample (fun i => (S i).1) (fun i => (S i).2))
+            (linearizedRiskFamily (d := d) B_param θ) ≤ c) := by
+    rw [hν_def, MeasureTheory.ae_dirac_eq]
+    exact Filter.eventually_pure.mpr h_at_S₀
+  -- Integrability under Dirac.
+  have hint :
+      MeasureTheory.Integrable
+        (fun S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+          empiricalRademacherComplexity m
+                (linearizedRiskFamily (d := d) B_param) S) ν := by
+    rw [hν_def]
+    exact MeasureTheory.integrable_dirac (by
+      simp only [enorm_lt_top])
+  -- Invoke the with-abs abstract theorem.
+  have h_abstract :=
+    wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall
+      (d := d) (m := m) ν B_param R B c ε
+      hd hR_nn hB_nn hB_param_nn hBR_pos hε_pos hm_pos hεc hae hint
+  -- Collapse the Dirac integral to evaluation at S₀.
+  have h_integral_eq :
+      ∫ S, empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) S ∂ν =
+        empiricalRademacherComplexity m
               (linearizedRiskFamily (d := d) B_param) S₀ := by
     rw [hν_def, MeasureTheory.integral_dirac]
   rw [h_integral_eq] at h_abstract

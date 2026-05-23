@@ -30,7 +30,17 @@ namespace LTFP
 
 /-- The δ-covering number of the closed real interval `[-B, B]` is at
 most `⌈2 * B / δ⌉₊ + 1`. Concrete `d = 1` instance of the deferred
-`(3B/δ)^d` bound used by B8 N6 (wide-network generalization). -/
+`(3B/δ)^d` bound used by B8 N6 (wide-network generalization).
+
+**Note (standalone result).** This theorem is *not* called by the final
+wide-network B8 N6 closure chain in `WideNetworkDudley.lean`. That chain
+threads through the general `d`-dimensional bound
+`covering_number_euclidean_ball` (in `CoveringNumberEuclidean.lean`),
+which is valid for any `d ≥ 1` and therefore subsumes both the `d = 1`
+and `d = 2` cases. This `d = 1` interval bound is kept as a standalone
+reference / sanity check — it is sharper in constants than the
+specialization of the general `d`-bound to `d = 1` (no `√d = 1` factor,
+and the spacing argument is one-sided rather than two-dimensional). -/
 theorem covering_number_real_interval
     (B : ℝ) (δ : ℝ≥0) (hB : 0 ≤ B) (hδ : δ ≠ 0) :
     Metric.coveringNumber δ (Metric.closedBall (0 : ℝ) B) ≤
