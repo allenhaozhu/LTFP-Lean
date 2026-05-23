@@ -65,4 +65,40 @@ theorem sigmoid_neg (z : ℝ) : sigmoid (-z) = 1 - sigmoid z := by
   field_simp
   ring
 
+/-- §9.1 — Sigmoid is nonnegative everywhere: `0 ≤ σ(z)`. Weak form of
+`sigmoid_pos`, convenient when chaining with lemmas that consume the
+nonstrict bound (e.g. `Real.sqrt_le_sqrt`, monotone integrals). -/
+theorem sigmoid_nonneg (z : ℝ) : 0 ≤ sigmoid z :=
+  (sigmoid_pos z).le
+
+/-- §9.1 — Sigmoid is at most `1` everywhere: `σ(z) ≤ 1`. Weak form of
+`sigmoid_lt_one`, packaged for use with monotone-bound APIs that
+require a nonstrict upper bound. -/
+theorem sigmoid_le_one (z : ℝ) : sigmoid z ≤ 1 :=
+  (sigmoid_lt_one z).le
+
+/-- §9.1 — Sigmoid is nonzero everywhere: `σ(z) ≠ 0`. Direct consequence
+of `sigmoid_pos`; useful as a `ne_of_gt` hypothesis when dividing by
+`σ(z)` in cross-entropy or log-likelihood expressions. -/
+theorem sigmoid_ne_zero (z : ℝ) : sigmoid z ≠ 0 :=
+  (sigmoid_pos z).ne'
+
+/-- §9.1 — Sigmoid never reaches `1`: `σ(z) ≠ 1`. Direct consequence of
+`sigmoid_lt_one`; useful when dividing by `1 - σ(z)` in cross-entropy
+or odds-ratio expressions. -/
+theorem sigmoid_ne_one (z : ℝ) : sigmoid z ≠ 1 :=
+  (sigmoid_lt_one z).ne
+
+/-- §9.1 — Flip of `sigmoid_neg`: `1 - σ(z) = σ(-z)`. Same point-symmetry
+identity, oriented to rewrite the complementary probability `1 - σ(z)`
+into a single sigmoid evaluation. -/
+theorem one_sub_sigmoid (z : ℝ) : 1 - sigmoid z = sigmoid (-z) :=
+  (sigmoid_neg z).symm
+
+/-- §9.1 — Partition-of-unity identity: `σ(z) + σ(-z) = 1`. The binary
+posterior `P(y = 1 | x) + P(y = -1 | x) = 1` reading of the sigmoid as
+used in logistic regression (Bach (2024) §4.1, equations 4.4-4.5). -/
+theorem sigmoid_add_sigmoid_neg (z : ℝ) : sigmoid z + sigmoid (-z) = 1 := by
+  rw [sigmoid_neg]; ring
+
 end LTFP
