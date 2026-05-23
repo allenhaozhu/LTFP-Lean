@@ -152,6 +152,31 @@ theorem tvDist_le_one (μ ν : ProbabilityMeasure α) :
     _ ≤ 2 / 2 := ENNReal.div_le_div_right hsum' 2
     _ = 1 := ENNReal.div_self h2ne h2top
 
+/-- For two probability measures the total variation distance is not `∞`.
+This is the `ne_top` companion to `tvDist_le_one`, useful as an `ENNReal`
+finiteness side condition for downstream `toReal` / `lift` rewrites. -/
+theorem tvDist_ne_top (μ ν : ProbabilityMeasure α) :
+    tvDist (μ : Measure α) (ν : Measure α) ≠ ∞ :=
+  ne_top_of_le_ne_top ENNReal.one_ne_top (tvDist_le_one μ ν)
+
+/-- The real-valued total variation distance is nonnegative. Provided as a
+named entry point so downstream lemmas can write `0 ≤ (tvDist μ ν).toReal`
+without unfolding `ENNReal.toReal`. -/
+theorem tvDist_toReal_nonneg (μ ν : Measure α) :
+    0 ≤ (tvDist μ ν).toReal :=
+  ENNReal.toReal_nonneg
+
+/-- For two probability measures, the real-valued total variation distance
+is at most `1`. This is the `toReal` lift of `tvDist_le_one`, packaged for
+consumers (Pinsker, Bretagnolle–Huber, Le Cam) that work in `ℝ` rather
+than `ℝ≥0∞`. -/
+theorem tvDist_toReal_le_one (μ ν : ProbabilityMeasure α) :
+    (tvDist (μ : Measure α) (ν : Measure α)).toReal ≤ 1 := by
+  have hle : tvDist (μ : Measure α) (ν : Measure α) ≤ 1 := tvDist_le_one μ ν
+  have hne : tvDist (μ : Measure α) (ν : Measure α) ≠ ∞ := tvDist_ne_top μ ν
+  have := (ENNReal.toReal_le_toReal hne ENNReal.one_ne_top).mpr hle
+  simpa using this
+
 /-! ### Examples
 
 These examples demonstrate basic usage of the `tvDist` API and double as
