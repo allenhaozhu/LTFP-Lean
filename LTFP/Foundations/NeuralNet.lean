@@ -8,6 +8,8 @@ activation is the rectified linear unit ReLU `σ(z) = max(z, 0)`.
 -/
 import Mathlib.Data.Real.Basic
 import Mathlib.Tactic.Linarith
+import Mathlib.Algebra.Order.Group.MinMax
+import Mathlib.Topology.MetricSpace.Lipschitz
 
 namespace LTFP
 
@@ -99,5 +101,23 @@ theorem relu_add_le (x y : ℝ) : relu (x + y) ≤ relu x + relu y := by
       rw [max_eq_right (le_of_lt hx), max_eq_right (le_of_lt hy),
           max_eq_right hxy]
       norm_num
+
+/-- §F6 — ReLU is 1-Lipschitz in absolute value form:
+    `|relu x - relu y| ≤ |x - y|`. Follows from
+    `abs_max_sub_max_le_abs` applied to `max · 0`. Used in NN/NTK
+    preprocessing and in Bach §4–6 Rademacher complexity bounds on
+    neural-net function classes. -/
+theorem abs_relu_sub_relu_le (x y : ℝ) : |relu x - relu y| ≤ |x - y| := by
+  unfold relu
+  exact abs_max_sub_max_le_abs x y 0
+
+/-- §F6 — ReLU is `LipschitzWith 1`. Forward value for NTK preprocessing
+    and Rademacher complexity arguments on neural-net function classes
+    (Bach §4–6). -/
+theorem lipschitzWith_relu : LipschitzWith 1 relu := by
+  refine LipschitzWith.of_dist_le_mul ?_
+  intro x y
+  rw [NNReal.coe_one, one_mul, Real.dist_eq, Real.dist_eq]
+  exact abs_relu_sub_relu_le x y
 
 end LTFP
