@@ -179,6 +179,126 @@ theorem scale_kernel_psd {X : Type*} (K : X → X → ℝ) (c : ℝ)
       hfactor]
   exact mul_nonneg hc (hK n x α)
 
+/-! ### Kernel combinator conveniences (Bach 2024 §7.1 forward coverage)
+
+Wrappers built on top of `sum_kernel_psd` and `scale_kernel_psd`. These
+package the standard finite-index combinators (zero kernel, constant
+nonneg kernel, finite indexed sum of PSD kernels, finite nonneg-weighted
+sum of PSD kernels) that downstream §7 material (Bach 2024, pp. 184-185)
+uses to build composite kernels (e.g. multiple-kernel learning, tensor
+products restricted to the PSD cone). Also exposes a diagonal-nonneg
+shortcut for `IsPSDKernel` and packaged feature-map / kernel-self
+identities for the reproducing-feature-map API.
+-/
+
+/-- **Zero kernel is PSD.** The constant-zero kernel
+`K x y := 0` is positive semidefinite — its Gram quadratic form is
+identically zero. -/
+theorem zero_kernel_psd {X : Type*} :
+    IsPSDKernel (fun _ _ : X => (0 : ℝ)) := by
+  intro n x α
+  -- Each inner term is `α i * α j * 0 = 0`, so the double sum is 0.
+  have hzero :
+      (∑ i, ∑ j, α i * α j *
+          ((fun _ _ : X => (0 : ℝ)) (x i) (x j))) = 0 := by
+    refine Finset.sum_eq_zero ?_
+    intro i _
+    refine Finset.sum_eq_zero ?_
+    intro j _
+    ring
+  rw [hzero]
+
+/-- **Constant nonneg kernel is PSD.** For any constant `c ≥ 0`,
+the constant kernel `K x y := c` is positive semidefinite: its Gram
+quadratic form factorises as `c * (∑ᵢ αᵢ)²`. -/
+theorem const_kernel_psd {X : Type*} {c : ℝ} (hc : 0 ≤ c) :
+    IsPSDKernel (fun _ _ : X => c) := by
+  intro n x α
+  -- The Gram form `∑ i, ∑ j, α i * α j * c` factorises as
+  -- `c * (∑ i, α i) * (∑ j, α j) = c * (∑ i, α i)²`.
+  have hfactor :
+      (∑ i, ∑ j, α i * α j *
+          ((fun _ _ : X => c) (x i) (x j)))
+        = c * (∑ i, α i) ^ 2 := by
+    calc (∑ i, ∑ j, α i * α j * c)
+        = (∑ i, ∑ j, c * (α i * α j)) := by
+              refine Finset.sum_congr rfl ?_
+              intro i _
+              refine Finset.sum_congr rfl ?_
+              intro j _; ring
+      _ = (∑ i, c * ∑ j, α i * α j) := by
+              refine Finset.sum_congr rfl ?_
+              intro i _; rw [Finset.mul_sum]
+      _ = c * ∑ i, ∑ j, α i * α j := by rw [← Finset.mul_sum]
+      _ = c * ∑ i, α i * ∑ j, α j := by
+              congr 1
+              refine Finset.sum_congr rfl ?_
+              intro i _; rw [← Finset.mul_sum]
+      _ = c * ((∑ i, α i) * ∑ j, α j) := by rw [← Finset.sum_mul]
+      _ = c * (∑ i, α i) ^ 2 := by ring
+  rw [hfactor]
+  exact mul_nonneg hc (sq_nonneg _)
+
+/-- **Finite indexed sum of PSD kernels is PSD.** Given a finite family
+`K : ι → X → X → ℝ` of PSD kernels and any `Finset s : Finset ι`, the
+pointwise sum `fun x y => ∑ i ∈ s, K i x y` is PSD. Proved by induction
+over `s` using `zero_kernel_psd` and `sum_kernel_psd`. -/
+theorem finset_sum_kernel_psd {X ι : Type*} (K : ι → X → X → ℝ)
+    (s : Finset ι) (hK : ∀ i ∈ s, IsPSDKernel (K i)) :
+    IsPSDKernel (fun x y => ∑ i ∈ s, K i x y) := by
+  classical
+  induction s using Finset.induction_on with
+  | empty =>
+      -- Empty sum is identically zero, which is PSD.
+      simp only [Finset.sum_empty]
+      exact zero_kernel_psd
+  | insert i s hi ih =>
+      have hKi : IsPSDKernel (K i) := hK i (Finset.mem_insert_self _ _)
+      have hKrest : ∀ j ∈ s, IsPSDKernel (K j) := fun j hj =>
+        hK j (Finset.mem_insert_of_mem hj)
+      have hsum : IsPSDKernel (fun x y => ∑ j ∈ s, K j x y) := ih hKrest
+      -- Rewrite the insert-sum as `K i x y + (∑ j ∈ s, K j x y)`.
+      have hrewrite :
+          (fun x y => ∑ j ∈ insert i s, K j x y)
+            = (fun x y => K i x y + ∑ j ∈ s, K j x y) := by
+        funext x y
+        rw [Finset.sum_insert hi]
+      rw [hrewrite]
+      exact sum_kernel_psd (K i) (fun x y => ∑ j ∈ s, K j x y) hKi hsum
+
+/-- **Finite nonneg-weighted sum of PSD kernels is PSD.** Given a finite
+family `K : ι → X → X → ℝ` of PSD kernels and nonneg weights
+`w : ι → ℝ`, the pointwise nonneg-weighted sum
+`fun x y => ∑ i ∈ s, w i * K i x y` is PSD. Combines `scale_kernel_psd`
+with `finset_sum_kernel_psd`. -/
+theorem finset_weighted_sum_kernel_psd {X ι : Type*} (K : ι → X → X → ℝ)
+    (w : ι → ℝ) (s : Finset ι)
+    (hw : ∀ i ∈ s, 0 ≤ w i)
+    (hK : ∀ i ∈ s, IsPSDKernel (K i)) :
+    IsPSDKernel (fun x y => ∑ i ∈ s, w i * K i x y) := by
+  -- Each summand `w i * K i x y` is a nonneg scaling of a PSD kernel, hence
+  -- PSD; closure under finite sums then gives the result.
+  refine finset_sum_kernel_psd (fun i x y => w i * K i x y) s ?_
+  intro i hi
+  exact scale_kernel_psd (K i) (w i) (hw i hi) (hK i hi)
+
+/-- **Diagonal nonnegativity for PSD kernels.** If `K` is PSD then
+`K x x ≥ 0` for every `x`: specialise the Gram quadratic form to the
+1-point sample `(x)` with coefficient `α := fun _ => 1`. -/
+theorem IsPSDKernel.diag_nonneg {X : Type*} {K : X → X → ℝ}
+    (hK : IsPSDKernel K) (x : X) : 0 ≤ K x x := by
+  -- Specialise to `n = 1`, sample `fun _ => x`, coefficient `fun _ => 1`.
+  have h := hK 1 (fun _ => x) (fun _ => 1)
+  -- The double sum reduces to `1 * 1 * K x x = K x x`.
+  have hcalc :
+      (∑ i, ∑ j : Fin 1, (fun _ : Fin 1 => (1 : ℝ)) i *
+          (fun _ : Fin 1 => (1 : ℝ)) j *
+          K ((fun _ : Fin 1 => x) i) ((fun _ : Fin 1 => x) j))
+        = K x x := by
+    simp
+  rw [hcalc] at h
+  exact h
+
 /-- **Representer theorem, algebraic core.**
 
 In any real inner-product space `E`, given training points represented
@@ -411,6 +531,21 @@ theorem eval_feature_eq_kernel
     (h : IsReproducingFeatureMap K φ eval) (x y : 𝒳) :
     eval (φ y) x = K y x := by
   rw [h.reproducing, h.kernel_eq y x]
+
+/-- **Diagonal of the kernel equals the squared feature-map norm.** For
+any reproducing feature map, `‖φ x‖² = K x x`. -/
+theorem norm_sq_eq_kernel_self
+    (h : IsReproducingFeatureMap K φ eval) (x : 𝒳) :
+    ‖φ x‖ ^ 2 = K x x := by
+  rw [h.kernel_eq x x, ← real_inner_self_eq_norm_sq]
+
+/-- **Diagonal of a reproducing kernel is nonneg.** A direct corollary
+of `norm_sq_eq_kernel_self`: `0 ≤ K x x` since `‖φ x‖² ≥ 0`. -/
+theorem kernel_self_nonneg
+    (h : IsReproducingFeatureMap K φ eval) (x : 𝒳) :
+    0 ≤ K x x := by
+  rw [← h.norm_sq_eq_kernel_self x]
+  exact sq_nonneg _
 
 end IsReproducingFeatureMap
 
