@@ -39,6 +39,16 @@ assembles them into the regularized-inverse limit statement.
 
 The carrier algebraic identities (`lam = 0` reduction and the trace
 value at the identity) are also recorded for downstream reuse.
+
+## Ergonomic variants
+
+* `Matrix.mul_regularized_inv_tendsto_one` :
+  symmetric counterpart `M * (M + lam • 1)⁻¹ ⟶ 1` as `lam → 0`.
+* `Matrix.regularized_inv_mul_tendsto_one_nhdsWithin_Ioi` :
+  one-sided variant on `nhdsWithin 0 (Set.Ioi 0)`, matching the
+  usual `lam → 0⁺` regularization setting.
+* `Matrix.trace_regularized_inv_mul_tendsto_card_nhdsWithin_Ioi` :
+  one-sided trace-card variant for the same filter.
 -/
 
 namespace Matrix
@@ -120,5 +130,55 @@ theorem trace_regularized_inv_mul_tendsto_card
       (nhds 0) (nhds ((Fintype.card d : ℕ) : ℝ)) := by
   have h := trace_regularized_inv_mul_tendsto M hM
   simpa [Matrix.trace_one] using h
+
+/-- Symmetric counterpart of `regularized_inv_mul_tendsto_one`: for an
+invertible real square matrix `M`, the right-multiplied form
+`M * (M + lam • 1)⁻¹` also tends to the identity as `lam → 0`. -/
+theorem mul_regularized_inv_tendsto_one
+    (M : Matrix d d ℝ) (hM : M.det ≠ 0) :
+    Tendsto (fun lam : ℝ => M * (M + lam • (1 : Matrix d d ℝ))⁻¹)
+      (nhds 0) (nhds (1 : Matrix d d ℝ)) := by
+  -- Same continuity scaffolding as `regularized_inv_mul_tendsto_one`,
+  -- but multiplying on the *left* by the constant `M`.
+  have h_add : Continuous (fun lam : ℝ => M + lam • (1 : Matrix d d ℝ)) :=
+    continuous_const.add (continuous_id.smul continuous_const)
+  have h_det_unit : IsUnit M.det := isUnit_iff_ne_zero.mpr hM
+  have h_ring_inv : ContinuousAt Ring.inverse M.det := by
+    have := NormedRing.inverse_continuousAt h_det_unit.unit
+    simpa [IsUnit.unit_spec] using this
+  have h_mat_inv : ContinuousAt (Inv.inv : Matrix d d ℝ → Matrix d d ℝ) M :=
+    continuousAt_matrix_inv M h_ring_inv
+  have h_g0 : M + (0 : ℝ) • (1 : Matrix d d ℝ) = M := by simp
+  have h_add_at0 :
+      ContinuousAt (fun lam : ℝ => M + lam • (1 : Matrix d d ℝ)) 0 :=
+    h_add.continuousAt
+  have h_inv_comp :
+      ContinuousAt (fun lam : ℝ => (M + lam • (1 : Matrix d d ℝ))⁻¹) 0 :=
+    h_mat_inv.comp_of_eq h_add_at0 h_g0
+  have h_mul :
+      ContinuousAt (fun lam : ℝ => M * (M + lam • (1 : Matrix d d ℝ))⁻¹) 0 :=
+    continuousAt_const.mul h_inv_comp
+  have h_tendsto := h_mul.tendsto
+  have h_value :
+      M * (M + (0 : ℝ) • (1 : Matrix d d ℝ))⁻¹ = (1 : Matrix d d ℝ) := by
+    rw [h_g0]; exact Matrix.mul_nonsing_inv M h_det_unit
+  rw [h_value] at h_tendsto
+  exact h_tendsto
+
+/-- One-sided variant: the headline limit holds as `lam → 0⁺`, i.e.
+through the right neighborhood `nhdsWithin 0 (Set.Ioi 0)`. This is
+the shape regularization arguments most often need. -/
+theorem regularized_inv_mul_tendsto_one_nhdsWithin_Ioi
+    (M : Matrix d d ℝ) (hM : M.det ≠ 0) :
+    Tendsto (fun lam : ℝ => (M + lam • (1 : Matrix d d ℝ))⁻¹ * M)
+      (nhdsWithin 0 (Set.Ioi 0)) (nhds (1 : Matrix d d ℝ)) :=
+  (regularized_inv_mul_tendsto_one M hM).mono_left nhdsWithin_le_nhds
+
+/-- One-sided trace-card variant for `lam → 0⁺`. -/
+theorem trace_regularized_inv_mul_tendsto_card_nhdsWithin_Ioi
+    (M : Matrix d d ℝ) (hM : M.det ≠ 0) :
+    Tendsto (fun lam : ℝ => ((M + lam • (1 : Matrix d d ℝ))⁻¹ * M).trace)
+      (nhdsWithin 0 (Set.Ioi 0)) (nhds ((Fintype.card d : ℕ) : ℝ)) :=
+  (trace_regularized_inv_mul_tendsto_card M hM).mono_left nhdsWithin_le_nhds
 
 end Matrix
