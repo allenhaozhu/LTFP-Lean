@@ -19,8 +19,11 @@ shape the Dudley entropy integral needs:
 
 1. `covering_number_euclidean_ball` (this file's dependency) — the
    `(⌈2 √d B / δ⌉₊ + 1) ^ d` *external*-cover-cardinality bound for the
-   parameter closed ball. **NOTE: this explicit cardinality is NOT yet
-   composed into the carrier theorem below; see "Residual bridge".**
+   parameter closed ball. This explicit cardinality IS now composed
+   into the end-to-end polynomial-rate bound; see
+   `wide_network_dudley_integral_explicit_polynomial_bound` (without-abs)
+   and `wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall`
+   (with-abs) downstream in this file.
 2. `linear_class_closed_ball_exists_finite_cover` — existence of a
    finite finset cover of the parameter ball at any positive radius.
 3. `linear_class_sample_pred_card_le` — sample-prediction tuple cover
@@ -48,12 +51,15 @@ file surfaces:
   linearized-risk sample-cover accuracy and the sample-prediction-
   tuple cardinality bound `≤ |C|`, *without* attaching an explicit
   numeric bound on `|C|`.
-- `wide_network_linearized_risk_explicit_cover_card` — a *weaker*
-  companion that, despite its current name, only exposes the explicit
-  external-covering-number bound for the parameter ball itself; it
-  does **not** lift to a linearized-risk-cover or to a sample-loss
-  cover. See its docstring for the honest characterization and the
-  rename note.
+- `wide_network_param_ball_external_cover_card` (formerly
+  `wide_network_linearized_risk_explicit_cover_card`, alias retained
+  via `@[deprecated]`) — a *narrower* companion that exposes the
+  explicit external-covering-number bound for the parameter ball
+  itself; it does **not** lift to a linearized-risk-cover or to a
+  sample-loss cover. The end-to-end lift to a polynomial-rate Dudley
+  bound is discharged downstream in
+  `wide_network_dudley_integral_explicit_polynomial_bound` and the
+  with-abs `wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall`.
 
 ## Lipschitz-image-of-cover bridge (landed 0a89656 + composed below)
 
@@ -212,17 +218,19 @@ there exists a *finite finset* `C` of cover parameters such that:
   `linear_predictor_lipschitz_on_ball`), and the induced
   prediction-tuple finset has cardinality `≤ |C|`.
 
-**Honest scope (2026-05-23 audit):** this theorem produces the finite
-finset `C` from `TotallyBounded`ness of the parameter ball (via
-`wide_network_param_finset_cover`); it does **NOT** attach the
+**Honest scope (2026-05-23 audit):** this theorem is the *qualitative*
+finset-based carrier — it produces the finite finset `C` from
+`TotallyBounded`ness of the parameter ball (via
+`wide_network_param_finset_cover`) and does **NOT** itself attach the
 explicit Euclidean cardinality bound `|C| ≤ (⌈2 √d B_param / δ⌉₊ + 1)^d`
-from `covering_number_euclidean_ball`. The explicit cardinality lives
-on an *external* grid cover and would need a Lipschitz-image-of-cover
-bridge (see the module docstring's "Residual bridge" section) before
-it can be attached to this `C`. Downstream consumers that need the
-explicit number must currently invoke
-`wide_network_linearized_risk_explicit_cover_card` separately for the
-parameter-ball cardinality and combine it by hand. -/
+from `covering_number_euclidean_ball`. The explicit cardinality is
+instead carried through LTFP's internal `coveringNumber` and composed
+end-to-end in the polynomial-rate Dudley bounds downstream
+(`wide_network_dudley_integral_explicit_polynomial_bound`,
+`wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall`).
+Consumers that want the qualitative finset-cover form should use this
+theorem; consumers that want the explicit polynomial rate should use
+the downstream `_explicit_polynomial_*` family directly. -/
 theorem wide_network_linearized_risk_explicit_cover
     {d m : ℕ}
     (xs : Fin m → EuclideanSpace ℝ (Fin d))
@@ -280,19 +288,7 @@ theorem wide_network_linearized_risk_explicit_cover
 
 /-- **Parameter-ball external covering-number bound (honest form).**
 
-**Misleading historical name (2026-05-23 audit):** despite the suffix
-`linearized_risk_..._cover_card`, this theorem does **not** mention
-`ys`, the squared loss, the sample-prediction tuple cover, or the
-linearized-risk-class cover at all. It is literally just
-`covering_number_euclidean_ball` (the external cardinality bound for
-the parameter ball) packaged together with the trivial restatement of
-the sample bound `∀ θ ..., ‖xs i‖ ≤ R`. The honest name for what is
-actually proved here is `wide_network_param_ball_external_cover_card`;
-the current name is retained to avoid breaking any out-of-tree callers
-but is scheduled for rename.
-
-What this theorem ACTUALLY proves, for `d ≥ 1`, `B_param ≥ 0`, and
-`δ : ℝ≥0` positive:
+For `d ≥ 1`, `B_param ≥ 0`, and `δ : ℝ≥0` positive:
 
 1. **First conjunct:** the *external* covering number of the
    parameter ball `Metric.closedBall 0 B_param ⊆ EuclideanSpace ℝ (Fin d)`
@@ -300,21 +296,28 @@ What this theorem ACTUALLY proves, for `d ≥ 1`, `B_param ≥ 0`, and
 2. **Second conjunct:** the sample bound `‖xs i‖ ≤ R` (trivially
    re-quantified over `θ`).
 
-What this theorem does **NOT** prove (despite the historical name):
+This is literally `covering_number_euclidean_ball` (the external
+cardinality bound for the parameter ball) packaged together with the
+trivial restatement of the sample bound `∀ θ ..., ‖xs i‖ ≤ R`. It
+deliberately does **not** mention `ys`, the squared loss, the
+sample-prediction tuple cover, or the linearized-risk-class cover —
+those live in `wide_network_linearized_risk_explicit_cover` above and
+the explicit polynomial-rate bounds downstream.
 
-- No linearized-risk cover is constructed.
-- No sample-prediction-tuple cover is constructed.
-- No squared-loss accuracy guarantee is stated.
-- The targets `ys` are not even a hypothesis.
-- The bound uses *external* covering points which need not live in
-  the parameter ball; lifting them to an internal finset cover (the
-  form `wide_network_linearized_risk_explicit_cover` uses) requires
-  the Lipschitz-image-of-cover bridge noted in the module docstring.
+The bound uses *external* covering points which need not live in the
+parameter ball; lifting them to an internal-cover bound is done via
+`coveringNumber_paramBall_subtype_le_externalCoveringNumber_closedBall`
+(the factor-of-4 subtype-lift bridge in this file), and the full
+composition is discharged in
+`wide_network_dudley_integral_explicit_polynomial_bound` (without-abs)
+and `wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall`
+(with-abs).
 
-Composing this cardinality bound with
-`wide_network_linearized_risk_explicit_cover` to obtain a single
-Dudley-input statement is the residual bridge work. -/
-theorem wide_network_linearized_risk_explicit_cover_card
+**Rename note (2026-05-23):** previously called
+`wide_network_linearized_risk_explicit_cover_card`, which falsely
+implied a linearized-risk lift. Deprecated alias retained for
+backward compatibility. -/
+theorem wide_network_param_ball_external_cover_card
     {d m : ℕ}
     (xs : Fin m → EuclideanSpace ℝ (Fin d))
     (B_param : ℝ) (δ : ℝ≥0) (hd : 1 ≤ d) (hB_param : 0 ≤ B_param)
@@ -329,6 +332,9 @@ theorem wide_network_linearized_risk_explicit_cover_card
       ∀ i : Fin m, ‖xs i‖ ≤ R) := by
   refine ⟨?_, fun _ _ _ => hx _⟩
   exact covering_number_euclidean_ball d B_param δ hd hB_param hδ_ne
+
+@[deprecated (since := "2026-05-23")] alias wide_network_linearized_risk_explicit_cover_card :=
+  wide_network_param_ball_external_cover_card
 
 /-! ### §35 closure: Rademacher complexity via Dudley + Lipschitz cover bridge
 
@@ -1359,13 +1365,18 @@ endpoint `ε` yields the closed-form upper bound
 These are *not* asymptotic rates — they are honest constant-factor
 bounds at the lower endpoint. To turn either into a polynomial rate one
 composes with the external Euclidean cardinality
-`coveringNumber hTB δ ≤ (⌈2 √d B_param / δ⌉₊ + 1) ^ d` (a separate
-TotallyBounded-internal-vs-external-cover bridge, currently a residual
-slot — see the module docstring's "Lipschitz-image-of-cover" note).
-That composition is downstream of this theorem.
+`coveringNumber hTB δ ≤ (⌈2 √d B_param / δ⌉₊ + 1) ^ d` via the
+TotallyBounded-internal-vs-external-cover bridge
+`coveringNumber_paramBall_subtype_le_externalCoveringNumber_closedBall`
+(implemented below in this file with the factor-of-4 subtype lift).
+That composition lands the explicit polynomial-rate bounds
+`wide_network_dudley_integral_explicit_polynomial_bound` (without-abs)
+and `wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall`
+(with-abs) downstream of this theorem.
 
-These two lemmas are the cleanest closed-form bound the
-paramBall-Dudley integrals admit without that residual bridge. -/
+These two lemmas remain the cleanest closed-form intermediate bound
+that the paramBall-Dudley integrals admit *before* applying the
+explicit-cardinality bridge. -/
 
 /-- **Closed-form endpoint bound on the without-abs wide-network Dudley
 integral** (Option C in the dispatch sheet).
