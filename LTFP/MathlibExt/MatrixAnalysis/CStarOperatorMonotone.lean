@@ -53,6 +53,20 @@ theorem cStarAlgebraOperatorMonotoneOnNonneg_rpow {p : ℝ} (hp : p ∈ Set.Icc 
     ← CFC.rpow_eq_cfc_real (a := b) (y := p) hb]
   exact CFC.monotone_rpow (A := A) hp hab
 
+/-- `Real.sqrt` is operator monotone on the nonnegative cone of every unital
+C⋆-algebra, as the `p = 1/2` instance of
+`cStarAlgebraOperatorMonotoneOnNonneg_rpow` via the unconditional identity
+`Real.sqrt x = x ^ (1/2)`. -/
+theorem cStarAlgebraOperatorMonotoneOnNonneg_sqrt :
+    CStarAlgebraOperatorMonotoneOnNonneg.{uA} Real.sqrt := by
+  intro A _ _ _ a ha b hb hab
+  have hsqrt : (Real.sqrt : ℝ → ℝ) = fun t : ℝ => t ^ (1 / (2 : ℝ)) := by
+    funext t; exact Real.sqrt_eq_rpow t
+  change cfc Real.sqrt a ≤ cfc Real.sqrt b
+  rw [hsqrt]
+  exact cStarAlgebraOperatorMonotoneOnNonneg_rpow.{uA}
+    (by norm_num : (1 / (2 : ℝ)) ∈ Set.Icc (0 : ℝ) 1) ha hb hab
+
 /-- A real function is operator monotone on the strictly-positive cone of every
 unital C⋆-algebra if real CFC by that function preserves spectral order there. -/
 def CStarAlgebraOperatorMonotoneOnStrictlyPos (f : ℝ → ℝ) : Prop :=
