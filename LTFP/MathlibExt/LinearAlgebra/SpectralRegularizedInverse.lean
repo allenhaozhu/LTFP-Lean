@@ -83,15 +83,15 @@ inverse trace identity:
 trace ((A + lam • 1)⁻¹ * A) = ∑ i, eig i / (eig i + lam)
 ```
 for a real positive-definite `A`, with `eig` the eigenvalues of `A`
-and `0 < lam`.
+and `0 ≤ lam`.
 
-The result is `0 ≤ lam`-compatible for free (the proof only uses
-`0 < eig i + lam`, which follows from `0 < eig i` alone when
-`0 ≤ lam`), but we state the strict version since the B4 Node 3
-downstream `lam → 0⁺` continuity argument has strict positivity at
-every fixed `lam`. -/
+The proof only uses `0 < eig i + lam`, which follows from
+`0 < eig i` (PosDef matrices have strictly-positive eigenvalues)
+together with `0 ≤ lam` via `add_pos_of_pos_of_nonneg`. This makes
+the statement directly applicable to the `lam → 0⁺` continuity
+argument's endpoint, in addition to every strictly-positive `lam`. -/
 theorem trace_regularized_inv_mul_eq_eigenvalue_sum
-    (A : Matrix d d ℝ) (hA : A.PosDef) {lam : ℝ} (hlam : 0 < lam) :
+    (A : Matrix d d ℝ) (hA : A.PosDef) {lam : ℝ} (hlam : 0 ≤ lam) :
     ((A + lam • (1 : Matrix d d ℝ))⁻¹ * A).trace
       = ∑ i, hA.1.eigenvalues i / (hA.1.eigenvalues i + lam) := by
   classical
@@ -121,7 +121,7 @@ theorem trace_regularized_inv_mul_eq_eigenvalue_sum
     rw [← Matrix.diagonal_add]
   -- Step 4: invertibility of the diagonal (via `det_diagonal` and positivity).
   have h_pos : ∀ i, 0 < eig i + lam := fun i =>
-    add_pos (hA.eigenvalues_pos i) hlam
+    add_pos_of_pos_of_nonneg (hA.eigenvalues_pos i) hlam
   have h_ne : ∀ i, eig i + lam ≠ 0 := fun i => (h_pos i).ne'
   have h_det_ne : (diagonal (fun i => eig i + lam)).det ≠ 0 := by
     rw [Matrix.det_diagonal]
