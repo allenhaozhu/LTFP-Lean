@@ -44,6 +44,16 @@ direct unit hypotheses.
   is the bottom-right Schur complement of the joint covariance block.
 * `Matrix.schurPosteriorCov_eq_precision_inv` — Woodbury identity
   giving the precision-form expression.
+* `Matrix.schurPosteriorCov_eq_precision_inv_of_obsCov` — convenience
+  alias of the Woodbury identity stated with the invertibility
+  hypothesis in `obsCov` ordering (i.e. `X · priorCov · Xᵀ + noiseVar • 1`
+  rather than `noiseVar • 1 + X · priorCov · Xᵀ`).
+* `Matrix.inv_smul_one_eq_smul_one` — scalar-noise inverse identity
+  `(noiseVar⁻¹ • 1)⁻¹ = noiseVar • 1`, the algebraic core of the
+  precision-to-covariance Woodbury rewrite.
+* `Matrix.obsCov_eq_add_comm` — bridges the `noiseVar • 1 + …`
+  ordering used by `Matrix.add_mul_mul_inv_eq_sub` to the
+  `obsCov` ordering used everywhere downstream.
 
 ## References
 
@@ -75,6 +85,38 @@ noncomputable def schurPosteriorCov
     (priorCov : Matrix p p R) (X : Matrix n p R) (noiseVar : R) :
     Matrix p p R :=
   priorCov - priorCov * Xᵀ * (obsCov priorCov X noiseVar)⁻¹ * (X * priorCov)
+
+/-! ### Convenience algebraic lemmas
+
+These three small lemmas are the load-bearing internal `have`s of the
+Woodbury rewrite below, surfaced as named public API so downstream
+callers can reuse them without re-deriving the algebra.
+-/
+
+/-- **Scalar-noise inverse identity.** For a unit scalar `noiseVar`, the
+matrix `noiseVar⁻¹ • (1 : Matrix n n R)` has matrix inverse
+`noiseVar • 1`. This is the algebraic core of the precision-to-
+covariance Woodbury rewrite: `C := noiseVar⁻¹ • 1` plays the role of
+the middle factor and its inverse is the original noise-times-identity. -/
+theorem inv_smul_one_eq_smul_one
+    {n : Type*} [Fintype n] [DecidableEq n]
+    (noiseVar : R) (hNoise : IsUnit noiseVar) :
+    (noiseVar⁻¹ • (1 : Matrix n n R))⁻¹ = noiseVar • (1 : Matrix n n R) := by
+  refine Matrix.inv_eq_left_inv ?_
+  rw [Matrix.smul_mul, Matrix.mul_smul, Matrix.mul_one, smul_smul,
+    mul_inv_cancel₀ (IsUnit.ne_zero hNoise), one_smul]
+
+omit [Fintype n] [DecidableEq p] in
+/-- **`obsCov` add-comm bridge.** Rewrites the additive ordering
+`noiseVar • 1 + X · priorCov · Xᵀ` (as it arises out of
+`Matrix.add_mul_mul_inv_eq_sub`) into the canonical `obsCov` form
+`X · priorCov · Xᵀ + noiseVar • 1`. -/
+theorem obsCov_eq_add_comm
+    (priorCov : Matrix p p R) (X : Matrix n p R) (noiseVar : R) :
+    noiseVar • (1 : Matrix n n R) + X * priorCov * Xᵀ
+      = obsCov priorCov X noiseVar := by
+  unfold obsCov
+  abel
 
 /-! ### Theorem 1 — Schur complement identity -/
 
@@ -133,10 +175,7 @@ theorem schurPosteriorCov_eq_precision_inv
   -- Compute `C⁻¹ = noiseVar • 1`.
   have hC_inv : C⁻¹ = noiseVar • (1 : Matrix n n R) := by
     rw [hC]
-    -- Show `(noiseVar⁻¹ • 1)⁻¹ = noiseVar • 1` directly via `inv_eq_left_inv`.
-    refine Matrix.inv_eq_left_inv ?_
-    rw [Matrix.smul_mul, Matrix.mul_smul, Matrix.mul_one, smul_smul,
-      mul_inv_cancel₀ (IsUnit.ne_zero hNoise), one_smul]
+    exact Matrix.inv_smul_one_eq_smul_one noiseVar hNoise
   -- The third invertibility hypothesis: `C⁻¹ + V * A⁻¹ * U` is a unit.
   have hAC_unit : IsUnit (C⁻¹ + V * A⁻¹ * U) := by
     rw [hC_inv]
@@ -155,10 +194,7 @@ theorem schurPosteriorCov_eq_precision_inv
   have hMid_eq : (C⁻¹ + V * A⁻¹ * U)⁻¹ = (obsCov priorCov X noiseVar)⁻¹ := by
     rw [hC_inv, hA_inv_eq, hU, hV]
     congr 1
-    -- `obsCov = X · priorCov · Xᵀ + noiseVar • 1`, and the LHS argument
-    -- is `noiseVar • 1 + X · priorCov · Xᵀ`. These differ by `add_comm`.
-    unfold obsCov
-    abel
+    exact Matrix.obsCov_eq_add_comm priorCov X noiseVar
   -- Rewrite the Woodbury RHS into `schurPosteriorCov`.
   calc (priorCov⁻¹ + Xᵀ * (noiseVar⁻¹ • (1 : Matrix n n R)) * X)⁻¹
       = (A + U * C * V)⁻¹ := by rw [hA, hU, hC, hV]
@@ -169,5 +205,22 @@ theorem schurPosteriorCov_eq_precision_inv
             Matrix.mul_assoc]
     _ = schurPosteriorCov priorCov X noiseVar := by
           rw [schurPosteriorCov_eq_schur_complement]
+
+/-- **Woodbury identity, `obsCov`-ordered variant.** Identical
+content to `schurPosteriorCov_eq_precision_inv`, but with the
+third invertibility hypothesis stated directly on
+`obsCov priorCov X noiseVar = X · priorCov · Xᵀ + noiseVar • 1`
+rather than on the additively-swapped
+`noiseVar • 1 + X · priorCov · Xᵀ`. This is the form most natural
+for callers who carry an `obsCov` invertibility witness around. -/
+theorem schurPosteriorCov_eq_precision_inv_of_obsCov
+    (priorCov : Matrix p p R) (X : Matrix n p R) (noiseVar : R)
+    (hPrior : IsUnit priorCov) (hNoise : IsUnit noiseVar)
+    (hObs : IsUnit (obsCov priorCov X noiseVar)) :
+    (priorCov⁻¹ + Xᵀ * (noiseVar⁻¹ • (1 : Matrix n n R)) * X)⁻¹
+      = schurPosteriorCov priorCov X noiseVar := by
+  refine schurPosteriorCov_eq_precision_inv priorCov X noiseVar hPrior hNoise ?_
+  rw [obsCov_eq_add_comm]
+  exact hObs
 
 end Matrix
