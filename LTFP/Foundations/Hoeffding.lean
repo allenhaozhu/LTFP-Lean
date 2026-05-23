@@ -185,4 +185,82 @@ theorem hoeffding [IsProbabilityMeasure μ] (t a b : ℝ) {X : Ω → ℝ} (hX :
       simp only [neg_eq_zero]
       exact h0
 
+/-! ### Downstream concentration corollaries
+
+These corollaries derive Chernoff-style tail bounds from the Hoeffding MGF
+bound by composing with `measure_ge_le_exp_mul_mgf` / `measure_le_le_exp_mul_mgf`.
+They are stated in the parametric form `exp (- t * ε + t ^ 2 * (b - a) ^ 2 / 8)`
+which avoids choosing the optimal `t`; the classical Hoeffding tail bound
+`exp (- 2 * ε ^ 2 / (b - a) ^ 2)` follows by specializing `t = 4 * ε / (b - a) ^ 2`.
+-/
+
+/-- **Hoeffding upper-tail bound** (parametric Chernoff form).
+For a zero-mean random variable `X` with `a ≤ X ≤ b` almost surely and `t ≥ 0`,
+the upper-tail probability satisfies
+`μ.real {ω | ε ≤ X ω} ≤ exp (- t * ε + t ^ 2 * (b - a) ^ 2 / 8)`. -/
+theorem hoeffding_upper_tail [IsProbabilityMeasure μ]
+    (t a b ε : ℝ) {X : Ω → ℝ} (ht : 0 ≤ t) (hX : AEMeasurable X μ)
+    (h : ∀ᵐ ω ∂μ, X ω ∈ Set.Icc a b) (h0 : μ[X] = 0) :
+    μ.real {ω | ε ≤ X ω} ≤ exp (- t * ε + t ^ 2 * (b - a) ^ 2 / 8) := by
+  have h_int : Integrable (fun ω ↦ exp (t * X ω)) μ := integrable_expt_bound hX h
+  refine (measure_ge_le_exp_mul_mgf ε ht h_int).trans ?_
+  rw [exp_add]
+  exact mul_le_mul_of_nonneg_left
+    (hoeffding_nonneg μ t a b ht hX h h0) (exp_pos _).le
+
+/-- **Hoeffding lower-tail bound** (parametric Chernoff form).
+For a zero-mean random variable `X` with `a ≤ X ≤ b` almost surely and `t ≥ 0`,
+the lower-tail probability satisfies
+`μ.real {ω | X ω ≤ -ε} ≤ exp (- t * ε + t ^ 2 * (b - a) ^ 2 / 8)`.
+The proof reduces to the upper-tail bound applied to `-X`. -/
+theorem hoeffding_lower_tail [IsProbabilityMeasure μ]
+    (t a b ε : ℝ) {X : Ω → ℝ} (ht : 0 ≤ t) (hX : AEMeasurable X μ)
+    (h : ∀ᵐ ω ∂μ, X ω ∈ Set.Icc a b) (h0 : μ[X] = 0) :
+    μ.real {ω | X ω ≤ -ε} ≤ exp (- t * ε + t ^ 2 * (b - a) ^ 2 / 8) := by
+  -- Restate {X ≤ -ε} as {ε ≤ -X} and apply the upper tail to `-X` which lies in `Icc (-b) (-a)`.
+  have h_neg_mem : ∀ᵐ ω ∂μ, (- X) ω ∈ Set.Icc (- b) (- a) := by
+    filter_upwards [h] with ω hω
+    exact ⟨neg_le_neg hω.2, neg_le_neg hω.1⟩
+  have h_neg_mean : μ[(- X)] = 0 := by
+    simp only [Pi.neg_apply, integral_neg, h0, neg_zero]
+  have key := hoeffding_upper_tail μ t (-b) (-a) ε ht hX.neg h_neg_mem h_neg_mean
+  have hset : {ω | X ω ≤ -ε} = {ω | ε ≤ -X ω} := by
+    ext ω; simp only [Set.mem_setOf_eq, le_neg]
+  have hba : (- a - - b) ^ 2 = (b - a) ^ 2 := by ring
+  rw [hba] at key
+  rw [hset]
+  exact key
+
+/-- **Hoeffding two-sided bound** (parametric Chernoff form).
+For a zero-mean random variable `X` with `a ≤ X ≤ b` almost surely and `t ≥ 0`,
+the two-sided deviation probability satisfies
+`μ.real {ω | ε ≤ |X ω|} ≤ 2 * exp (- t * ε + t ^ 2 * (b - a) ^ 2 / 8)`.
+The proof combines the upper- and lower-tail bounds via a union bound. -/
+theorem hoeffding_two_sided [IsProbabilityMeasure μ]
+    (t a b ε : ℝ) {X : Ω → ℝ} (ht : 0 ≤ t) (hX : AEMeasurable X μ)
+    (h : ∀ᵐ ω ∂μ, X ω ∈ Set.Icc a b) (h0 : μ[X] = 0) :
+    μ.real {ω | ε ≤ |X ω|} ≤ 2 * exp (- t * ε + t ^ 2 * (b - a) ^ 2 / 8) := by
+  -- Split {ε ≤ |X|} = {ε ≤ X} ∪ {X ≤ -ε} and apply both one-sided bounds.
+  have hsplit : {ω | ε ≤ |X ω|} ⊆ {ω | ε ≤ X ω} ∪ {ω | X ω ≤ -ε} := by
+    intro ω hω
+    simp only [Set.mem_setOf_eq, Set.mem_union] at hω ⊢
+    rcases lt_or_ge (X ω) 0 with hx | hx
+    · right
+      rw [abs_of_neg hx] at hω
+      linarith
+    · left; rwa [abs_of_nonneg hx] at hω
+  have h_meas : μ.real {ω | ε ≤ |X ω|} ≤
+      μ.real {ω | ε ≤ X ω} + μ.real {ω | X ω ≤ -ε} := by
+    refine (measureReal_mono ?_ ?_).trans (measureReal_union_le _ _)
+    · exact hsplit
+    · exact measure_ne_top _ _
+  have h_upper := hoeffding_upper_tail μ t a b ε ht hX h h0
+  have h_lower := hoeffding_lower_tail μ t a b ε ht hX h h0
+  calc μ.real {ω | ε ≤ |X ω|}
+      ≤ μ.real {ω | ε ≤ X ω} + μ.real {ω | X ω ≤ -ε} := h_meas
+    _ ≤ exp (- t * ε + t ^ 2 * (b - a) ^ 2 / 8)
+        + exp (- t * ε + t ^ 2 * (b - a) ^ 2 / 8) := by
+          exact add_le_add h_upper h_lower
+    _ = 2 * exp (- t * ε + t ^ 2 * (b - a) ^ 2 / 8) := by ring
+
 end ProbabilityTheory
