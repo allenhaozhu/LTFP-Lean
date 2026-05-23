@@ -137,4 +137,25 @@ theorem liebScalar_log_concave_anchor (h₁ h₂ k : ℝ) (hk : 0 < k) :
       Real.log_exp, Real.log_exp, Real.log_exp]
   ring
 
+/-- Scalar Lieb concavity in `k`: for fixed `h`, the map
+`k ↦ liebScalar h k = k * exp h` is concave on `Ioi 0` (in fact on all
+of ℝ, but we state it on `Ioi 0` to match the positivity domain of the
+matrix-Lieb statement). The function is linear in `k`, so concavity is
+trivial. This is a scalar anchor for the full matrix Lieb concavity
+result, which is a months-tier Mathlib gap. -/
+theorem liebScalar_concaveOn_k (h : ℝ) :
+    ConcaveOn ℝ (Set.Ioi (0 : ℝ)) (fun k => liebScalar h k) := by
+  -- `liebScalar h k = k * exp h = (exp h) • k`, which is the identity
+  -- scaled by the nonneg constant `exp h`. Compose `concaveOn_id` with
+  -- `ConcaveOn.smul`, then bridge via `congr` to the `k * exp h` form.
+  have hexp_nn : (0 : ℝ) ≤ Real.exp h := (Real.exp_pos h).le
+  have hbase : ConcaveOn ℝ (Set.Ioi (0 : ℝ)) (fun k : ℝ => Real.exp h • k) :=
+    (concaveOn_id (convex_Ioi (0 : ℝ))).smul hexp_nn
+  refine hbase.congr ?_
+  intro k _
+  -- `Real.exp h • k = Real.exp h * k = k * Real.exp h = liebScalar h k`.
+  unfold liebScalar
+  show Real.exp h • k = k * Real.exp h
+  rw [smul_eq_mul, mul_comm]
+
 end LTFP.MathlibExt.MatrixAnalysis
