@@ -77,4 +77,67 @@ theorem cStarOperatorMonotoneOnNonneg_sqrt :
   exact cStarOperatorMonotoneOnNonneg_rpow.{uA, un}
     (by norm_num : (1 / (2 : ℝ)) ∈ Set.Icc (0 : ℝ) 1) hM hN hMN
 
+/-! ### L2 layer: operator concavity on `CStarMatrix`
+
+Mirror predicate of `CStarOperatorMonotoneOnNonneg` for operator concavity.
+The full Löwner integral representation linking operator-concave with
+operator-monotone is multi-month upstream Mathlib work and is NOT proved
+here. This file currently records the predicate together with the two
+trivial affine instances (constant, identity) so the L2 API has
+non-vacuous content and a tested scaffold. Concrete instances such as
+`Real.log` and `Real.rpow` for `p ∈ [0, 1]` are blocked on pinned Mathlib
+(`80732f7660`, 2026-01-09), which carries only TODO comments — see
+`Mathlib/Analysis/SpecialFunctions/ContinuousFunctionalCalculus/ExpLog/Order.lean`
+("Show that the log is operator concave") and
+`Mathlib/Analysis/SpecialFunctions/ContinuousFunctionalCalculus/Rpow/IntegralRepresentation.lean`
+(the integral representation is described as "useful for showing rpow is
+operator concave", but the operator-concavity lemma itself is not stated).
+-/
+
+/-- A real function is operator concave on the nonnegative cone of finite
+`CStarMatrix` type copies if for all `t ∈ [0, 1]` and nonnegative `M N`,
+the CFC values satisfy
+`t • cfc f M + (1 - t) • cfc f N ≤ cfc f (t • M + (1 - t) • N)`.
+
+Mirror of `CStarOperatorMonotoneOnNonneg`. Convex combinations of
+nonnegative elements are nonnegative in a `StarOrderedRing`, so the
+midpoint stays in the cone. -/
+def CStarOperatorConcaveOnNonneg (f : ℝ → ℝ) : Prop :=
+  ∀ {A : Type uA} [CStarAlgebra A] [PartialOrder A] [StarOrderedRing A]
+    {n : Type un} [Fintype n] [DecidableEq n]
+    (M N : CStarMatrix n n A) (_hM : 0 ≤ M) (_hN : 0 ≤ N)
+    (t : ℝ) (_ht : t ∈ Set.Icc (0:ℝ) 1),
+    t • cfc f M + (1 - t) • cfc f N ≤ cfc f (t • M + (1 - t) • N)
+
+/-- Constants are operator concave on the nonnegative cone of `CStarMatrix`
+type copies (with equality).
+
+Both sides reduce to `c • 1` after `cfc_const` and `t + (1 - t) = 1`. -/
+theorem cStarOperatorConcaveOnNonneg_const (c : ℝ) :
+    CStarOperatorConcaveOnNonneg.{uA, un} (fun _ => c) := by
+  intro A _ _ _ n _ _ M N hM hN t ht
+  -- Nonnegativity is preserved under nonneg-scalar combinations.
+  have ht0 : (0 : ℝ) ≤ t := ht.1
+  have ht1 : t ≤ 1 := ht.2
+  have h1mt : (0 : ℝ) ≤ 1 - t := by linarith
+  have hsum : (0 : CStarMatrix n n A) ≤ t • M + (1 - t) • N :=
+    add_nonneg (smul_nonneg ht0 hM) (smul_nonneg h1mt hN)
+  rw [cfc_const (R := ℝ) c M, cfc_const (R := ℝ) c N,
+      cfc_const (R := ℝ) c (t • M + (1 - t) • N), ← add_smul]
+  have ht_sum : t + (1 - t) = 1 := by ring
+  rw [ht_sum, one_smul]
+
+/-- The identity is operator concave on the nonnegative cone of `CStarMatrix`
+type copies (with equality — affine in `t`). -/
+theorem cStarOperatorConcaveOnNonneg_id :
+    CStarOperatorConcaveOnNonneg.{uA, un} id := by
+  intro A _ _ _ n _ _ M N hM hN t ht
+  have ht0 : (0 : ℝ) ≤ t := ht.1
+  have ht1 : t ≤ 1 := ht.2
+  have h1mt : (0 : ℝ) ≤ 1 - t := by linarith
+  have hsum : (0 : CStarMatrix n n A) ≤ t • M + (1 - t) • N :=
+    add_nonneg (smul_nonneg ht0 hM) (smul_nonneg h1mt hN)
+  rw [cfc_id (R := ℝ) M, cfc_id (R := ℝ) N,
+      cfc_id (R := ℝ) (t • M + (1 - t) • N)]
+
 end LTFP.MathlibExt.MatrixAnalysis
