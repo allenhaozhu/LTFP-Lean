@@ -1304,12 +1304,37 @@ example : 0 ≤ bhattacharyya μ ν := bhattacharyya_nonneg μ ν
 
 end Examples
 
+/-! ### Self-affinity for probability measures -/
+
+/-- **Bhattacharyya self-affinity for probability measures.** For any
+probability measure `μ`, the Bhattacharyya affinity satisfies
+`bhattacharyya μ μ = 1`.
+
+The proof routes through the asymmetric-form bridge
+`bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac` (with `ν := μ` and
+`hμν := Measure.AbsolutelyContinuous.rfl`), reduces the integrand to
+the constant `1` via `Measure.rnDeriv_self` (an a.e. equality), and
+evaluates `∫ 1 ∂μ = 1` using `probReal_univ` for the probability
+measure. -/
+theorem bhattacharyya_self_eq_one (μ : Measure α) [IsProbabilityMeasure μ] :
+    bhattacharyya μ μ = 1 := by
+  -- Bridge: `bhattacharyya μ μ = ∫ √((μ.rnDeriv μ x).toReal) ∂μ`.
+  rw [bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac μ μ
+        MeasureTheory.Measure.AbsolutelyContinuous.rfl]
+  -- The integrand equals `1` almost everywhere with respect to `μ`.
+  have h_rn : μ.rnDeriv μ =ᵐ[μ] fun _ => (1 : ℝ≥0∞) :=
+    MeasureTheory.Measure.rnDeriv_self μ
+  have h_pt : (fun x => Real.sqrt ((μ.rnDeriv μ x).toReal)) =ᵐ[μ]
+      fun _ => (1 : ℝ) := by
+    filter_upwards [h_rn] with x hx
+    rw [hx]
+    simp [ENNReal.toReal_one, Real.sqrt_one]
+  rw [MeasureTheory.integral_congr_ae h_pt, MeasureTheory.integral_const,
+    probReal_univ, smul_eq_mul, mul_one]
+
 /-!
 ## TODO
 
-* `bhattacharyya_self : [IsProbabilityMeasure μ] → bhattacharyya μ μ = 1`.
-  Blocked on a clean computation of `rnDeriv μ (μ + μ)`; expected to
-  follow from `Measure.rnDeriv_self` plus a `(μ + μ) = 2 • μ` rewrite.
 * When `μ` is not absolutely continuous with respect to `ν`, the
   asymmetric-form bridge `bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac`
   fails (the singular part of `μ` is invisible to `μ.rnDeriv ν`). A
