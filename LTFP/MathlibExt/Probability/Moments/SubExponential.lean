@@ -383,6 +383,142 @@ theorem measure_ge_le [IsFiniteMeasure μ]
     _ ≤ Real.exp (-s * ε) * Real.exp (s ^ 2 * ν / (2 * (1 - s * b))) := hstep
     _ = Real.exp (-s * ε + s ^ 2 * ν / (2 * (1 - s * b))) := hfold
 
+/-- **Bernstein's inequality (canonical two-regime form).**
+
+For a `(ν, b)`-sub-Gamma random variable `X` with `0 < ν`, every positive
+threshold `ε > 0` yields the canonical Bernstein tail bound
+
+`μ.real {ω | ε ≤ X ω} ≤ exp(-ε² / (2 (ν + b · ε)))`.
+
+This is the closed-form Bernstein inequality, obtained from
+`IsSubGamma.measure_ge_le` by the Chernoff-optimal choice
+`s := ε / (ν + b · ε)`, which lies in the small-`s` regime `s · b < 1`
+because `s · b = b · ε / (ν + b · ε) < 1` whenever `ν > 0`.
+
+The exponent collapses by elementary algebra: at this `s`, the exponent
+`-s · ε + s² · ν / (2 (1 - s · b))` equals `-ε² / (2 (ν + b · ε))`. -/
+theorem measure_ge_le_bernstein [IsFiniteMeasure μ]
+    (h : IsSubGamma X μ ν b) (ε : ℝ) (hε : 0 < ε) (hν : 0 < ν)
+    (h_int :
+      Integrable (fun ω => Real.exp (ε / (ν + b * ε) * X ω)) μ) :
+    μ.real {ω | ε ≤ X ω} ≤
+      Real.exp (-(ε ^ 2) / (2 * (ν + b * ε))) := by
+  -- Chernoff parameter.
+  set s : ℝ := ε / (ν + b * ε) with hs_def
+  -- Sign and side condition.
+  have hbε_nn : 0 ≤ b * ε := mul_nonneg h.b_nonneg hε.le
+  have hνb : 0 < ν + b * ε := by linarith
+  have hνb_ne : ν + b * ε ≠ 0 := ne_of_gt hνb
+  have hs_nn : 0 ≤ s := by
+    rw [hs_def]; exact div_nonneg hε.le hνb.le
+  -- `s · b = b · ε / (ν + b · ε) < 1` since `ν > 0`.
+  have hsb : s * b < 1 := by
+    rw [hs_def]
+    have hnum_lt : b * ε < ν + b * ε := by linarith
+    have h_eq : ε / (ν + b * ε) * b = (b * ε) / (ν + b * ε) := by
+      rw [div_mul_eq_mul_div]; congr 1; ring
+    rw [h_eq]
+    exact (div_lt_one hνb).mpr hnum_lt
+  -- Apply the base sub-Gamma tail bound.
+  have hbase := h.measure_ge_le ε s hs_nn hsb h_int
+  -- First simplify `1 - s * b = ν / (ν + b · ε)`.
+  have h_one_sb : 1 - s * b = ν / (ν + b * ε) := by
+    rw [hs_def]
+    rw [div_mul_eq_mul_div]
+    rw [show ε * b = b * ε from mul_comm _ _]
+    rw [eq_div_iff hνb_ne]
+    field_simp
+    ring
+  -- Then `2 * (1 - s * b) = 2 * ν / (ν + b · ε)`, and at the optimal `s`
+  -- the exponent collapses.
+  have h_exp_eq :
+      -s * ε + s ^ 2 * ν / (2 * (1 - s * b)) =
+        -(ε ^ 2) / (2 * (ν + b * ε)) := by
+    rw [h_one_sb]
+    rw [show (2 : ℝ) * (ν / (ν + b * ε)) = (2 * ν) / (ν + b * ε) by
+        rw [mul_div_assoc]]
+    rw [hs_def]
+    have h2ν_ne : (2 * ν) ≠ 0 := by positivity
+    have h2D_ne : (2 * (ν + b * ε)) ≠ 0 := by
+      have : 0 < 2 * (ν + b * ε) := by positivity
+      exact ne_of_gt this
+    field_simp
+    ring
+  rw [h_exp_eq] at hbase
+  exact hbase
+
+/-- **Bernstein sub-Gaussian regime.**
+
+In the sub-Gaussian regime `b · ε ≤ ν` (the deviation `ε` is small
+relative to the variance proxy `ν`), the canonical Bernstein bound
+`exp(-ε² / (2 (ν + b · ε)))` simplifies to the sub-Gaussian
+`exp(-ε² / (4 ν))`. This is the regime where the tail behaves like a
+Gaussian, and the user can invert the bound by `ε = 2 √(ν · log(1/δ))`
+to obtain a sub-Gaussian confidence interval.
+
+The proof uses `2(ν + b · ε) ≤ 4ν` in this regime. -/
+theorem measure_ge_le_sub_gaussian_regime [IsFiniteMeasure μ]
+    (h : IsSubGamma X μ ν b) (ε : ℝ) (hε : 0 < ε) (hν : 0 < ν)
+    (hreg : b * ε ≤ ν)
+    (h_int :
+      Integrable (fun ω => Real.exp (ε / (ν + b * ε) * X ω)) μ) :
+    μ.real {ω | ε ≤ X ω} ≤ Real.exp (-(ε ^ 2) / (4 * ν)) := by
+  -- Start from the canonical Bernstein tail.
+  have hbern := h.measure_ge_le_bernstein ε hε hν h_int
+  -- In the sub-Gaussian regime, `2(ν + b · ε) ≤ 4ν`.
+  have hbε_nn : 0 ≤ b * ε := mul_nonneg h.b_nonneg hε.le
+  have hνb_pos : 0 < ν + b * ε := by linarith
+  have hden_le : 2 * (ν + b * ε) ≤ 4 * ν := by linarith
+  have hden_pos : 0 < 2 * (ν + b * ε) := by linarith
+  have h4ν_pos : 0 < 4 * ν := by linarith
+  have hε2_nn : 0 ≤ ε ^ 2 := sq_nonneg ε
+  -- So `ε² / (2 (ν + b · ε)) ≥ ε² / (4 ν)`, hence
+  -- `-(ε²)/(2(ν+bε)) ≤ -(ε²)/(4ν)`.
+  have h_exp_le :
+      -(ε ^ 2) / (2 * (ν + b * ε)) ≤ -(ε ^ 2) / (4 * ν) := by
+    rw [neg_div, neg_div, neg_le_neg_iff]
+    exact div_le_div_of_nonneg_left hε2_nn hden_pos hden_le
+  exact hbern.trans (Real.exp_le_exp.mpr h_exp_le)
+
+/-- **Bernstein exponential regime.**
+
+In the exponential regime `ν ≤ b · ε` (the deviation `ε` is large
+relative to the variance proxy, so the heavy-tail exponential decay
+dominates), the canonical Bernstein bound `exp(-ε² / (2 (ν + b · ε)))`
+simplifies to `exp(-ε / (4 b))`. This is the regime where the tail
+behaves like a one-sided exponential, and the user can invert the bound
+by `ε = 4 b · log(1/δ)` to obtain an exponential confidence interval.
+
+The proof uses `2(ν + b · ε) ≤ 4 b · ε` in this regime, hence
+`ε² / (2 (ν + b · ε)) ≥ ε² / (4 b · ε) = ε / (4 b)`. Requires `0 < b`. -/
+theorem measure_ge_le_exp_regime [IsFiniteMeasure μ]
+    (h : IsSubGamma X μ ν b) (ε : ℝ) (hε : 0 < ε) (hν : 0 < ν) (hb : 0 < b)
+    (hreg : ν ≤ b * ε)
+    (h_int :
+      Integrable (fun ω => Real.exp (ε / (ν + b * ε) * X ω)) μ) :
+    μ.real {ω | ε ≤ X ω} ≤ Real.exp (-ε / (4 * b)) := by
+  -- Start from the canonical Bernstein tail.
+  have hbern := h.measure_ge_le_bernstein ε hε hν h_int
+  -- In the exponential regime, `2(ν + b · ε) ≤ 4 b · ε`.
+  have hbε_pos : 0 < b * ε := mul_pos hb hε
+  have hνb_pos : 0 < ν + b * ε := by linarith
+  have hden_le : 2 * (ν + b * ε) ≤ 4 * (b * ε) := by linarith
+  have hden_pos : 0 < 2 * (ν + b * ε) := by linarith
+  have h4bε_pos : 0 < 4 * (b * ε) := by linarith
+  have hε2_nn : 0 ≤ ε ^ 2 := sq_nonneg ε
+  -- So `-(ε²)/(2(ν+bε)) ≤ -(ε²)/(4(bε)) = -ε/(4b)`.
+  have h_exp_le :
+      -(ε ^ 2) / (2 * (ν + b * ε)) ≤ -(ε ^ 2) / (4 * (b * ε)) := by
+    rw [neg_div, neg_div, neg_le_neg_iff]
+    exact div_le_div_of_nonneg_left hε2_nn hden_pos hden_le
+  -- Simplify `-(ε²) / (4 (b · ε)) = -ε / (4 b)`.
+  have hε_ne : ε ≠ 0 := ne_of_gt hε
+  have hb_ne : b ≠ 0 := ne_of_gt hb
+  have h_simp : -(ε ^ 2) / (4 * (b * ε)) = -ε / (4 * b) := by
+    field_simp
+  rw [h_simp] at h_exp_le
+  exact hbern.trans (Real.exp_le_exp.mpr h_exp_le)
+
 end IsSubGamma
 
 /-! ## Conversions between sub-exponential and sub-Gamma
@@ -472,6 +608,28 @@ theorem IsSubGamma.toIsSubExponential
       rw [← h_eq]; exact h_div_le_num
     exact le_trans hbound (Real.exp_le_exp.mpr h_final)
 
+/-! ## Sub-exponential Bernstein wrappers
+
+Every sub-exponential variable is sub-Gamma with the same parameters
+(via `IsSubExponential.toIsSubGamma`), so the canonical Bernstein
+two-regime tail bound applies verbatim. -/
+
+/-- **Bernstein's inequality for sub-exponential random variables.**
+
+A `(ν, b)`-sub-exponential random variable with `0 < ν` satisfies the
+canonical Bernstein tail bound
+`μ.real {ω | ε ≤ X ω} ≤ exp(-ε² / (2 (ν + b · ε)))` at every positive
+threshold `ε > 0`. This follows immediately from the sub-Gamma version
+via `IsSubExponential.toIsSubGamma`. -/
+theorem IsSubExponential.measure_ge_le_bernstein
+    {X : Ω → ℝ} {μ : Measure Ω} [IsFiniteMeasure μ] {ν b : ℝ}
+    (h : IsSubExponential X μ ν b) (ε : ℝ) (hε : 0 < ε) (hν : 0 < ν)
+    (h_int :
+      Integrable (fun ω => Real.exp (ε / (ν + b * ε) * X ω)) μ) :
+    μ.real {ω | ε ≤ X ω} ≤
+      Real.exp (-(ε ^ 2) / (2 * (ν + b * ε))) :=
+  h.toIsSubGamma.measure_ge_le_bernstein ε hε hν h_int
+
 /-! ## Examples -/
 
 section Examples
@@ -517,6 +675,15 @@ example {X : Ω → ℝ} {μ : Measure Ω} {ν b : ℝ}
     (h : IsSubGamma X μ ν b) :
     IsSubExponential X μ (2 * ν) (2 * b) :=
   h.toIsSubExponential
+
+/-- Example: the canonical Bernstein tail for a sub-Gamma variable. -/
+example {X : Ω → ℝ} {μ : Measure Ω} [IsFiniteMeasure μ] {ν b : ℝ}
+    (h : IsSubGamma X μ ν b) (ε : ℝ) (hε : 0 < ε) (hν : 0 < ν)
+    (h_int :
+      Integrable (fun ω => Real.exp (ε / (ν + b * ε) * X ω)) μ) :
+    μ.real {ω | ε ≤ X ω} ≤
+      Real.exp (-(ε ^ 2) / (2 * (ν + b * ε))) :=
+  h.measure_ge_le_bernstein ε hε hν h_int
 
 end Examples
 
