@@ -463,6 +463,18 @@ theorem operatorConvex_const (c : ℝ) : OperatorConvex.{uomk, uomn} (fun _ => c
   have ht_sum : t + (1 - t) = 1 := by ring
   rw [ht_sum, one_smul]
 
+/-- The identity is operator convex (with equality — affine in t). -/
+theorem operatorConvex_id : OperatorConvex.{uomk, uomn} id := by
+  intro 𝕜 _ n _ _ A B hA hB t _ht
+  have hAs : IsSelfAdjoint A := hA
+  have hBs : IsSelfAdjoint B := hB
+  have hsum : IsSelfAdjoint (t • A + (1 - t) • B) :=
+    ((IsSelfAdjoint.all t).smul hAs).add
+      ((IsSelfAdjoint.all (1 - t)).smul hBs)
+  rw [cfc_id (R := ℝ) (p := IsSelfAdjoint) A hAs,
+      cfc_id (R := ℝ) (p := IsSelfAdjoint) B hBs,
+      cfc_id (R := ℝ) (p := IsSelfAdjoint) (t • A + (1 - t) • B) hsum]
+
 /-- Sum of two operator-convex functions is operator convex. -/
 theorem OperatorConvex.add {f g : ℝ → ℝ}
     (hf : OperatorConvex.{uomk, uomn} f) (hg : OperatorConvex.{uomk, uomn} g) :
@@ -553,6 +565,38 @@ theorem OperatorConvex.add_const {f : ℝ → ℝ}
   have hfun : (fun t : ℝ => c + f t) = (fun t : ℝ => f t + c) := by
     funext s; exact add_comm c (f s)
   rw [← hfun]
+  exact hraw
+
+/-- Negating an operator-convex function gives an operator-concave function.
+Mirror of `OperatorMonotone.neg_antitone` for the convex/concave pair. -/
+theorem OperatorConvex.neg_concave {f : ℝ → ℝ}
+    (hf : OperatorConvex.{uomk, uomn} f) :
+    OperatorConcave.{uomk, uomn} (fun t => -f t) := by
+  intro 𝕜 _ n _ _ A B hA hB t ht
+  have hraw := hf A B hA hB t ht
+  change t • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x) A +
+      (1 - t) • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x) B ≤
+      cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x)
+        (t • A + (1 - t) • B)
+  rw [cfc_neg (p := IsSelfAdjoint) f A, cfc_neg (p := IsSelfAdjoint) f B,
+      cfc_neg (p := IsSelfAdjoint) f (t • A + (1 - t) • B),
+      smul_neg, smul_neg, ← neg_add, neg_le_neg_iff]
+  exact hraw
+
+/-- Negating an operator-concave function gives an operator-convex function.
+Mirror of `OperatorMonotone.neg_antitone` for the concave/convex pair. -/
+theorem OperatorConcave.neg_convex {f : ℝ → ℝ}
+    (hf : OperatorConcave.{uomk, uomn} f) :
+    OperatorConvex.{uomk, uomn} (fun t => -f t) := by
+  intro 𝕜 _ n _ _ A B hA hB t ht
+  have hraw := hf A B hA hB t ht
+  change cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x)
+        (t • A + (1 - t) • B) ≤
+      t • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x) A +
+        (1 - t) • cfc (R := ℝ) (p := IsSelfAdjoint) (fun x => -f x) B
+  rw [cfc_neg (p := IsSelfAdjoint) f A, cfc_neg (p := IsSelfAdjoint) f B,
+      cfc_neg (p := IsSelfAdjoint) f (t • A + (1 - t) • B),
+      smul_neg, smul_neg, ← neg_add, neg_le_neg_iff]
   exact hraw
 
 /-- The function `t ↦ -t` is operator antitone.
