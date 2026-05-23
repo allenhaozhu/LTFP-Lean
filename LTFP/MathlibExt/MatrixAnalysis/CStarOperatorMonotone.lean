@@ -63,4 +63,18 @@ theorem cStarOperatorMonotoneOnStrictlyPos_log :
   change cfc Real.log M ≤ cfc Real.log N
   exact CFC.log_monotoneOn (A := CStarMatrix n n A) hM hN hMN
 
+/-- `Real.sqrt` is operator monotone on the nonnegative cone of finite
+`CStarMatrix` type copies, as the `p = 1/2` instance of
+`cStarOperatorMonotoneOnNonneg_rpow` via the unconditional identity
+`Real.sqrt x = x ^ (1/2)`. -/
+theorem cStarOperatorMonotoneOnNonneg_sqrt :
+    CStarOperatorMonotoneOnNonneg.{uA, un} Real.sqrt := by
+  intro A _ _ _ n _ _ M hM N hN hMN
+  have hsqrt : (Real.sqrt : ℝ → ℝ) = fun t : ℝ => t ^ (1 / (2 : ℝ)) := by
+    funext t; exact Real.sqrt_eq_rpow t
+  change cfc Real.sqrt M ≤ cfc Real.sqrt N
+  rw [hsqrt]
+  exact cStarOperatorMonotoneOnNonneg_rpow.{uA, un}
+    (by norm_num : (1 / (2 : ℝ)) ∈ Set.Icc (0 : ℝ) 1) hM hN hMN
+
 end LTFP.MathlibExt.MatrixAnalysis
