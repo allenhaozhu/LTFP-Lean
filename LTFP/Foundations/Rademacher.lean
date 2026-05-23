@@ -1366,4 +1366,138 @@ theorem expectation_le_rademacher {X : Ω → Z} [Nonempty ι] [Countable ι]
       apply Nat.cast_ne_zero.mpr hn
     _ = _ := by simp
 
+/-! ### with-abs ↔ without-abs Rademacher complexity bridge
+
+The standard pointwise inequality `with_abs ≤ 2 * without_abs` of the
+ticket B8 N6 dispatch sheet is **mathematically false** in the
+unconditional form (counterexample: `F = {f₀}` with `f₀(x₁) = 1`, `n = 1`;
+then `with_abs = 1`, `without_abs = 0`).  What is unconditionally true,
+and what the downstream Dudley composition actually needs, is the
+**equality** between `empiricalRademacherComplexity` of `F` and
+`empiricalRademacherComplexity_without_abs` of the *negation-doubled*
+class `F̃ = {f, -f : f ∈ F}` (Bartlett–Mendelson, Bach §13.3
+"symmetrisation by sign-flipping"; cf. `Symmetrization.sup_abs_lemma`).
+
+This equality is the load-bearing bridge: given a Dudley bound on the
+without-abs Rademacher complexity of the doubled class (which is
+recovered from a Dudley bound on `F` plus a factor-of-2 inflation of
+covering numbers under negation-closure), the with-abs Rademacher
+complexity of the original class is bounded by the same RHS, which then
+chains into `uniform_deviation_expectation_le_two_smul_rademacher_complexity`
+(`LTFP/Foundations/Main.lean:28`).
+-/
+
+/-- The negation-doubled function class: each `f i : 𝒳 → ℝ` in the
+original family contributes both `f i` (index `(0, i)`) and `-(f i)`
+(index `(1, i)`) to the new family indexed by `Fin 2 × ι`.
+
+The `(j.1.1 == 0)` form (Bool `BEq.beq`) is chosen to match the
+shape produced by `Symmetrization.sup_abs_lemma`. -/
+def negDoubleFamily (f : ι → Z → ℝ) : Fin 2 × ι → Z → ℝ :=
+  fun j x => if (j.1.1 == 0) = true then f j.2 x else -(f j.2 x)
+
+/-- **with-abs ↔ without-abs Rademacher complexity bridge.**
+
+For any family `f : ι → 𝒳 → ℝ` with uniformly bounded values on the
+sample `S`, the with-abs empirical Rademacher complexity of `f` equals
+the without-abs empirical Rademacher complexity of the negation-doubled
+class `negDoubleFamily f : Fin 2 × ι → 𝒳 → ℝ`.
+
+This is the exact relationship between the two definitions: the
+absolute value inside the supremum is absorbed into a doubling of the
+index set with sign-flipped duplicates.  See the module docstring above
+for why the "naive" `≤ 2 *` form is unconditionally false. -/
+theorem empiricalRademacherComplexity_eq_without_abs_negDoubleFamily
+    [Nonempty ι] (f : ι → Z → ℝ) (S : Fin n → Z)
+    {C : ℝ} (hC : ∀ i j, |f i (S j)| ≤ C) :
+    empiricalRademacherComplexity n f S =
+      empiricalRademacherComplexity_without_abs n (negDoubleFamily f) S := by
+  dsimp [empiricalRademacherComplexity, empiricalRademacherComplexity_without_abs]
+  -- Both sides factor as `(2^n)⁻¹ * ∑_σ (per-σ supremum)`; reduce to per-σ.
+  apply congrArg
+  apply Finset.sum_congr rfl
+  intro σ _
+  -- Per-σ goal: `⨆ i, |V_σ(f i)| = ⨆ (s,i) : Fin 2 × ι, V_σ((negDoubleFamily f) (s,i))`
+  -- where `V_σ(g) = (n)⁻¹ * ∑ k, (σ k : ℝ) * g (S k)`.
+  set V : (Z → ℝ) → ℝ :=
+    fun g => (n : ℝ)⁻¹ * ∑ k : Fin n, ((σ k : ℤ) : ℝ) * g (S k) with hV_def
+  -- Linearity-under-negation of `V`.
+  have hV₀ : ∀ g : Z → ℝ, V (-g) = -(V g) := by
+    intro g
+    simp only [V, Pi.neg_apply, mul_neg, Finset.sum_neg_distrib]
+  -- Boundedness of the `|V (f i)|` range (needed for `sup_abs_lemma`).
+  -- We use `(n : ℝ)⁻¹ * (n * |C|) + |C|` as a uniform upper bound, which
+  -- avoids needing a separate nonneg hypothesis on `C` and works in both
+  -- `n = 0` and `n > 0` cases.
+  have hV₁ : BddAbove (Set.range fun i => |V (f i)|) := by
+    refine ⟨|C| + 1, ?_⟩
+    rintro x ⟨i, rfl⟩
+    simp only [V]
+    rw [abs_mul]
+    have habs_inv : |(n : ℝ)⁻¹| = (n : ℝ)⁻¹ := abs_of_nonneg (by positivity)
+    rw [habs_inv]
+    have hsum_bd :
+        |∑ k : Fin n, ((σ k : ℤ) : ℝ) * f i (S k)|
+          ≤ ∑ k : Fin n, |((σ k : ℤ) : ℝ) * f i (S k)| :=
+      Finset.abs_sum_le_sum_abs _ _
+    have hterm_bd :
+        ∑ k : Fin n, |((σ k : ℤ) : ℝ) * f i (S k)| ≤ (n : ℝ) * |C| := by
+      have hk : ∀ k : Fin n, |((σ k : ℤ) : ℝ) * f i (S k)| ≤ |C| := by
+        intro k
+        rw [abs_mul]
+        have hσ_abs : |((σ k : ℤ) : ℝ)| = 1 := Signs.apply_abs' σ k
+        rw [hσ_abs, one_mul]
+        exact le_trans (hC i k) (le_abs_self C)
+      calc
+        ∑ k : Fin n, |((σ k : ℤ) : ℝ) * f i (S k)| ≤ ∑ k : Fin n, |C| :=
+          Finset.sum_le_sum (fun k _ => hk k)
+        _ = (n : ℝ) * |C| := by
+          simp [Finset.sum_const, Finset.card_univ, Fintype.card_fin, mul_comm]
+    have hbound :
+        (n : ℝ)⁻¹ * |∑ k : Fin n, ((σ k : ℤ) : ℝ) * f i (S k)| ≤ |C| := by
+      by_cases hn : n = 0
+      · subst hn
+        simp
+      · have hn' : (0 : ℝ) < (n : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hn
+        calc
+          (n : ℝ)⁻¹ * |∑ k : Fin n, ((σ k : ℤ) : ℝ) * f i (S k)|
+            ≤ (n : ℝ)⁻¹ * ∑ k : Fin n, |((σ k : ℤ) : ℝ) * f i (S k)| :=
+              mul_le_mul_of_nonneg_left hsum_bd (by positivity)
+          _ ≤ (n : ℝ)⁻¹ * ((n : ℝ) * |C|) :=
+              mul_le_mul_of_nonneg_left hterm_bd (by positivity)
+          _ = |C| := by field_simp
+    linarith
+  -- Apply sup_abs_lemma.
+  have h_sup_abs := sup_abs_lemma (V := V) (f := f) hV₀ hV₁
+  -- h_sup_abs : ⨆ i, |V (f i)| = ⨆ (j : Fin 2 × ι), V (if (j.1.1 == 0) = true then f j.2 else -(f j.2))
+  rw [h_sup_abs]
+  -- Goal: ⨆ (j : Fin 2 × ι), V (if (j.1.1 == 0) = true then f j.2 else -(f j.2))
+  --     = ⨆ (j : Fin 2 × ι), (n)⁻¹ * ∑ k, σ k * (negDoubleFamily f) j (S k)
+  apply congrArg
+  funext ⟨s, i⟩
+  -- Both sides reduce to V applied to the same function (modulo eta).
+  -- `V g = (n)⁻¹ * ∑ k, σ k * g (S k)`, and we want
+  --   V (if (s.1 == 0) = true then f i else -(f i))
+  --     = (n)⁻¹ * ∑ k, σ k * (if (s.1 == 0) = true then f i (S k) else -(f i (S k)))
+  -- which is `V` applied with the if pushed inside the application.
+  simp only [V, negDoubleFamily]
+  -- LHS: V (if (s.1 == 0) = true then f i else -(f i)) — the `if` is over functions.
+  -- RHS: V_body with the if pushed inside the function application.
+  -- Use `Finset.sum_congr` to push the if inside the sum.
+  by_cases hs : ((s.1 : ℕ) == 0) = true
+  · rw [if_pos hs]
+    -- LHS: (n)⁻¹ * ∑ k, σ k * f i (S k)
+    -- RHS: (n)⁻¹ * ∑ x, σ x * (if ... then f i (S x) else -f i (S x))
+    -- Push the if inside the sum (RHS), then simplify with `hs`.
+    apply congrArg
+    apply Finset.sum_congr rfl
+    intro k _
+    rw [if_pos hs]
+  · rw [if_neg hs]
+    apply congrArg
+    apply Finset.sum_congr rfl
+    intro k _
+    rw [if_neg hs]
+    rfl
+
 end
