@@ -77,6 +77,21 @@ What is **pending** for a follow-up Mathlib PR:
 * `IsLSmooth.add_const` — adding a constant preserves `L`-smoothness.
 * `IsLSmooth.const_smul` — multiplying by a nonneg scalar `c` rescales
   the smoothness constant by `c`.
+* `IsLSmooth.neg` — negating an `L`-smooth function preserves
+  `L`-smoothness (no differentiability hypothesis needed).
+* `IsLSmooth.add` — the sum of an `L₁`-smooth and an `L₂`-smooth
+  function is `(L₁ + L₂)`-smooth, assuming both are differentiable on
+  `ℝ` so that `deriv (f + g) = deriv f + deriv g` pointwise.
+* `IsLSmooth.sub` — the difference of an `L₁`-smooth and an
+  `L₂`-smooth function is `(L₁ + L₂)`-smooth, under the same
+  differentiability hypothesis.
+* `descent_ratio_nonneg_of_eta_le_two_div_L` — wrapper of
+  `descent_ratio_nonneg` that takes the natural hypothesis
+  `η ≤ 2 / L` (the right-end of the admissible step-size window)
+  rather than `η * L ≤ 1`.
+* `descent_ratio_nonneg_of_eta_le_one_div_L` — wrapper of
+  `descent_ratio_nonneg` taking the canonical hypothesis `η ≤ 1 / L`,
+  the most common specialisation in textbook descent arguments.
 
 ## Implementation notes
 
@@ -183,6 +198,47 @@ theorem descent_ratio_neg_of_step_too_large
   have h_neg_factor : 1 - L * η / 2 < 0 := by linarith
   exact mul_neg_of_pos_of_neg hη_pos h_neg_factor
 
+/-- Wrapper of `descent_ratio_nonneg` taking the natural step-size
+hypothesis `η ≤ 2 / L`: the right end of the admissible window for
+vanilla gradient descent on an `L`-smooth function.
+
+This is the cleanest form for downstream textbook arguments, which
+typically write the step-size constraint as `η ≤ 2 / L` rather than
+`η * L ≤ 1`. -/
+theorem descent_ratio_nonneg_of_eta_le_two_div_L
+    (L η : ℝ) (hL : 0 < L) (hη : 0 ≤ η) (hηL : η ≤ 2 / L) :
+    0 ≤ η * (1 - L * η / 2) := by
+  -- `η ≤ 2 / L` and `L > 0` give `L * η ≤ 2`, hence `1 - L * η / 2 ≥ 0`.
+  have hLη_le_two : L * η ≤ 2 := by
+    have := (mul_le_mul_of_nonneg_left hηL (le_of_lt hL))
+    -- `L * η ≤ L * (2 / L) = 2`.
+    have hL_ne : L ≠ 0 := ne_of_gt hL
+    have hsimp : L * (2 / L) = 2 := by field_simp
+    rw [hsimp] at this
+    exact this
+  have h_pos_factor : 0 ≤ 1 - L * η / 2 := by linarith
+  exact mul_nonneg hη h_pos_factor
+
+/-- Canonical-step-size specialisation of `descent_ratio_nonneg`:
+on `[0, 1 / L]` the descent quadratic `η * (1 - L * η / 2)` is nonneg.
+
+This is the most common form invoked in textbook descent arguments,
+where the step size is chosen as `η = 1 / L` (or any value bounded by
+it). It is an immediate consequence of `descent_ratio_nonneg` once
+`η ≤ 1 / L` is rewritten as `η * L ≤ 1`. -/
+theorem descent_ratio_nonneg_of_eta_le_one_div_L
+    (L η : ℝ) (hL : 0 < L) (hη : 0 ≤ η) (hηL : η ≤ 1 / L) :
+    0 ≤ η * (1 - L * η / 2) := by
+  have hL_ne : L ≠ 0 := ne_of_gt hL
+  have hL_nonneg : 0 ≤ L := le_of_lt hL
+  have hηL' : η * L ≤ 1 := by
+    have hmul := (mul_le_mul_of_nonneg_right hηL hL_nonneg)
+    -- `η * L ≤ (1 / L) * L = 1`.
+    have hsimp : (1 / L) * L = 1 := by field_simp
+    rw [hsimp] at hmul
+    exact hmul
+  exact descent_ratio_nonneg L η hL_nonneg hη hηL'
+
 /-- Concrete instance of the descent lemma on the scalar quadratic
 `f y = y² / 2`: gradient descent with `L = 1` and `η = 1` jumps from
 `x` to `x - x = 0` and decreases the value by exactly `x² / 2`. The
@@ -263,6 +319,75 @@ theorem const_smul {L : ℝ} {f : ℝ → ℝ} (hf : IsLSmooth L f)
     _ ≤ c * (L * |x - y|) := by
         exact mul_le_mul_of_nonneg_left h_bound hc
     _ = c * L * |x - y| := by ring
+
+/-- Negating an `L`-smooth function preserves `L`-smoothness:
+`deriv (-f) x = -deriv f x` unconditionally (no differentiability
+hypothesis needed because `fderiv_neg` is unconditional), and
+`|-(deriv f x) - -(deriv f y)| = |deriv f x - deriv f y|`. -/
+theorem neg {L : ℝ} {f : ℝ → ℝ} (hf : IsLSmooth L f) :
+    IsLSmooth L (fun x : ℝ => -f x) := by
+  intro x y
+  have hd : deriv (fun x : ℝ => -f x) = fun z => -deriv f z := by
+    funext z
+    exact deriv.neg
+  rw [hd]
+  have h_eq : |(-deriv f x) - (-deriv f y)| = |deriv f x - deriv f y| := by
+    rw [show (-deriv f x) - (-deriv f y) = -(deriv f x - deriv f y) by ring,
+        abs_neg]
+  rw [h_eq]
+  exact hf x y
+
+/-- The sum of an `L₁`-smooth and an `L₂`-smooth function is
+`(L₁ + L₂)`-smooth, assuming both are differentiable on `ℝ` so that
+`deriv (f + g) = deriv f + deriv g` pointwise.
+
+This is the standard closure of `IsLSmooth` under addition used in
+textbook composition arguments (e.g., Bach §5 regularised objectives,
+where the loss is `L_loss`-smooth and the regulariser is
+`L_reg`-smooth). -/
+theorem add {L₁ L₂ : ℝ} {f g : ℝ → ℝ}
+    (hf : IsLSmooth L₁ f) (hg : IsLSmooth L₂ g)
+    (hfdiff : Differentiable ℝ f) (hgdiff : Differentiable ℝ g) :
+    IsLSmooth (L₁ + L₂) (fun x : ℝ => f x + g x) := by
+  intro x y
+  have hd : deriv (fun x : ℝ => f x + g x) =
+      fun z => deriv f z + deriv g z := by
+    funext z
+    exact deriv_fun_add (hfdiff z) (hgdiff z)
+  rw [hd]
+  -- Triangle inequality: `|(a + b) - (c + d)| ≤ |a - c| + |b - d|`.
+  have h_split :
+      |(deriv f x + deriv g x) - (deriv f y + deriv g y)|
+        ≤ |deriv f x - deriv f y| + |deriv g x - deriv g y| := by
+    have h_rw :
+        (deriv f x + deriv g x) - (deriv f y + deriv g y)
+          = (deriv f x - deriv f y) + (deriv g x - deriv g y) := by ring
+    rw [h_rw]
+    exact abs_add_le _ _
+  have h_bound :
+      |deriv f x - deriv f y| + |deriv g x - deriv g y|
+        ≤ L₁ * |x - y| + L₂ * |x - y| :=
+    add_le_add (hf x y) (hg x y)
+  have h_combine :
+      L₁ * |x - y| + L₂ * |x - y| = (L₁ + L₂) * |x - y| := by ring
+  linarith [h_split, h_bound, h_combine.le, h_combine.ge]
+
+/-- The difference of an `L₁`-smooth and an `L₂`-smooth function is
+`(L₁ + L₂)`-smooth, under the same differentiability hypothesis as
+`IsLSmooth.add`. Composition of `IsLSmooth.add` and `IsLSmooth.neg`. -/
+theorem sub {L₁ L₂ : ℝ} {f g : ℝ → ℝ}
+    (hf : IsLSmooth L₁ f) (hg : IsLSmooth L₂ g)
+    (hfdiff : Differentiable ℝ f) (hgdiff : Differentiable ℝ g) :
+    IsLSmooth (L₁ + L₂) (fun x : ℝ => f x - g x) := by
+  have hg_neg : IsLSmooth L₂ (fun x : ℝ => -g x) := hg.neg
+  have hg_neg_diff : Differentiable ℝ (fun x : ℝ => -g x) := hgdiff.neg
+  have hadd : IsLSmooth (L₁ + L₂) (fun x : ℝ => f x + -g x) :=
+    hf.add hg_neg hfdiff hg_neg_diff
+  intro x y
+  have h_fun : (fun x : ℝ => f x - g x) = (fun x : ℝ => f x + -g x) := by
+    funext z; ring
+  rw [h_fun]
+  exact hadd x y
 
 end IsLSmooth
 
