@@ -7,6 +7,7 @@ import Mathlib.Analysis.Calculus.Deriv.Basic
 import Mathlib.Analysis.Calculus.Deriv.Pow
 import Mathlib.Analysis.Calculus.Deriv.Mul
 import Mathlib.Analysis.Calculus.MeanValue
+import Mathlib.Analysis.Convex.Deriv
 import Mathlib.Analysis.ODE.Gronwall
 import Mathlib.Analysis.ODE.PicardLindelof
 import Mathlib.Tactic.Linarith
@@ -435,6 +436,41 @@ theorem gradient_flow_energy_deriv_nonpos_of_differentiable
     {f α : ℝ → ℝ} (hα : IsGradientFlow f α) (hf : Differentiable ℝ f) (t : ℝ) :
     deriv (fun s : ℝ => f (α s)) t ≤ 0 :=
   gradient_flow_energy_deriv_nonpos hα (hf (α t))
+
+/-- **Scalar convex first-order inequality.**
+For a convex differentiable function `f : ℝ → ℝ`, the tangent line at any
+point `y` lies below the graph: `f y + deriv f y · (x - y) ≤ f x`.
+
+This is the load-bearing intermediate for the O(1/t) gradient-flow decay
+theorem (the tangent-line lower bound at the current state lets us
+control the optimality gap by the gradient norm). -/
+theorem convex_first_order_inequality
+    {f : ℝ → ℝ} (hconv : ConvexOn ℝ Set.univ f) (hf : Differentiable ℝ f)
+    (x y : ℝ) :
+    f y + deriv f y * (x - y) ≤ f x := by
+  rcases lt_trichotomy x y with hxy | hxy | hxy
+  · -- Case `x < y`: slope at right endpoint `y` is bounded above by `deriv f y`.
+    -- `(f y - f x) / (y - x) ≤ deriv f y` and `y - x > 0`.
+    have hxy' : (0 : ℝ) < y - x := sub_pos.mpr hxy
+    have hslope :=
+      hconv.slope_le_deriv (Set.mem_univ x) (Set.mem_univ y) hxy (hf y)
+    rw [slope_def_field] at hslope
+    rw [div_le_iff₀ hxy'] at hslope
+    -- `hslope : f y - f x ≤ deriv f y * (y - x)`, goal needs `(x - y)`.
+    have hneg : deriv f y * (x - y) = -(deriv f y * (y - x)) := by ring
+    linarith
+  · -- Case `x = y`: tangent line value equals `f y`.
+    subst hxy
+    simp
+  · -- Case `y < x`: slope at left endpoint `y` is bounded below by `deriv f y`.
+    -- `deriv f y ≤ (f x - f y) / (x - y)` and `x - y > 0`.
+    have hyx' : (0 : ℝ) < x - y := sub_pos.mpr hxy
+    have hslope :=
+      hconv.deriv_le_slope (Set.mem_univ y) (Set.mem_univ x) hxy (hf y)
+    rw [slope_def_field] at hslope
+    rw [le_div_iff₀ hyx'] at hslope
+    -- `hslope : deriv f y * (x - y) ≤ f x - f y`.
+    linarith
 
 /-- Three iterations of gradient descent on `f y = y² / 2` with step
 size `η = 1/2` starting at `x = 1` produce `(1/2)^3 = 1/8`. -/
