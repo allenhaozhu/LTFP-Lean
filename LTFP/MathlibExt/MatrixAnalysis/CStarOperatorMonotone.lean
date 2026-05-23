@@ -27,6 +27,48 @@ namespace LTFP.MathlibExt.MatrixAnalysis
 
 universe uA un
 
+/-! ### CStarAlgebra-level lift
+
+Abstract CStarAlgebra-cone operator-monotone predicates parallel to the
+finite `CStarMatrix` wrappers below. These are direct CFC wrappers around
+`CFC.monotone_rpow` and `CFC.log_monotoneOn` lifted to a `CStarAlgebra`-
+level predicate, so downstream callers can quantify over arbitrary unital
+C⋆-algebras (not just finite `CStarMatrix n n A`). Distinct from the
+finite `CStarOperatorMonotoneOnNonneg` below — no name collision.
+-/
+
+/-- A real function is operator monotone on the nonnegative cone of every unital
+C⋆-algebra if real CFC by that function preserves spectral order there. -/
+def CStarAlgebraOperatorMonotoneOnNonneg (f : ℝ → ℝ) : Prop :=
+  ∀ {A : Type uA} [CStarAlgebra A] [PartialOrder A] [StarOrderedRing A],
+    MonotoneOn (fun a : A => cfc f a) {a | 0 ≤ a}
+
+/-- `t ↦ t ^ p` is operator monotone on the nonnegative cone of every unital
+C⋆-algebra for `p ∈ [0, 1]`. -/
+theorem cStarAlgebraOperatorMonotoneOnNonneg_rpow {p : ℝ} (hp : p ∈ Set.Icc 0 1) :
+    CStarAlgebraOperatorMonotoneOnNonneg.{uA} (fun t : ℝ => t ^ p) := by
+  intro A _ _ _ a ha b hb hab
+  change cfc (fun t : ℝ => t ^ p) a ≤ cfc (fun t : ℝ => t ^ p) b
+  rw [← CFC.rpow_eq_cfc_real (a := a) (y := p) ha,
+    ← CFC.rpow_eq_cfc_real (a := b) (y := p) hb]
+  exact CFC.monotone_rpow (A := A) hp hab
+
+/-- A real function is operator monotone on the strictly-positive cone of every
+unital C⋆-algebra if real CFC by that function preserves spectral order there. -/
+def CStarAlgebraOperatorMonotoneOnStrictlyPos (f : ℝ → ℝ) : Prop :=
+  ∀ {A : Type uA} [CStarAlgebra A] [PartialOrder A] [StarOrderedRing A],
+    MonotoneOn (fun a : A => cfc f a) {a | IsStrictlyPositive a}
+
+/-- The natural logarithm is operator monotone on the strictly-positive cone of
+every unital C⋆-algebra, via Mathlib's `CFC.log_monotoneOn`. -/
+theorem cStarAlgebraOperatorMonotoneOnStrictlyPos_log :
+    CStarAlgebraOperatorMonotoneOnStrictlyPos.{uA} Real.log := by
+  intro A _ _ _ a ha b hb hab
+  change cfc Real.log a ≤ cfc Real.log b
+  exact CFC.log_monotoneOn (A := A) ha hb hab
+
+/-! ### Finite `CStarMatrix` wrappers -/
+
 /-- A real function is operator monotone on the nonnegative cone of finite
 `CStarMatrix` type copies if real CFC by that function preserves spectral order
 there. -/
