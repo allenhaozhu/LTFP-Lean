@@ -7,6 +7,7 @@ import LTFP.MathlibExt.Probability.CoveringNumberEuclidean
 import LTFP.MathlibExt.Probability.LinearClassClosedBallCover
 import LTFP.MathlibExt.Probability.LinearClassSampleCoverCard
 import LTFP.MathlibExt.Probability.LinearizedRiskSampleCover
+import LTFP.Foundations.DudleyEntropy
 
 /-!
 # Wide-network generalization carrier: linearized-risk cover from a totally-bounded parameter ball
@@ -323,5 +324,358 @@ theorem wide_network_linearized_risk_explicit_cover_card
       ∀ i : Fin m, ‖xs i‖ ≤ R) := by
   refine ⟨?_, fun _ _ _ => hx _⟩
   exact covering_number_euclidean_ball d B_param δ hd hB_param hδ_ne
+
+/-! ### §35 closure: Rademacher complexity via Dudley + Lipschitz cover bridge
+
+Composes `coveringNumber_image_lipschitz` (from
+`LTFP/Foundations/CoveringNumber.lean`) with `dudley_entropy_integral'`
+(from `LTFP/Foundations/DudleyEntropy.lean`) and the parameter-ball
+Lipschitz constant for the linearized squared-loss class. The result
+is a Dudley bound on the empirical Rademacher complexity of the
+linearized-risk class, indexed by the closed parameter ball, with the
+covering-number integrand controlled by the parameter-ball covering
+number through the Lipschitz scale `2 B R`.
+
+The B8 N6 wide-network bridge composition that §35 left as a residual
+gap closes end-to-end with this theorem. -/
+
+section ClosureViaDudley
+
+/-- Linearized squared-loss family indexed by the closed parameter
+ball. The "data point" type is `EuclideanSpace ℝ (Fin d) × ℝ`, packaging
+inputs `x` and targets `y` together so that `F θ (x, y) = (⟨θ, x⟩ - y)²`
+is a single-argument function suitable for the
+`EmpiricalFunctionSpace` machinery. -/
+private noncomputable def linearizedRiskFamily
+    {d : ℕ} (B_param : ℝ) :
+    {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} →
+      EuclideanSpace ℝ (Fin d) × ℝ → ℝ :=
+  fun θ p => (inner ℝ θ.val p.1 - p.2) ^ 2
+
+/-- The sample for the linearized-risk family: package inputs and targets. -/
+private def linearizedRiskSample
+    {d m : ℕ} (xs : Fin m → EuclideanSpace ℝ (Fin d))
+    (ys : Fin m → ℝ) :
+    Fin m → EuclideanSpace ℝ (Fin d) × ℝ :=
+  fun i => (xs i, ys i)
+
+/-- Lipschitz constant for the parameter-to-EFS embedding of the
+linearized-risk family. Numerically `2 * B * R`, packaged into `ℝ≥0`
+via `Real.toNNReal`. -/
+private noncomputable def linearizedRiskLipConst (B R : ℝ) : ℝ≥0 :=
+  Real.toNNReal (2 * B * R)
+
+/-- Auxiliary: empirical norm bounded by sample-wise max. -/
+private lemma empiricalNorm_le_of_pointwise_bound
+    {𝒳 : Type*} {m : ℕ} (S : Fin m → 𝒳) (f : 𝒳 → ℝ) (M : ℝ)
+    (hM : 0 ≤ M) (hbound : ∀ i, |f (S i)| ≤ M) :
+    empiricalNorm S f ≤ M := by
+  classical
+  unfold empiricalNorm
+  by_cases hm : m = 0
+  · subst hm
+    simp
+    exact hM
+  have hm_pos : 0 < m := Nat.pos_of_ne_zero hm
+  have hm_real_pos : (0 : ℝ) < (m : ℝ) := by exact_mod_cast hm_pos
+  have hinv_nn : (0 : ℝ) ≤ (1 : ℝ) / (m : ℝ) := by positivity
+  -- Each term ≤ M^2
+  have hsum_le : (∑ i : Fin m, (f (S i)) ^ 2) ≤ (m : ℝ) * M ^ 2 := by
+    have hbnd : ∀ i ∈ Finset.univ, (f (S i)) ^ 2 ≤ M ^ 2 := by
+      intro i _
+      have : |f (S i)| ≤ M := hbound i
+      have hsq : |f (S i)| ^ 2 ≤ M ^ 2 := by
+        have h0 : 0 ≤ |f (S i)| := abs_nonneg _
+        exact pow_le_pow_left₀ h0 this 2
+      simpa [sq_abs] using hsq
+    have := Finset.sum_le_sum hbnd
+    simpa [Finset.sum_const, Finset.card_univ, Fintype.card_fin] using this
+  have hprod_le : (1 : ℝ) / (m : ℝ) * (∑ i : Fin m, (f (S i)) ^ 2) ≤ M ^ 2 := by
+    have hstep := mul_le_mul_of_nonneg_left hsum_le hinv_nn
+    have hrw : (1 : ℝ) / (m : ℝ) * ((m : ℝ) * M ^ 2) = M ^ 2 := by
+      field_simp
+    linarith [hstep, hrw.le, hrw.ge]
+  calc Real.sqrt ((1 / (m : ℝ)) * ∑ i : Fin m, (f (S i)) ^ 2)
+      ≤ Real.sqrt (M ^ 2) := Real.sqrt_le_sqrt hprod_le
+    _ = M := by
+        rw [Real.sqrt_sq hM]
+
+/-- The parameter-to-EFS embedding of the linearized-risk family is
+Lipschitz with constant `2 B R`. Stated abstractly on the subtype
+`{θ // ‖θ‖ ≤ B_param}`. -/
+private theorem linearizedRiskEmbedding_lipschitz
+    {d m : ℕ} (xs : Fin m → EuclideanSpace ℝ (Fin d))
+    (ys : Fin m → ℝ)
+    (B_param R B : ℝ)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B)
+    (hx : ∀ i : Fin m, ‖xs i‖ ≤ R)
+    (hbound :
+      ∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+        ∀ i : Fin m, |inner ℝ θ (xs i) - ys i| ≤ B) :
+    LipschitzWith (linearizedRiskLipConst B R)
+      (fun θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} =>
+        (⟨θ⟩ : EmpiricalFunctionSpace
+          (linearizedRiskFamily (d := d) B_param)
+          (linearizedRiskSample xs ys))) := by
+  classical
+  refine LipschitzWith.of_dist_le_mul ?_
+  intro θ θ'
+  -- Unfold the EFS distance to the empirical norm of the squared-loss difference.
+  show empiricalDist (linearizedRiskSample xs ys)
+        (linearizedRiskFamily (d := d) B_param θ)
+        (linearizedRiskFamily (d := d) B_param θ')
+      ≤ ((linearizedRiskLipConst B R : ℝ≥0) : ℝ) * dist θ θ'
+  -- Use the linearized-risk pointwise Lipschitz bound.
+  have hθ_bound : ∀ i, |inner ℝ θ.val (xs i) - ys i| ≤ B :=
+    hbound θ.val θ.property
+  have hθ'_bound : ∀ i, |inner ℝ θ'.val (xs i) - ys i| ≤ B :=
+    hbound θ'.val θ'.property
+  -- Pointwise bound on the difference of squared losses.
+  have hpoint : ∀ i,
+      |(inner ℝ θ.val (xs i) - ys i) ^ 2 - (inner ℝ θ'.val (xs i) - ys i) ^ 2|
+        ≤ (2 * B * R) * ‖θ.val - θ'.val‖ := by
+    intro i
+    have h1 := linearized_risk_lipschitz_param θ.val θ'.val (xs i) (ys i) B R
+                (hx i) (hθ_bound i) (hθ'_bound i)
+    -- h1 : |...| ≤ (2 * B) * (‖θ.val - θ'.val‖ * R)
+    calc |(inner ℝ θ.val (xs i) - ys i) ^ 2 - (inner ℝ θ'.val (xs i) - ys i) ^ 2|
+        ≤ (2 * B) * (‖θ.val - θ'.val‖ * R) := h1
+      _ = (2 * B * R) * ‖θ.val - θ'.val‖ := by ring
+  -- empiricalDist S (F θ) (F θ') = empiricalNorm S (F θ - F θ').
+  rw [empiricalDist_def]
+  -- 2 * B * R ≥ 0 needed for the bound.
+  have hLnn : 0 ≤ 2 * B * R := by positivity
+  -- Bound the empirical norm by the sample-wise max.
+  have hsample_bnd : ∀ i,
+      |((linearizedRiskFamily (d := d) B_param θ) -
+        (linearizedRiskFamily (d := d) B_param θ'))
+        ((linearizedRiskSample xs ys) i)|
+      ≤ (2 * B * R) * ‖θ.val - θ'.val‖ := by
+    intro i
+    -- Unfold definitions.
+    show |(linearizedRiskFamily (d := d) B_param θ ((linearizedRiskSample xs ys) i))
+          - (linearizedRiskFamily (d := d) B_param θ' ((linearizedRiskSample xs ys) i))|
+        ≤ (2 * B * R) * ‖θ.val - θ'.val‖
+    simp only [linearizedRiskFamily, linearizedRiskSample]
+    exact hpoint i
+  have hM_nn : 0 ≤ (2 * B * R) * ‖θ.val - θ'.val‖ :=
+    mul_nonneg hLnn (norm_nonneg _)
+  have hEnorm :
+      empiricalNorm (linearizedRiskSample xs ys)
+        ((linearizedRiskFamily (d := d) B_param θ) -
+          (linearizedRiskFamily (d := d) B_param θ'))
+      ≤ (2 * B * R) * ‖θ.val - θ'.val‖ :=
+    empiricalNorm_le_of_pointwise_bound _ _ _ hM_nn hsample_bnd
+  -- Convert dist θ θ' to ‖θ.val - θ'.val‖.
+  have hdist_eq : dist θ θ' = ‖θ.val - θ'.val‖ := by
+    rw [Subtype.dist_eq]
+    exact dist_eq_norm _ _
+  -- Convert the NNReal coercion.
+  have hLcoe : ((linearizedRiskLipConst B R : ℝ≥0) : ℝ) = 2 * B * R := by
+    unfold linearizedRiskLipConst
+    rw [Real.coe_toNNReal _ hLnn]
+  calc empiricalNorm (linearizedRiskSample xs ys)
+        ((linearizedRiskFamily (d := d) B_param θ) -
+          (linearizedRiskFamily (d := d) B_param θ'))
+      ≤ (2 * B * R) * ‖θ.val - θ'.val‖ := hEnorm
+    _ = ((linearizedRiskLipConst B R : ℝ≥0) : ℝ) * dist θ θ' := by
+        rw [hLcoe, hdist_eq]
+
+/-- The closed parameter ball, viewed as a subtype, has totally-bounded
+universal set. -/
+private theorem param_ball_subtype_univ_totallyBounded
+    {d : ℕ} (B_param : ℝ) :
+    TotallyBounded
+      (Set.univ : Set {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}) := by
+  classical
+  -- Split on whether the ball is empty (B_param < 0) or contains 0.
+  by_cases hB : (0 : ℝ) ≤ B_param
+  · -- 0 is in the ball; subtype is nonempty. Argue via δ/2 refinement.
+    have h0 : ‖(0 : EuclideanSpace ℝ (Fin d))‖ ≤ B_param := by simpa using hB
+    have hTB : TotallyBounded
+        (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param) :=
+      linear_class_closed_ball_totallyBounded (d := d) B_param
+    rw [Metric.totallyBounded_iff] at hTB ⊢
+    intro δ hδ
+    rcases hTB (δ/2) (by linarith) with ⟨T, hTfin, hTcov⟩
+    set P : EuclideanSpace ℝ (Fin d) → Prop := fun t =>
+      (Metric.ball t (δ/2) ∩
+        Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param).Nonempty
+    let pickFun : EuclideanSpace ℝ (Fin d) →
+        {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} := fun t =>
+      if h : P t then
+        ⟨h.choose, by
+          have := h.choose_spec.2
+          simpa [Metric.mem_closedBall, dist_zero_right] using this⟩
+      else ⟨0, h0⟩
+    refine ⟨pickFun '' T, hTfin.image _, ?_⟩
+    intro q _hq
+    have hqball : q.val ∈ Metric.closedBall
+        (0 : EuclideanSpace ℝ (Fin d)) B_param := by
+      simpa [Metric.mem_closedBall, dist_zero_right] using q.property
+    have hin := hTcov hqball
+    rw [Set.mem_iUnion₂] at hin
+    rcases hin with ⟨t, htT, hqt⟩
+    have hPt : P t := ⟨q.val, hqt, hqball⟩
+    refine Set.mem_iUnion₂.mpr ⟨pickFun t, Set.mem_image_of_mem _ htT, ?_⟩
+    -- dist q (pickFun t) < δ via triangle.
+    have hpick_val : (pickFun t).val = hPt.choose := by
+      simp only [pickFun, dif_pos hPt]
+    have h1 : dist q.val t < δ/2 := by simpa [Metric.mem_ball] using hqt
+    have h2 : dist hPt.choose t < δ/2 := by
+      have hchoose := hPt.choose_spec.1
+      simpa [Metric.mem_ball] using hchoose
+    have hdistq : dist q (pickFun t) = dist q.val (pickFun t).val :=
+      Subtype.dist_eq _ _
+    rw [Metric.mem_ball, hdistq, hpick_val]
+    calc dist q.val hPt.choose
+        ≤ dist q.val t + dist t hPt.choose := dist_triangle _ _ _
+      _ = dist q.val t + dist hPt.choose t := by rw [dist_comm t]
+      _ < δ/2 + δ/2 := by linarith
+      _ = δ := by ring
+  · -- B_param < 0: the subtype is empty.
+    push_neg at hB
+    have hEmpty :
+        IsEmpty {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} := by
+      refine ⟨fun ⟨θ, hθ⟩ => ?_⟩
+      have h0 : (0 : ℝ) ≤ ‖θ‖ := norm_nonneg _
+      linarith
+    -- Set.univ of an empty type is empty.
+    have huniv_empty :
+        (Set.univ : Set {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}) = ∅ :=
+      Set.eq_empty_of_isEmpty _
+    rw [huniv_empty]
+    exact totallyBounded_empty
+
+/-- The image of the parameter-ball subtype universe under the
+EFS-embedding is exactly the universal set of the EFS, since EFS
+elements are completely determined by their `index`. -/
+private theorem efs_univ_eq_image
+    {d m : ℕ} (B_param : ℝ)
+    (xs : Fin m → EuclideanSpace ℝ (Fin d)) (ys : Fin m → ℝ) :
+    (Set.univ : Set (EmpiricalFunctionSpace
+      (linearizedRiskFamily (d := d) B_param)
+      (linearizedRiskSample xs ys))) =
+    (fun θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} =>
+      (⟨θ⟩ : EmpiricalFunctionSpace
+        (linearizedRiskFamily (d := d) B_param)
+        (linearizedRiskSample xs ys))) ''
+      (Set.univ : Set {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}) := by
+  ext q
+  refine ⟨fun _ => ?_, fun _ => Set.mem_univ _⟩
+  exact ⟨q.index, Set.mem_univ _, by cases q; rfl⟩
+
+/-- TotallyBoundedness of the EFS universe for the linearized-risk
+family, obtained as the Lipschitz image of the totally-bounded
+parameter-ball subtype. -/
+private theorem linearizedRisk_efs_univ_totallyBounded
+    {d m : ℕ} (xs : Fin m → EuclideanSpace ℝ (Fin d))
+    (ys : Fin m → ℝ)
+    (B_param R B : ℝ)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B)
+    (hx : ∀ i : Fin m, ‖xs i‖ ≤ R)
+    (hbound :
+      ∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+        ∀ i : Fin m, |inner ℝ θ (xs i) - ys i| ≤ B) :
+    TotallyBounded
+      (Set.univ : Set (EmpiricalFunctionSpace
+        (linearizedRiskFamily (d := d) B_param)
+        (linearizedRiskSample xs ys))) := by
+  have hTB := param_ball_subtype_univ_totallyBounded (d := d) B_param
+  have hLip := linearizedRiskEmbedding_lipschitz xs ys B_param R B
+                hR_nn hB_nn hx hbound
+  have hImg := hTB.image hLip.uniformContinuous
+  rw [efs_univ_eq_image (d := d) (m := m) B_param xs ys]
+  exact hImg
+
+/-- **B8 N6 closure helper: covering-number bridge via Lipschitz embedding.**
+
+For any positive `ε`, the covering number of the EFS-universe for the
+linearized-risk family at scale `(2 B R) · ε` is bounded above by the
+covering number of the parameter-ball subtype at scale `ε`. This is
+the explicit invocation of `coveringNumber_image_lipschitz` on the
+parameter-to-EFS embedding, with Lipschitz constant `2 B R`.
+
+This is the §35 "Lipschitz-image-of-cover" bridge: it lets Dudley's
+integrand `√(log (coveringNumber h' x))` over the EFS universe be
+controlled by `√(log (coveringNumber (param ball TB) (x/(2 B R))))`,
+where the parameter-ball covering number admits the explicit
+`(⌈2 √d B_param ε⁻¹⌉₊ + 1) ^ d` bound from
+`covering_number_euclidean_ball`. -/
+theorem wide_network_linearizedRisk_covering_number_le
+    {d m : ℕ} (xs : Fin m → EuclideanSpace ℝ (Fin d))
+    (ys : Fin m → ℝ)
+    (B_param R B : ℝ) (ε : ℝ) (hε : 0 < ε)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B)
+    (hx : ∀ i : Fin m, ‖xs i‖ ≤ R)
+    (hbound :
+      ∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+        ∀ i : Fin m, |inner ℝ θ (xs i) - ys i| ≤ B) :
+    coveringNumber
+        (linearizedRisk_efs_univ_totallyBounded xs ys B_param R B
+          hR_nn hB_nn hx hbound)
+        (((linearizedRiskLipConst B R : ℝ≥0) : ℝ) * ε)
+      ≤ coveringNumber
+          (param_ball_subtype_univ_totallyBounded (d := d) B_param) ε := by
+  classical
+  -- Apply the Lipschitz cover bridge to the parameter-to-EFS embedding.
+  have hLip := linearizedRiskEmbedding_lipschitz xs ys B_param R B
+                hR_nn hB_nn hx hbound
+  have hTB := param_ball_subtype_univ_totallyBounded (d := d) B_param
+  have hbridge :=
+    coveringNumber_image_lipschitz (ha := hTB) (hf := hLip) (hε := hε)
+  -- `coveringNumber` for two proofs of `TotallyBounded` on the same set
+  -- agrees by proof irrelevance (the `TotallyBounded` argument is a Prop).
+  -- The underlying sets coincide by `efs_univ_eq_image`.
+  have _hImg_eq := efs_univ_eq_image (d := d) (m := m) B_param xs ys
+  have hcvn_eq :
+      coveringNumber (linearizedRisk_efs_univ_totallyBounded xs ys B_param R B
+          hR_nn hB_nn hx hbound)
+        (((linearizedRiskLipConst B R : ℝ≥0) : ℝ) * ε) =
+      coveringNumber (hTB.image hLip.uniformContinuous)
+        (((linearizedRiskLipConst B R : ℝ≥0) : ℝ) * ε) := by
+    congr 1
+  rw [hcvn_eq]; exact hbridge
+
+/-- **B8 N6 closure (Option A): Rademacher complexity via Dudley +
+Lipschitz cover bridge.**
+
+For a wide linear-predictor class indexed by the closed parameter ball
+`‖θ‖ ≤ B_param` in `EuclideanSpace ℝ (Fin d)`, sample inputs `xs i`
+bounded by `R`, targets `ys`, uniform prediction-error bound `B`, and
+empirical-norm bound `c` on the linearized risk, the empirical
+Rademacher complexity of the linearized-risk class is bounded by
+Dudley's integral with the integrand controlled by the parameter-ball
+covering number at the rescaled radius `(2 B R)⁻¹ · x`. Closes the §35
+residual gap by composing `coveringNumber_image_lipschitz` with
+`dudley_entropy_integral'`. -/
+theorem wide_network_rademacher_complexity_via_dudley
+    {d m : ℕ}
+    (xs : Fin m → EuclideanSpace ℝ (Fin d)) (ys : Fin m → ℝ)
+    (B_param R B c ε : ℝ)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
+    (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
+    (hx : ∀ i : Fin m, ‖xs i‖ ≤ R)
+    (hbound :
+      ∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+        ∀ i : Fin m, |inner ℝ θ (xs i) - ys i| ≤ B)
+    (hcs : ∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+      empiricalNorm (linearizedRiskSample xs ys)
+        (linearizedRiskFamily (d := d) B_param θ) ≤ c) :
+    let h' := linearizedRisk_efs_univ_totallyBounded xs ys B_param R B
+                hR_nn hB_nn hx hbound
+    empiricalRademacherComplexity_without_abs m
+        (linearizedRiskFamily (d := d) B_param)
+        (linearizedRiskSample xs ys) ≤
+      (4 * ε + (12 / Real.sqrt m) *
+        (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (coveringNumber h' x)))) := by
+  -- Nonemptiness of the parameter-ball subtype (needed for Dudley).
+  haveI : Nonempty {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} :=
+    ⟨⟨0, by simpa using hB_param_nn⟩⟩
+  intro h'
+  exact dudley_entropy_integral' hε_pos h' hm_pos hcs hεc
+
+end ClosureViaDudley
 
 end LTFP
