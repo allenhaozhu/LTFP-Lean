@@ -1,6 +1,7 @@
 import Mathlib.Topology.MetricSpace.Pseudo.Basic
 import Mathlib.Topology.MetricSpace.Pseudo.Defs
 import Mathlib.Topology.MetricSpace.Lipschitz
+import Mathlib.Topology.MetricSpace.Isometry
 import Mathlib.Data.Finset.Basic
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Order
 import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
@@ -158,3 +159,83 @@ theorem coveringNumber_image_lipschitz
           coveringNumber_eq (ha.image hf.uniformContinuous) hLεpos
       _ ≤ n := hfind
       _ ≤ coveringNumber ha ε := hcard_le
+
+/-!
+### Doubling under negation-closure (and more generally, double covers)
+
+If `B ⊆ Y` is covered by the images of two isometric embeddings
+`e₀, e₁ : X → Y` of a totally-bounded `A ⊆ X`, then the covering number of
+`B` at scale `ε` is at most `2 * coveringNumber ha ε`. The motivating use
+case is `Y = EmpiricalFunctionSpace (negDoubleFamily F) S`,
+`X = EmpiricalFunctionSpace F S`, with `e₀ q = ⟨(0, q.index)⟩` (the
+positive copy) and `e₁ q = ⟨(1, q.index)⟩` (the negated copy); negation
+is an isometry in the empirical-L² pseudometric since
+`empiricalNorm S (-(f - g)) = empiricalNorm S (f - g)`. Combined with
+`empiricalRademacherComplexity_eq_without_abs_negDoubleFamily`
+(`Rademacher.lean`, commit `1d71e7e`) and `dudley_entropy_integral'`,
+this delivers the with-abs Dudley analogue.
+-/
+
+/-- **Covering-number doubling under a two-fold isometric cover.**
+
+If `B ⊆ e₀ '' A ∪ e₁ '' A` with both `e₀` and `e₁` isometries of `A`,
+then the covering number of `B` at scale `ε` is at most twice the
+covering number of `A` at scale `ε`. The cover is built by taking the
+finset `C.image e₀ ∪ C.image e₁` where `C` is the optimal `A`-cover. -/
+theorem coveringNumber_le_two_mul_of_isometric_double_cover
+    {X Y : Type*} [PseudoMetricSpace X] [PseudoMetricSpace Y]
+    {A : Set X} (ha : TotallyBounded A)
+    {B : Set Y} (hb : TotallyBounded B)
+    {e₀ e₁ : X → Y} (he₀ : Isometry e₀) (he₁ : Isometry e₁)
+    (hcov : B ⊆ e₀ '' A ∪ e₁ '' A) {ε : ℝ} (hε : 0 < ε) :
+    coveringNumber hb ε ≤ 2 * coveringNumber ha ε := by
+  classical
+  set C : Finset X := coveringFinset ha hε with hC_def
+  -- The doubled cover in `Y`.
+  set D : Finset Y := C.image e₀ ∪ C.image e₁ with hD_def
+  -- Cardinality bound: `|D| ≤ 2 * coveringNumber ha ε`.
+  have hcard : D.card ≤ 2 * coveringNumber ha ε := by
+    have hunion : D.card ≤ (C.image e₀).card + (C.image e₁).card :=
+      Finset.card_union_le _ _
+    have h₀ : (C.image e₀).card ≤ C.card := Finset.card_image_le
+    have h₁ : (C.image e₁).card ≤ C.card := Finset.card_image_le
+    have hC_card : C.card = coveringNumber ha ε := coveringFinset_card ha hε
+    calc
+      D.card ≤ (C.image e₀).card + (C.image e₁).card := hunion
+      _ ≤ C.card + C.card := Nat.add_le_add h₀ h₁
+      _ = 2 * C.card := by ring
+      _ = 2 * coveringNumber ha ε := by rw [hC_card]
+  -- Cover property: every point of `B` is within `ε` of some `d ∈ D`.
+  have hAcov : A ⊆ ⋃ c ∈ C, Metric.ball c ε := coveringFinset_cover ha hε
+  have hDcov : B ⊆ ⋃ d ∈ D, Metric.ball d ε := by
+    intro y hyB
+    rcases hcov hyB with ⟨x, hxA, rfl⟩ | ⟨x, hxA, rfl⟩
+    · -- `y = e₀ x`. Pick `c ∈ C` with `dist x c < ε`, then `e₀ c ∈ D`
+      -- satisfies `dist (e₀ x) (e₀ c) = dist x c < ε`.
+      rcases Set.mem_iUnion₂.mp (hAcov hxA) with ⟨c, hcC, hxc⟩
+      have hxc' : dist x c < ε := by simpa [Metric.mem_ball] using hxc
+      have hiso : dist (e₀ x) (e₀ c) = dist x c := he₀.dist_eq x c
+      refine Set.mem_iUnion₂.mpr ⟨e₀ c, ?_, ?_⟩
+      · -- `e₀ c ∈ D`
+        have : e₀ c ∈ C.image e₀ := Finset.mem_image.mpr ⟨c, hcC, rfl⟩
+        exact Finset.mem_union.mpr (Or.inl this)
+      · simpa [Metric.mem_ball, hiso] using hxc'
+    · -- Symmetric case for `e₁`.
+      rcases Set.mem_iUnion₂.mp (hAcov hxA) with ⟨c, hcC, hxc⟩
+      have hxc' : dist x c < ε := by simpa [Metric.mem_ball] using hxc
+      have hiso : dist (e₁ x) (e₁ c) = dist x c := he₁.dist_eq x c
+      refine Set.mem_iUnion₂.mpr ⟨e₁ c, ?_, ?_⟩
+      · have : e₁ c ∈ C.image e₁ := Finset.mem_image.mpr ⟨c, hcC, rfl⟩
+        exact Finset.mem_union.mpr (Or.inr this)
+      · simpa [Metric.mem_ball, hiso] using hxc'
+  -- Witness for `coveringNumber_exists` at scale `ε`.
+  have hwitness :
+      ∃ t : Finset Y, t.card = D.card ∧ B ⊆ ⋃ y ∈ t, Metric.ball y ε :=
+    ⟨D, rfl, hDcov⟩
+  have hfind :
+      Nat.find (coveringNumber_exists hb hε) ≤ D.card :=
+    Nat.find_min' (coveringNumber_exists hb hε) hwitness
+  calc coveringNumber hb ε
+      = Nat.find (coveringNumber_exists hb hε) := coveringNumber_eq hb hε
+    _ ≤ D.card := hfind
+    _ ≤ 2 * coveringNumber ha ε := hcard
