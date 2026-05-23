@@ -58,4 +58,63 @@ theorem isKSparse_succ_of_kSparse {k : ℕ} {θ : Fin d → ℝ}
     (h : IsKSparse k θ) : IsKSparse (k + 1) θ :=
   h.mono (Nat.le_succ k)
 
+/-! ### §8.2 — Support calculus for the ℓ₀-norm.
+
+Sub-additivity, scalar-multiplication behavior, and corresponding
+closure properties of `IsKSparse`. These are basic support-set
+inclusions plus `Finset.card_union_le`; together they make the
+sparse-model algebra (e.g. composing two sparse vectors) usable. -/
+
+/-- §8.2 — Subadditivity of the ℓ₀ "norm": the support of `x + y`
+    is contained in the union of supports, so its cardinality is at
+    most the sum. -/
+theorem l0Norm_add_le (x y : Fin d → ℝ) :
+    l0Norm (x + y) ≤ l0Norm x + l0Norm y := by
+  unfold l0Norm
+  -- support(x + y) ⊆ support x ∪ support y
+  have hsub :
+      (Finset.univ.filter fun i => (x + y) i ≠ 0) ⊆
+        (Finset.univ.filter fun i => x i ≠ 0) ∪
+          (Finset.univ.filter fun i => y i ≠ 0) := by
+    intro i hi
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_union,
+      Pi.add_apply] at *
+    by_contra hcontra
+    push_neg at hcontra
+    obtain ⟨hx, hy⟩ := hcontra
+    exact hi (by rw [hx, hy, add_zero])
+  exact (Finset.card_le_card hsub).trans (Finset.card_union_le _ _)
+
+/-- §8.2 — Scalar multiplication can only shrink the ℓ₀ support
+    (it kills it entirely when `c = 0`). -/
+theorem l0Norm_smul_le (c : ℝ) (x : Fin d → ℝ) :
+    l0Norm (c • x) ≤ l0Norm x := by
+  unfold l0Norm
+  apply Finset.card_le_card
+  intro i hi
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and, Pi.smul_apply,
+    smul_eq_mul] at *
+  intro hxi
+  exact hi (by rw [hxi, mul_zero])
+
+/-- §8.2 — Nonzero scalar multiplication preserves the ℓ₀-norm. -/
+theorem l0Norm_smul_eq_of_ne_zero {c : ℝ} (hc : c ≠ 0) (x : Fin d → ℝ) :
+    l0Norm (c • x) = l0Norm x := by
+  unfold l0Norm
+  congr 1
+  apply Finset.filter_congr
+  intro i _
+  simp only [Pi.smul_apply, smul_eq_mul, ne_eq, mul_eq_zero, hc, false_or]
+
+/-- §8.2 — Sum of a `k₁`-sparse and a `k₂`-sparse vector is `(k₁+k₂)`-sparse. -/
+theorem IsKSparse.add {k₁ k₂ : ℕ} {x y : Fin d → ℝ}
+    (hx : IsKSparse k₁ x) (hy : IsKSparse k₂ y) :
+    IsKSparse (k₁ + k₂) (x + y) :=
+  (l0Norm_add_le x y).trans (Nat.add_le_add hx hy)
+
+/-- §8.2 — Scalar multiplication preserves k-sparsity. -/
+theorem IsKSparse.smul {k : ℕ} {x : Fin d → ℝ}
+    (hx : IsKSparse k x) (c : ℝ) : IsKSparse k (c • x) :=
+  (l0Norm_smul_le c x).trans hx
+
 end LTFP
