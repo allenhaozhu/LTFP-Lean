@@ -81,6 +81,24 @@ theorem cStarAlgebraOperatorMonotoneOnStrictlyPos_log :
   change cfc Real.log a ≤ cfc Real.log b
   exact CFC.log_monotoneOn (A := A) ha hb hab
 
+/-- A real function is operator antitone on the strictly-positive cone of every
+unital C⋆-algebra if real CFC by that function reverses spectral order there. -/
+def CStarAlgebraOperatorAntitoneOnStrictlyPos (f : ℝ → ℝ) : Prop :=
+  ∀ {A : Type uA} [CStarAlgebra A] [PartialOrder A] [StarOrderedRing A],
+    AntitoneOn (fun a : A => cfc f a) {a | IsStrictlyPositive a}
+
+/-- Löwner inversion: `t ↦ t ^ (-1 : ℝ)` is operator antitone on the
+strictly-positive cone of every unital C⋆-algebra. Classical result, lifted from
+Mathlib's `CStarAlgebra.rpow_neg_one_le_rpow_neg_one`. -/
+theorem cStarAlgebraOperatorAntitoneOnStrictlyPos_rpow_neg_one :
+    CStarAlgebraOperatorAntitoneOnStrictlyPos.{uA} (fun t : ℝ => t ^ (-1 : ℝ)) := by
+  intro A _ _ _ a ha b hb hab
+  -- `AntitoneOn` flips: goal is `cfc f b ≤ cfc f a`.
+  change cfc (fun t : ℝ => t ^ (-1 : ℝ)) b ≤ cfc (fun t : ℝ => t ^ (-1 : ℝ)) a
+  rw [← CFC.rpow_eq_cfc_real (a := b) (y := -1) hb.nonneg,
+    ← CFC.rpow_eq_cfc_real (a := a) (y := -1) ha.nonneg]
+  exact CStarAlgebra.rpow_neg_one_le_rpow_neg_one (A := A) hab ha
+
 /-! ### Finite `CStarMatrix` wrappers -/
 
 /-- A real function is operator monotone on the nonnegative cone of finite
@@ -118,6 +136,27 @@ theorem cStarOperatorMonotoneOnStrictlyPos_log :
   -- `CFC.log` unfolds to `cfc Real.log`; `CFC.log_monotoneOn` gives the conclusion.
   change cfc Real.log M ≤ cfc Real.log N
   exact CFC.log_monotoneOn (A := CStarMatrix n n A) hM hN hMN
+
+/-- A real function is operator antitone on the strictly-positive cone of finite
+`CStarMatrix` type copies if real CFC by that function reverses spectral order
+on strictly-positive matrices. -/
+def CStarOperatorAntitoneOnStrictlyPos (f : ℝ → ℝ) : Prop :=
+  ∀ {A : Type uA} [CStarAlgebra A] [PartialOrder A] [StarOrderedRing A]
+    {n : Type un} [Fintype n] [DecidableEq n],
+    AntitoneOn (fun M : CStarMatrix n n A => cfc f M)
+      {M | IsStrictlyPositive M}
+
+/-- Löwner inversion on finite `CStarMatrix`: `t ↦ t ^ (-1 : ℝ)` is operator
+antitone on the strictly-positive cone, via
+`CStarAlgebra.rpow_neg_one_le_rpow_neg_one`. -/
+theorem cStarOperatorAntitoneOnStrictlyPos_rpow_neg_one :
+    CStarOperatorAntitoneOnStrictlyPos.{uA, un} (fun t : ℝ => t ^ (-1 : ℝ)) := by
+  intro A _ _ _ n _ _ M hM N hN hMN
+  -- `AntitoneOn` flips: goal is `cfc f N ≤ cfc f M`.
+  change cfc (fun t : ℝ => t ^ (-1 : ℝ)) N ≤ cfc (fun t : ℝ => t ^ (-1 : ℝ)) M
+  rw [← CFC.rpow_eq_cfc_real (a := N) (y := -1) hN.nonneg,
+    ← CFC.rpow_eq_cfc_real (a := M) (y := -1) hM.nonneg]
+  exact CStarAlgebra.rpow_neg_one_le_rpow_neg_one (A := CStarMatrix n n A) hMN hM
 
 /-- `Real.sqrt` is operator monotone on the nonnegative cone of finite
 `CStarMatrix` type copies, as the `p = 1/2` instance of
