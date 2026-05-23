@@ -63,20 +63,40 @@ scalar-Hoeffding rate `O(n / √m)` in operator norm.
   `σ_inf^4 / m` (Hoeffding + iid sum + scaling).
 * `empiricalNTK_entry_concentration_tail` — per-entry Hoeffding tail
   bound for `|K̂_m(a,b) - K(a,b)|`.
+* `empiricalNTK_opNorm_concentration_param` — operator-norm tail
+  bound `μ.real { ω | n·ε < ‖K̂_m − K‖_op } ≤ 2 n² · exp(−ε² m /
+  (2 σ_inf⁴))`, obtained by composing the per-entry tail with a
+  union bound over the `n²` matrix entries and the matrix-norm glue
+  lemma `Matrix.l2_opNorm_le_card_mul_of_entry_le` from
+  `LTFP/MathlibExt/Analysis/Matrix/OpNormByMax.lean`.
+* `ntk_concentration_scalar_hoeffding` — the named-rate form: with
+  probability at least `1 − δ`,
+  `‖K̂_m − K‖_op ≤ n · σ_inf² · √(2 log(2 n² / δ) / m)`. This is
+  the B8 N4 v1 sub-carrier consumed downstream by B8 N5 lazy-
+  training analysis.
 
-## Open: union bound + matrix glue
+## B8 N5 v1 status
 
-The composition of `n²` per-entry tail bounds into a single
-operator-norm tail bound `‖K̂_m - K‖_op > t` requires:
+This file closes the **scalar Hoeffding v1 sub-carrier** for B8 N5
+in full: union bound + matrix glue are wired through to the named-
+rate statement `ntk_concentration_scalar_hoeffding`.
 
-1. A union bound over `n²` entries (Mathlib has
-   `measure_biUnion_finset_le`).
-2. The matrix-norm glue lemma
-   `Matrix.l2_opNorm_le_card_mul_of_entry_le` from
-   `LTFP/MathlibExt/Analysis/Matrix/OpNormByMax.lean`.
+What remains for a *full* B8 N5 with sharper rates is genuinely
+multi-week upstream work, NOT a v1 wiring task:
 
-Both pieces are available; the final composition is left for a
-follow-up dispatch (B8 N5 wiring).
+1. **Matrix Bernstein** to upgrade the rate from `O(n / √m)` to the
+   sharper `O(√(log n) / √m)`, which requires B6 Lieb concavity —
+   currently a multi-week Mathlib gap.
+2. **Carrier-facing wide-network theorem** composing this
+   concentration side with the deterministic Taylor remainder
+   (`LTFP/MathlibExt/Calculus/TaylorRemainderBallRight.lean`) into a
+   wide-network learning rate. The Taylor side is currently 1D
+   scalar `f : ℝ → ℝ`; bridging to the multivariate parameter space
+   that matches `lazy_training_linearization_from_taylor`
+   (`LTFP/MathlibExt/Analysis/LazyTrainingLinearization.lean`)
+   requires (a) a multivariate Hessian Taylor bound and (b) a
+   parameter-movement bound `‖θt − θ₀‖ ≤ A/√m` derived from this
+   NTK concentration. Both are days+ infrastructure, deferred.
 -/
 
 namespace ProbabilityTheory
