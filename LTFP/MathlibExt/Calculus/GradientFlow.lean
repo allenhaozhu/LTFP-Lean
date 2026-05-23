@@ -398,6 +398,44 @@ theorem gradient_flow_unique_of_lipschitz_deriv
     refine ⟨?_, Set.mem_univ _⟩
     simpa [v] using hβ t
 
+/-- **Energy identity along scalar gradient flow.**
+If `α` solves `α' = -f' ∘ α` and `f` is differentiable at the current
+state `α t`, then the objective value satisfies
+`(f ∘ α)'(t) = -(f'(α t))²`.
+
+This is the basic Lyapunov identity underlying continuous-time gradient
+flow. Convexity is not needed for the identity itself; convexity enters
+later when converting this dissipation identity into rates for the
+optimality gap. -/
+theorem gradient_flow_energy_hasDerivAt
+    {f α : ℝ → ℝ} (hα : IsGradientFlow f α) {t : ℝ}
+    (hf : DifferentiableAt ℝ f (α t)) :
+    HasDerivAt (fun s : ℝ => f (α s)) (-(deriv f (α t)) ^ 2) t := by
+  have hf' : HasDerivAt f (deriv f (α t)) (α t) := hf.hasDerivAt
+  have hcomp := hf'.comp t (hα t)
+  simpa [pow_two, mul_comm, mul_left_comm, mul_assoc] using hcomp
+
+/-- Smooth global version of `gradient_flow_energy_hasDerivAt`. -/
+theorem gradient_flow_energy_hasDerivAt_of_differentiable
+    {f α : ℝ → ℝ} (hα : IsGradientFlow f α) (hf : Differentiable ℝ f) (t : ℝ) :
+    HasDerivAt (fun s : ℝ => f (α s)) (-(deriv f (α t)) ^ 2) t :=
+  gradient_flow_energy_hasDerivAt hα (hf (α t))
+
+/-- Along a scalar gradient flow, objective energy has nonpositive derivative. -/
+theorem gradient_flow_energy_deriv_nonpos
+    {f α : ℝ → ℝ} (hα : IsGradientFlow f α) {t : ℝ}
+    (hf : DifferentiableAt ℝ f (α t)) :
+    deriv (fun s : ℝ => f (α s)) t ≤ 0 := by
+  have hderiv := (gradient_flow_energy_hasDerivAt hα hf).deriv
+  rw [hderiv]
+  exact neg_nonpos.mpr (sq_nonneg (deriv f (α t)))
+
+/-- Smooth global version of `gradient_flow_energy_deriv_nonpos`. -/
+theorem gradient_flow_energy_deriv_nonpos_of_differentiable
+    {f α : ℝ → ℝ} (hα : IsGradientFlow f α) (hf : Differentiable ℝ f) (t : ℝ) :
+    deriv (fun s : ℝ => f (α s)) t ≤ 0 :=
+  gradient_flow_energy_deriv_nonpos hα (hf (α t))
+
 /-- Three iterations of gradient descent on `f y = y² / 2` with step
 size `η = 1/2` starting at `x = 1` produce `(1/2)^3 = 1/8`. -/
 example : gradIter (fun y : ℝ => y ^ 2 / 2) (1 / 2) 3 1 = 1 / 8 := by
