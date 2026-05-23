@@ -105,4 +105,18 @@ theorem MarginSatisfied.const (c : ℝ) (y : Fin k) :
   intro j _
   simp
 
+/-- §13.5 — *Classification consequence of margin satisfaction.* If
+    the score vector `g` satisfies a nonnegative margin `γ` at the
+    true label `y`, then decoding `y` itself as the (witnessed)
+    argmax yields zero score-loss. This is the downstream link
+    `MarginSatisfied → IsArgmax → scoreLoss = 0` that closes the
+    pipeline from max-margin learning to vanishing 0-1 risk on a
+    correctly-margined point (Bach 2024 §13.5, p. 392, immediate
+    consequence of eq. 13.16). -/
+theorem MarginSatisfied.scoreLoss_eq_zero {g : Fin k → ℝ} {y : Fin k}
+    {γ : ℝ} (hγ : 0 ≤ γ) (h : MarginSatisfied g y γ) :
+    scoreLoss g y y (h.isArgmax hγ) = 0 := by
+  unfold scoreLoss
+  exact multicategoryLoss_diag y
+
 end LTFP
