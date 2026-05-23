@@ -129,6 +129,19 @@ theorem cStarAlgebraOperatorMonotoneOnNonneg_one_sub_one_add_inv :
       ← cfcₙ_eq_cfc (a := b) (f := fun t : ℝ => 1 - (1 + t)⁻¹) hcont_b hf0]
   exact CFC.monotoneOn_one_sub_one_add_inv_real (A := A) ha hb hab
 
+/-- `t ↦ -Real.log t` is operator antitone on the strictly-positive cone of every
+unital C⋆-algebra, via negation of `cStarAlgebraOperatorMonotoneOnStrictlyPos_log`:
+`cfc (fun t => -Real.log t) x = -cfc Real.log x` by `cfc_neg`, and monotonicity of
+`Real.log` then gives the reversed inequality after `neg_le_neg`. -/
+theorem cStarAlgebraOperatorAntitoneOnStrictlyPos_neg_log :
+    CStarAlgebraOperatorAntitoneOnStrictlyPos.{uA} (fun t : ℝ => -Real.log t) := by
+  intro A _ _ _ a ha b hb hab
+  -- `AntitoneOn` flips: goal is `cfc f b ≤ cfc f a`.
+  change cfc (fun t : ℝ => -Real.log t) b ≤ cfc (fun t : ℝ => -Real.log t) a
+  rw [cfc_neg (R := ℝ) Real.log b, cfc_neg (R := ℝ) Real.log a]
+  exact neg_le_neg
+    (cStarAlgebraOperatorMonotoneOnStrictlyPos_log.{uA} (A := A) ha hb hab)
+
 /-! ### Finite `CStarMatrix` wrappers -/
 
 /-- A real function is operator monotone on the nonnegative cone of finite
@@ -187,6 +200,46 @@ theorem cStarOperatorAntitoneOnStrictlyPos_rpow_neg_one :
   rw [← CFC.rpow_eq_cfc_real (a := N) (y := -1) hN.nonneg,
     ← CFC.rpow_eq_cfc_real (a := M) (y := -1) hM.nonneg]
   exact CStarAlgebra.rpow_neg_one_le_rpow_neg_one (A := CStarMatrix n n A) hMN hM
+
+/-- Finite-`CStarMatrix` analog of
+`cStarAlgebraOperatorMonotoneOnNonneg_one_sub_one_add_inv`: `t ↦ 1 - (1 + t)⁻¹`
+is operator monotone on the nonnegative cone of `CStarMatrix n n A`, via the
+`cfcₙ_eq_cfc` zero-at-zero bridge from `CFC.monotoneOn_one_sub_one_add_inv_real`. -/
+theorem cStarOperatorMonotoneOnNonneg_one_sub_one_add_inv :
+    CStarOperatorMonotoneOnNonneg.{uA, un} (fun t : ℝ => 1 - (1 + t)⁻¹) := by
+  intro A _ _ _ n _ _ M (hM : 0 ≤ M) N (hN : 0 ≤ N) hMN
+  change cfc (fun t : ℝ => 1 - (1 + t)⁻¹) M ≤ cfc (fun t : ℝ => 1 - (1 + t)⁻¹) N
+  have hf0 : (fun t : ℝ => 1 - (1 + t)⁻¹) 0 = 0 := by norm_num
+  have hcont_M : ContinuousOn (fun t : ℝ => 1 - (1 + t)⁻¹) (quasispectrum ℝ M) := by
+    refine continuousOn_const.sub ?_
+    refine (continuousOn_const.add continuousOn_id).inv₀ ?_
+    intro x hx
+    have hx_nn : 0 ≤ x := quasispectrum_nonneg_of_nonneg M hM x hx
+    simp only [id]
+    linarith
+  have hcont_N : ContinuousOn (fun t : ℝ => 1 - (1 + t)⁻¹) (quasispectrum ℝ N) := by
+    refine continuousOn_const.sub ?_
+    refine (continuousOn_const.add continuousOn_id).inv₀ ?_
+    intro x hx
+    have hx_nn : 0 ≤ x := quasispectrum_nonneg_of_nonneg N hN x hx
+    simp only [id]
+    linarith
+  rw [← cfcₙ_eq_cfc (a := M) (f := fun t : ℝ => 1 - (1 + t)⁻¹) hcont_M hf0,
+      ← cfcₙ_eq_cfc (a := N) (f := fun t : ℝ => 1 - (1 + t)⁻¹) hcont_N hf0]
+  exact CFC.monotoneOn_one_sub_one_add_inv_real (A := CStarMatrix n n A) hM hN hMN
+
+/-- Finite-`CStarMatrix` analog of
+`cStarAlgebraOperatorAntitoneOnStrictlyPos_neg_log`: `t ↦ -Real.log t` is operator
+antitone on the strictly-positive cone of `CStarMatrix n n A`, via `cfc_neg`
+together with `cStarOperatorMonotoneOnStrictlyPos_log`. -/
+theorem cStarOperatorAntitoneOnStrictlyPos_neg_log :
+    CStarOperatorAntitoneOnStrictlyPos.{uA, un} (fun t : ℝ => -Real.log t) := by
+  intro A _ _ _ n _ _ M hM N hN hMN
+  -- `AntitoneOn` flips: goal is `cfc f N ≤ cfc f M`.
+  change cfc (fun t : ℝ => -Real.log t) N ≤ cfc (fun t : ℝ => -Real.log t) M
+  rw [cfc_neg (R := ℝ) Real.log N, cfc_neg (R := ℝ) Real.log M]
+  exact neg_le_neg
+    (cStarOperatorMonotoneOnStrictlyPos_log.{uA, un} (A := A) (n := n) hM hN hMN)
 
 /-- `Real.sqrt` is operator monotone on the nonnegative cone of finite
 `CStarMatrix` type copies, as the `p = 1/2` instance of
