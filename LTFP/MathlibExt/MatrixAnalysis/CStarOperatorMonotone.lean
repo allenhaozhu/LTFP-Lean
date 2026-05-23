@@ -3,6 +3,7 @@ Copyright (c) 2026 Allen Hao Zhu. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Allen Hao Zhu
 -/
+import Mathlib.Analysis.CStarAlgebra.ApproximateUnit
 import Mathlib.Analysis.CStarAlgebra.CStarMatrix
 import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.Rpow.Order
 import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.ExpLog.Order
@@ -98,6 +99,35 @@ theorem cStarAlgebraOperatorAntitoneOnStrictlyPos_rpow_neg_one :
   rw [← CFC.rpow_eq_cfc_real (a := b) (y := -1) hb.nonneg,
     ← CFC.rpow_eq_cfc_real (a := a) (y := -1) ha.nonneg]
   exact CStarAlgebra.rpow_neg_one_le_rpow_neg_one (A := A) hab ha
+
+/-- `t ↦ 1 - (1 + t)⁻¹` is operator monotone on the nonnegative cone of every
+unital C⋆-algebra. Lifted from Mathlib's
+`CFC.monotoneOn_one_sub_one_add_inv_real` (stated in `cfcₙ` form) via the
+zero-at-zero bridge `cfcₙ_eq_cfc`: the function vanishes at `0` (since
+`1 - (1 + 0)⁻¹ = 0`), and is continuous on the quasispectrum of any
+nonnegative element (denominator `1 + t > 0` for `t ≥ 0`). -/
+theorem cStarAlgebraOperatorMonotoneOnNonneg_one_sub_one_add_inv :
+    CStarAlgebraOperatorMonotoneOnNonneg.{uA} (fun t : ℝ => 1 - (1 + t)⁻¹) := by
+  intro A _ _ _ a (ha : 0 ≤ a) b (hb : 0 ≤ b) hab
+  change cfc (fun t : ℝ => 1 - (1 + t)⁻¹) a ≤ cfc (fun t : ℝ => 1 - (1 + t)⁻¹) b
+  have hf0 : (fun t : ℝ => 1 - (1 + t)⁻¹) 0 = 0 := by norm_num
+  have hcont_a : ContinuousOn (fun t : ℝ => 1 - (1 + t)⁻¹) (quasispectrum ℝ a) := by
+    refine continuousOn_const.sub ?_
+    refine (continuousOn_const.add continuousOn_id).inv₀ ?_
+    intro x hx
+    have hx_nn : 0 ≤ x := quasispectrum_nonneg_of_nonneg a ha x hx
+    simp only [id]
+    linarith
+  have hcont_b : ContinuousOn (fun t : ℝ => 1 - (1 + t)⁻¹) (quasispectrum ℝ b) := by
+    refine continuousOn_const.sub ?_
+    refine (continuousOn_const.add continuousOn_id).inv₀ ?_
+    intro x hx
+    have hx_nn : 0 ≤ x := quasispectrum_nonneg_of_nonneg b hb x hx
+    simp only [id]
+    linarith
+  rw [← cfcₙ_eq_cfc (a := a) (f := fun t : ℝ => 1 - (1 + t)⁻¹) hcont_a hf0,
+      ← cfcₙ_eq_cfc (a := b) (f := fun t : ℝ => 1 - (1 + t)⁻¹) hcont_b hf0]
+  exact CFC.monotoneOn_one_sub_one_add_inv_real (A := A) ha hb hab
 
 /-! ### Finite `CStarMatrix` wrappers -/
 
