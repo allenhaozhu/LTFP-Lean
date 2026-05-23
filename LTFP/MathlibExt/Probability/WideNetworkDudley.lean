@@ -901,6 +901,62 @@ theorem wide_network_rademacher_complexity_via_dudley_paramBall
           (∫ (x : ℝ) in ε..(c/2),
             √(Real.log (coveringNumber hTB (x / L)))) := by linarith
 
+/-- Composition of the wide-network Dudley-parameter-ball bound with the
+symmetrization factor of `2`.
+
+Multiplying `wide_network_rademacher_complexity_via_dudley_paramBall` by `2`
+gives the explicit RHS that appears as an upper bound on the expected
+supremum of (empirical − true risk) over the linearized-risk class for any
+i.i.d. sample whose realised inputs/targets satisfy the deterministic
+hypotheses `hx`, `hbound`, `hcs`.
+
+Concretely, this theorem is the deterministic-sample form: it bounds
+`2 · empiricalRademacherComplexity_without_abs m F S` by twice the
+parameter-ball Dudley integral. The standard symmetrization identity
+`μⁿ[uniformDeviation n F μ X (X ∘ ω)] ≤ 2 • rademacherComplexity n F μ X`
+(`LTFP.Foundations.Main.uniform_deviation_expectation_le_two_smul_rademacher_complexity`,
+line 28) supplies the missing measure-theoretic step that lifts a per-sample
+Rademacher bound to a sample-averaged expected-sup bound. Composing the two
+facts on an i.i.d. wide-network sample whose realisations a.s. satisfy
+`hx, hbound, hcs` recovers the textbook
+`E[sup_θ (R̂_S(θ) − R(θ))] ≤ 2 · (Dudley integral)` form for the linearised
+squared-loss class. That measure-theoretic lift is a separate downstream
+slot and is **not** discharged here; this theorem provides only the
+deterministic-sample upper bound that the lift consumes.
+
+The `2 *` placement matches the convention of
+`uniform_deviation_expectation_le_two_smul_rademacher_complexity`:
+the factor of `2` is on the Rademacher complexity side, not on the
+Dudley integrand. -/
+theorem wide_network_two_rademacher_complexity_via_dudley_paramBall
+    {d m : ℕ}
+    (xs : Fin m → EuclideanSpace ℝ (Fin d)) (ys : Fin m → ℝ)
+    (B_param R B c ε : ℝ)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
+    (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
+    (hx : ∀ i : Fin m, ‖xs i‖ ≤ R)
+    (hbound :
+      ∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+        ∀ i : Fin m, |inner ℝ θ (xs i) - ys i| ≤ B)
+    (hcs : ∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+      empiricalNorm (linearizedRiskSample xs ys)
+        (linearizedRiskFamily (d := d) B_param θ) ≤ c) :
+    2 * empiricalRademacherComplexity_without_abs m
+        (linearizedRiskFamily (d := d) B_param)
+        (linearizedRiskSample xs ys) ≤
+      2 * (4 * ε + (12 / Real.sqrt m) *
+        (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (coveringNumber
+              (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+              (x / (2 * B * R)))))) := by
+  have hbase :=
+    wide_network_rademacher_complexity_via_dudley_paramBall
+      (d := d) (m := m) xs ys B_param R B c ε
+      hR_nn hB_nn hB_param_nn hBR_pos hε_pos hm_pos hεc hx hbound hcs
+  have h2_nn : (0 : ℝ) ≤ 2 := by norm_num
+  exact mul_le_mul_of_nonneg_left hbase h2_nn
+
 end ClosureViaDudley
 
 end LTFP
