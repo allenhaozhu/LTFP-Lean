@@ -391,7 +391,7 @@ threshold `ε > 0` yields the canonical Bernstein tail bound
 `μ.real {ω | ε ≤ X ω} ≤ exp(-ε² / (2 (ν + b · ε)))`.
 
 This is the closed-form Bernstein inequality, obtained from
-`IsSubGamma.measure_ge_le` by the Chernoff-optimal choice
+`IsSubGamma.measure_ge_le` by the standard Bernstein choice
 `s := ε / (ν + b · ε)`, which lies in the small-`s` regime `s · b < 1`
 because `s · b = b · ε / (ν + b · ε) < 1` whenever `ν > 0`.
 
@@ -429,8 +429,8 @@ theorem measure_ge_le_bernstein [IsFiniteMeasure μ]
     rw [eq_div_iff hνb_ne]
     field_simp
     ring
-  -- Then `2 * (1 - s * b) = 2 * ν / (ν + b · ε)`, and at the optimal `s`
-  -- the exponent collapses.
+  -- Then `2 * (1 - s * b) = 2 * ν / (ν + b · ε)`, and at the standard
+  -- Bernstein choice of `s` the exponent collapses.
   have h_exp_eq :
       -s * ε + s ^ 2 * ν / (2 * (1 - s * b)) =
         -(ε ^ 2) / (2 * (ν + b * ε)) := by
