@@ -247,4 +247,249 @@ theorem dudley_entropy_integral_bound
     (∫ (x : ℝ) in ε..(c/2),√(Real.log (coveringNumber h' x)))) := by
   exact dudley_entropy_integral' ε_pos h' m_pos cs ε_le_c_div_2
 
+/-- **With-abs Dudley entropy integral upper bound.**
+
+Composes `empiricalRademacherComplexity_eq_without_abs_negDoubleFamily`
+(Bartlett–Mendelson with-abs ↔ without-abs bridge) with
+`dudley_entropy_integral'` and the negation-closure covering inflation
+`coveringNumber_negDoubleFamily_le` (factor of 2) to bound the
+with-abs empirical Rademacher complexity by the same Dudley entropy
+integral expressed in covering numbers of the original family `F`
+(not the doubled `negDoubleFamily F`), at the cost of a `2 ·` factor
+inside the log.
+
+This closes the with-abs Dudley analogue gap flagged in the session
+ledger: downstream chains via
+`uniform_deviation_expectation_le_two_smul_rademacher_complexity`
+which uses the with-abs definition. -/
+theorem dudley_entropy_integral_bound_with_abs
+    {𝒳 : Type v} {n : ℕ} {ι : Type u} [Nonempty ι]
+    {F : ι → 𝒳 → ℝ} {S : Fin n → 𝒳} {c ε : ℝ}
+    {C : ℝ} (hC : ∀ i j, |F i (S j)| ≤ C)
+    (ε_pos : 0 < ε)
+    (h' : TotallyBounded (Set.univ : Set (EmpiricalFunctionSpace F S)))
+    (m_pos : 0 < n) (cs : ∀ f : ι, empiricalNorm S (F f) ≤ c)
+    (ε_le_c_div_2 : ε < c/2) :
+    empiricalRademacherComplexity n F S ≤
+      (4 * ε + (12 / Real.sqrt n) *
+      (∫ (x : ℝ) in ε..(c/2),
+        √(Real.log (2 * (coveringNumber h' x : ℝ))))) := by
+  classical
+  -- Positive / negative isometric embeddings into the doubled space.
+  set e₀ : EmpiricalFunctionSpace F S →
+      EmpiricalFunctionSpace (negDoubleFamily F) S :=
+    fun q => ⟨((0 : Fin 2), q.index)⟩ with he₀_def
+  set e₁ : EmpiricalFunctionSpace F S →
+      EmpiricalFunctionSpace (negDoubleFamily F) S :=
+    fun q => ⟨((1 : Fin 2), q.index)⟩ with he₁_def
+  have he₀ : Isometry e₀ := by
+    refine Isometry.of_dist_eq (fun q q' => ?_)
+    show empiricalDist S (negDoubleFamily F (e₀ q).index)
+        (negDoubleFamily F (e₀ q').index)
+      = empiricalDist S (F q.index) (F q'.index)
+    have h₁ : negDoubleFamily F ((0 : Fin 2), q.index) = F q.index := by
+      funext x; simp [negDoubleFamily]
+    have h₂ : negDoubleFamily F ((0 : Fin 2), q'.index) = F q'.index := by
+      funext x; simp [negDoubleFamily]
+    simp only [he₀_def, h₁, h₂]
+  have he₁ : Isometry e₁ := by
+    refine Isometry.of_dist_eq (fun q q' => ?_)
+    show empiricalDist S (negDoubleFamily F (e₁ q).index)
+        (negDoubleFamily F (e₁ q').index)
+      = empiricalDist S (F q.index) (F q'.index)
+    have h₁ : negDoubleFamily F ((1 : Fin 2), q.index) = -(F q.index) := by
+      funext x; simp [negDoubleFamily]
+    have h₂ : negDoubleFamily F ((1 : Fin 2), q'.index) = -(F q'.index) := by
+      funext x; simp [negDoubleFamily]
+    simp only [he₁_def, h₁, h₂]
+    dsimp [empiricalDist, empiricalNorm]
+    congr 1
+    congr 1
+    apply Finset.sum_congr rfl
+    intro i _
+    ring
+  -- Derive `TotallyBounded` of the doubled function space from the
+  -- isometric union cover.
+  have h'_neg : TotallyBounded
+      (Set.univ : Set (EmpiricalFunctionSpace (negDoubleFamily F) S)) := by
+    -- `Set.univ ⊆ e₀ '' univ ∪ e₁ '' univ` (every index has first
+    -- component `0` or `1`).
+    have hcov_set :
+        (Set.univ : Set (EmpiricalFunctionSpace (negDoubleFamily F) S))
+        ⊆ e₀ '' (Set.univ : Set (EmpiricalFunctionSpace F S))
+          ∪ e₁ '' (Set.univ : Set (EmpiricalFunctionSpace F S)) := by
+      intro q _
+      rcases q with ⟨⟨s, i⟩⟩
+      have hs : s = 0 ∨ s = 1 := by
+        fin_cases s
+        · exact Or.inl rfl
+        · exact Or.inr rfl
+      rcases hs with hs0 | hs1
+      · left
+        refine ⟨⟨i⟩, Set.mem_univ _, ?_⟩
+        simp [he₀_def, hs0]
+      · right
+        refine ⟨⟨i⟩, Set.mem_univ _, ?_⟩
+        simp [he₁_def, hs1]
+    have htb_e₀ : TotallyBounded (e₀ '' (Set.univ : Set _)) :=
+      h'.image he₀.uniformContinuous
+    have htb_e₁ : TotallyBounded (e₁ '' (Set.univ : Set _)) :=
+      h'.image he₁.uniformContinuous
+    exact (htb_e₀.union htb_e₁).subset hcov_set
+  -- `empiricalNorm` is invariant under pointwise negation (squares
+  -- ignore signs).
+  have cs_neg : ∀ f : Fin 2 × ι,
+      empiricalNorm S (negDoubleFamily F f) ≤ c := by
+    intro ⟨s, i⟩
+    by_cases hs : (s = 0)
+    · have h₁ : negDoubleFamily F (s, i) = F i := by
+        funext x; simp [negDoubleFamily, hs]
+      rw [h₁]; exact cs i
+    · have hs1 : s = 1 := by
+        fin_cases s
+        · exact (hs rfl).elim
+        · rfl
+      have h₁ : negDoubleFamily F (s, i) = -(F i) := by
+        funext x; simp [negDoubleFamily, hs1]
+      rw [h₁]
+      -- empiricalNorm S (-(F i)) = empiricalNorm S (F i)
+      have heq : empiricalNorm S (-(F i)) = empiricalNorm S (F i) := by
+        dsimp [empiricalNorm]
+        congr 1
+        congr 1
+        apply Finset.sum_congr rfl
+        intro j _
+        exact neg_sq (F i (S j))
+      rw [heq]
+      exact cs i
+  -- Bartlett–Mendelson bridge.
+  have h_bridge :
+      empiricalRademacherComplexity n F S
+        = empiricalRademacherComplexity_without_abs n
+            (negDoubleFamily F) S :=
+    empiricalRademacherComplexity_eq_without_abs_negDoubleFamily F S hC
+  -- Without-abs Dudley applied to the negDoubleFamily.
+  have h_dudley :
+      empiricalRademacherComplexity_without_abs n (negDoubleFamily F) S
+        ≤ 4 * ε + (12 / Real.sqrt n) *
+            (∫ (x : ℝ) in ε..(c/2),
+              √(Real.log (coveringNumber h'_neg x))) :=
+    dudley_entropy_integral' ε_pos h'_neg m_pos cs_neg ε_le_c_div_2
+  -- Covering-number doubling pointwise on `[ε, c/2]` ⇒ pointwise
+  -- bound on the integrand ⇒ interval-integral monotonicity.
+  -- First, both integrands are AntitoneOn `[ε, c/2]` (composition of
+  -- monotone `√` with antitone `log ∘ coveringNumber`).
+  have hε_le : ε ≤ c / 2 := le_of_lt ε_le_c_div_2
+  -- Nonemptiness of the underlying function space (needed to invoke
+  -- `coveringNumber_nonzero`).
+  have hNE : (Set.univ : Set (EmpiricalFunctionSpace F S)).Nonempty := by
+    obtain ⟨i⟩ := (inferInstance : Nonempty ι)
+    exact ⟨⟨i⟩, by simp⟩
+  have hNE_neg :
+      (Set.univ : Set (EmpiricalFunctionSpace (negDoubleFamily F) S)).Nonempty := by
+    obtain ⟨i⟩ := (inferInstance : Nonempty ι)
+    exact ⟨⟨((0 : Fin 2), i)⟩, by simp⟩
+  -- Pointwise integrand bound on `[ε, c/2]`.
+  have h_integrand_bd :
+      ∀ x ∈ Set.Icc ε (c/2),
+        √(Real.log (coveringNumber h'_neg x))
+          ≤ √(Real.log (2 * (coveringNumber h' x : ℝ))) := by
+    intro x hx
+    have hx_pos : 0 < x := lt_of_lt_of_le ε_pos hx.1
+    have hcov_pos_orig : 0 < coveringNumber h' x :=
+      coveringNumber_nonzero hNE h' hx_pos
+    have hcov_pos_neg : 0 < coveringNumber h'_neg x :=
+      coveringNumber_nonzero hNE_neg h'_neg hx_pos
+    have hcov_doubling :
+        coveringNumber h'_neg x ≤ 2 * coveringNumber h' x :=
+      coveringNumber_negDoubleFamily_le F S h' h'_neg hx_pos
+    have hcov_doubling_real :
+        (coveringNumber h'_neg x : ℝ) ≤ 2 * (coveringNumber h' x : ℝ) := by
+      exact_mod_cast hcov_doubling
+    have hcov_pos_neg_real : (0 : ℝ) < (coveringNumber h'_neg x : ℝ) := by
+      exact_mod_cast hcov_pos_neg
+    have hlog_le :
+        Real.log (coveringNumber h'_neg x)
+          ≤ Real.log (2 * (coveringNumber h' x : ℝ)) :=
+      Real.log_le_log hcov_pos_neg_real hcov_doubling_real
+    exact Real.sqrt_le_sqrt hlog_le
+  -- Integrability (AntitoneOn ⇒ IntervalIntegrable) for both
+  -- integrands. Pattern reused from `dudley_entropy_integral'`.
+  have h_int_neg :
+      IntervalIntegrable
+        (fun x => √(Real.log (coveringNumber h'_neg x)))
+        MeasureTheory.volume ε (c/2) := by
+    apply AntitoneOn.intervalIntegrable
+    have f0 : Monotone (fun x ↦ √x) := fun _ _ h => Real.sqrt_le_sqrt h
+    apply Monotone.comp_antitoneOn f0
+    refine antitoneOn_iff_forall_lt.mpr ?_
+    intro a ha b hb hab
+    dsimp [Set.uIcc, Set.Icc] at ha hb
+    have hmin : min ε (c / 2) = ε := by simp; linarith
+    rw [hmin] at ha hb
+    -- AntitoneOn: `a < b → f b ≤ f a`. With `f x = log (cov h'_neg x)`.
+    apply Real.log_le_log
+    · -- Need `0 < (cov h'_neg b : ℝ)`.
+      exact_mod_cast coveringNumber_nonzero hNE_neg h'_neg
+        (lt_of_lt_of_le ε_pos hb.1)
+    · -- Need `(cov h'_neg b : ℝ) ≤ (cov h'_neg a : ℝ)` from antitonicity.
+      exact_mod_cast converingNumber_antitone h'_neg
+        (lt_of_lt_of_le ε_pos ha.1) (lt_of_lt_of_le ε_pos hb.1)
+        (le_of_lt hab)
+  have h_int_pos :
+      IntervalIntegrable
+        (fun x => √(Real.log (2 * (coveringNumber h' x : ℝ))))
+        MeasureTheory.volume ε (c/2) := by
+    apply AntitoneOn.intervalIntegrable
+    have f0 : Monotone (fun x ↦ √x) := fun _ _ h => Real.sqrt_le_sqrt h
+    apply Monotone.comp_antitoneOn f0
+    refine antitoneOn_iff_forall_lt.mpr ?_
+    intro a ha b hb hab
+    dsimp [Set.uIcc, Set.Icc] at ha hb
+    have hmin : min ε (c / 2) = ε := by simp; linarith
+    rw [hmin] at ha hb
+    -- AntitoneOn: `a < b → f b ≤ f a`. With `f x = log (2 * cov h' x)`.
+    apply Real.log_le_log
+    · -- Need `0 < 2 * (cov h' b : ℝ)`.
+      have hb_pos : (0 : ℝ) < (coveringNumber h' b : ℝ) := by
+        exact_mod_cast coveringNumber_nonzero hNE h'
+          (lt_of_lt_of_le ε_pos hb.1)
+      linarith
+    · -- Need `2 * (cov h' b : ℝ) ≤ 2 * (cov h' a : ℝ)` from antitonicity.
+      have hmono : coveringNumber h' b ≤ coveringNumber h' a :=
+        converingNumber_antitone h' (lt_of_lt_of_le ε_pos ha.1)
+          (lt_of_lt_of_le ε_pos hb.1) (le_of_lt hab)
+      have : (coveringNumber h' b : ℝ) ≤ (coveringNumber h' a : ℝ) := by
+        exact_mod_cast hmono
+      linarith
+  -- Apply interval-integral monotonicity.
+  have h_int_mono :
+      (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (coveringNumber h'_neg x)))
+        ≤ ∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber h' x : ℝ))) :=
+    intervalIntegral.integral_mono_on hε_le h_int_neg h_int_pos h_integrand_bd
+  -- Multiplier `12 / √n` is nonnegative.
+  have h_mul_nonneg : (0 : ℝ) ≤ 12 / Real.sqrt n :=
+    div_nonneg (by norm_num) (Real.sqrt_nonneg _)
+  -- Chain everything.
+  calc empiricalRademacherComplexity n F S
+      = empiricalRademacherComplexity_without_abs n (negDoubleFamily F) S :=
+        h_bridge
+    _ ≤ 4 * ε + (12 / Real.sqrt n) *
+          (∫ (x : ℝ) in ε..(c/2),
+            √(Real.log (coveringNumber h'_neg x))) := h_dudley
+    _ ≤ 4 * ε + (12 / Real.sqrt n) *
+          (∫ (x : ℝ) in ε..(c/2),
+            √(Real.log (2 * (coveringNumber h' x : ℝ)))) := by
+        have hmul :
+            (12 / Real.sqrt n) *
+              (∫ (x : ℝ) in ε..(c/2),
+                √(Real.log (coveringNumber h'_neg x)))
+            ≤ (12 / Real.sqrt n) *
+              (∫ (x : ℝ) in ε..(c/2),
+                √(Real.log (2 * (coveringNumber h' x : ℝ)))) :=
+          mul_le_mul_of_nonneg_left h_int_mono h_mul_nonneg
+        linarith
+
 end
