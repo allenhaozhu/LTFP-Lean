@@ -8,8 +8,11 @@ round `t` the player picks `xₜ` from a convex set, suffers loss
 `R_T(x⋆) = ∑ₜ fₜ(xₜ) − ∑ₜ fₜ(x⋆)` against the best fixed `x⋆`.
 -/
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import Mathlib.Algebra.Order.Field.Basic
 import Mathlib.Data.Real.Basic
 import Mathlib.Data.Fintype.BigOperators
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Linarith
 
 namespace LTFP
 
@@ -56,5 +59,54 @@ theorem cumLoss_const {T : ℕ} {E : Type*} (c : ℝ) (x : E) :
     cumLoss (fun _ : Fin T => fun _ : E => c) x = T * c := by
   unfold cumLoss
   rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+
+/-- §F8a — Cumulative loss is additive in the loss functions:
+    `cumLoss (f + g) x = cumLoss f x + cumLoss g x`. -/
+theorem cumLoss_add {T : ℕ} {E : Type*}
+    (fs gs : Fin T → E → ℝ) (x : E) :
+    cumLoss (fun t y => fs t y + gs t y) x = cumLoss fs x + cumLoss gs x := by
+  unfold cumLoss
+  exact Finset.sum_add_distrib
+
+/-- §F8a — With all-zero loss functions, regret vanishes against any
+    comparator and any play sequence. -/
+theorem regret_zero_loss {T : ℕ} {E : Type*}
+    (xs : Fin T → E) (xstar : E) :
+    regret (fun _ : Fin T => fun _ : E => (0 : ℝ)) xs xstar = 0 := by
+  unfold regret
+  simp
+
+/-- §F8a — With constant loss `c` independent of action, regret is zero:
+    every player and comparator pays the same cumulative loss. -/
+theorem regret_const_loss {T : ℕ} {E : Type*}
+    (c : ℝ) (xs : Fin T → E) (xstar : E) :
+    regret (fun _ : Fin T => fun _ : E => c) xs xstar = 0 := by
+  unfold regret
+  simp
+
+/-- §F8a — Adding a per-round constant `c t` (independent of the action)
+    to the loss functions leaves regret invariant. The constants cancel
+    between the played trajectory and the comparator. -/
+theorem regret_add_const {T : ℕ} {E : Type*}
+    (fs : Fin T → E → ℝ) (c : Fin T → ℝ) (xs : Fin T → E) (xstar : E) :
+    regret (fun t y => fs t y + c t) xs xstar = regret fs xs xstar := by
+  unfold regret
+  have h₁ : ∑ t, (fs t (xs t) + c t) = (∑ t, fs t (xs t)) + ∑ t, c t :=
+    Finset.sum_add_distrib
+  have h₂ : ∑ t, (fs t xstar + c t) = (∑ t, fs t xstar) + ∑ t, c t :=
+    Finset.sum_add_distrib
+  rw [h₁, h₂]
+  ring
+
+/-- §F8a — Average-regret bound: if regret is bounded by `B` and the
+    horizon is positive, the per-round (average) regret is bounded by
+    `B / T`. This is the elementary rearrangement underlying every
+    online-learning rate. -/
+theorem average_regret_le_of_regret_le {T : ℕ} {E : Type*}
+    (fs : Fin T → E → ℝ) (xs : Fin T → E) (xstar : E) (B : ℝ)
+    (hT : 0 < T) (h : regret fs xs xstar ≤ B) :
+    regret fs xs xstar / T ≤ B / T := by
+  have hTpos : (0 : ℝ) < T := by exact_mod_cast hT
+  exact (div_le_div_iff_of_pos_right hTpos).mpr h
 
 end LTFP
