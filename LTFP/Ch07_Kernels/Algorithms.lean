@@ -336,4 +336,34 @@ theorem IsPSDKernel.finset_weighted_sum {ι : Type*} (s : Finset ι)
       rw [hrw]
       exact h_sum_app
 
+/-! ### KRR regularization bridge: `gramMatrix + λ • I` is positive definite
+
+For kernel ridge regression (Bach 2024 §7.4) the regularized system
+matrix `K + n λ I` must be invertible. The cleanest sufficient
+condition is positive definiteness: a PSD matrix plus a positive
+scalar multiple of the identity is PosDef. This packages the bridge
+in the exact shape needed by `krrCoeffs` (with arbitrary positive
+coefficient `λ`, so the caller can specialize to `n * λ`). -/
+
+/-- §7.4 — **Gram matrix of a PSD kernel, plus a positive multiple of
+the identity, is positive definite.**
+
+If `k` is a positive-semidefinite kernel and `0 < λ`, then
+`gramMatrix k xs + λ • I` is positive definite (in particular,
+invertible). This is the bridge used to justify the closed-form
+KRR solution `α̂ = (K + n λ I)⁻¹ y`. -/
+theorem gramMatrix_add_pos_scalar_id_posDef {k : 𝒳 → 𝒳 → ℝ}
+    (hk : IsPSDKernel k) (xs : Fin n → 𝒳)
+    {lam : ℝ} (hlam : 0 < lam) :
+    (gramMatrix k xs + lam • (1 : Matrix (Fin n) (Fin n) ℝ)).PosDef := by
+  -- Gram matrix is PSD via the freshly landed bridge.
+  have hGram : (gramMatrix k xs).PosSemidef :=
+    gramMatrix_posSemidef_of_psdKernel hk xs
+  -- `λ • I` is PosDef whenever `0 < λ`: scale the PosDef identity matrix.
+  have hScaled :
+      (lam • (1 : Matrix (Fin n) (Fin n) ℝ)).PosDef :=
+    Matrix.PosDef.one.smul hlam
+  -- PosSemidef + PosDef = PosDef.
+  exact Matrix.PosDef.posSemidef_add hGram hScaled
+
 end LTFP
