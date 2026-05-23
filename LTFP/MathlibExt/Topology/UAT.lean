@@ -558,4 +558,65 @@ theorem cybenko_uat_rampSubalgebra_via_singleHiddenRampNN_scaffold_pointwise
 @[deprecated (since := "2026-05-23")] alias cybenko_uat_singleHiddenRampNN_pointwise :=
   cybenko_uat_rampSubalgebra_via_singleHiddenRampNN_scaffold_pointwise
 
+/-! ## §9.3 — Honest-name aliases (2026-05-24)
+
+The existing theorem names
+`cybenko_uat_rampSubalgebra_via_singleHiddenRampNN_scaffold` (and the
+pointwise variant) retain the `_via_singleHiddenRampNN_scaffold` suffix
+to flag — per the docstring — that the existential is on subalgebra
+elements rather than on an explicit `singleHiddenRampNN` parametrisation.
+Codex's round-2 inventory audit nevertheless flagged the substring
+`via_singleHiddenRampNN` as inviting the misreading "explicit NN
+witness". The aliases below provide an unambiguously density-flavoured
+naming that downstream callers should prefer; the original names remain
+in force as the canonical statement (and as a deprecation target for the
+even-earlier `cybenko_uat_singleHiddenRampNN` alias). -/
+
+/-- **Honest alias for `cybenko_uat_rampSubalgebra_via_singleHiddenRampNN_scaffold`.**
+States exactly what the underlying theorem proves: density of
+`rampSubalgebra ι` in `C(X, ℝ)` (i.e. for every continuous target there
+exists some `g ∈ rampSubalgebra ι` with `‖g - f‖ < ε`). No explicit
+`singleHiddenRampNN` parameters are extracted — the bridge lemma
+`singleHiddenRampNN_mem_rampSubalgebra` is what populates this
+subalgebra with explicit single-hidden-layer ramp networks. -/
+theorem cybenko_uat_rampSubalgebra_dense
+    {ι : C(X, ℝ)} (hι : Function.Injective ι)
+    (f : C(X, ℝ)) {ε : ℝ} (hε : 0 < ε) :
+    ∃ (g : C(X, ℝ)), g ∈ rampSubalgebra ι ∧ ‖g - f‖ < ε :=
+  cybenko_uat_rampSubalgebra_via_singleHiddenRampNN_scaffold hι f hε
+
+set_option linter.unusedSectionVars false in
+/-- **Honest alias for the pointwise version
+`cybenko_uat_rampSubalgebra_via_singleHiddenRampNN_scaffold_pointwise`.**
+States exactly what the underlying theorem proves: pointwise ε-density of
+`rampSubalgebra ι` against arbitrary continuous `f : X → ℝ`. As with the
+bundled alias, the witness is an abstract subalgebra element, not an
+explicit `singleHiddenRampNN` parametrisation. -/
+theorem cybenko_uat_rampSubalgebra_dense_pointwise
+    {ι : C(X, ℝ)} (hι : Function.Injective ι)
+    (f : X → ℝ) (hf : Continuous f) {ε : ℝ} (hε : 0 < ε) :
+    ∃ g : C(X, ℝ), g ∈ rampSubalgebra ι ∧ ∀ x, ‖g x - f x‖ < ε :=
+  cybenko_uat_rampSubalgebra_via_singleHiddenRampNN_scaffold_pointwise hι f hf hε
+
+/-- **Honest alias retaining the `via_singleHiddenRampNN` substring.**
+This is the same density statement as `cybenko_uat_rampSubalgebra_dense`,
+exposed under a name that explicitly references the
+`singleHiddenRampNN`-bridge framing (for callers that prefer the
+NN-flavoured naming convention but want the `dense` prefix to indicate
+what is actually returned). -/
+theorem cybenko_uat_rampSubalgebra_dense_via_singleHiddenRampNN
+    {ι : C(X, ℝ)} (hι : Function.Injective ι)
+    (f : C(X, ℝ)) {ε : ℝ} (hε : 0 < ε) :
+    ∃ (g : C(X, ℝ)), g ∈ rampSubalgebra ι ∧ ‖g - f‖ < ε :=
+  cybenko_uat_rampSubalgebra_via_singleHiddenRampNN_scaffold hι f hε
+
+set_option linter.unusedSectionVars false in
+/-- **Honest alias retaining the `via_singleHiddenRampNN` substring (pointwise).**
+Pointwise companion to `cybenko_uat_rampSubalgebra_dense_via_singleHiddenRampNN`. -/
+theorem cybenko_uat_rampSubalgebra_dense_via_singleHiddenRampNN_pointwise
+    {ι : C(X, ℝ)} (hι : Function.Injective ι)
+    (f : X → ℝ) (hf : Continuous f) {ε : ℝ} (hε : 0 < ε) :
+    ∃ g : C(X, ℝ), g ∈ rampSubalgebra ι ∧ ∀ x, ‖g x - f x‖ < ε :=
+  cybenko_uat_rampSubalgebra_via_singleHiddenRampNN_scaffold_pointwise hι f hf hε
+
 end LTFP.MathlibExt.Topology
