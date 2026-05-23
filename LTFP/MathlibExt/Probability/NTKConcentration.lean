@@ -662,4 +662,63 @@ theorem ntk_concentration_scalar_hoeffding
   rw [h_target]
   exact le_of_le_of_eq h_param h_final
 
+/-! ### Confidence-form corollaries -/
+
+/-- **Confidence-form of `ntk_concentration_scalar_hoeffding`.**
+
+The dual of `ntk_concentration_scalar_hoeffding`: with probability at
+least `1 − δ`, the empirical NTK operator-norm deviation is bounded
+by the named rate `n · σ_inf² · √(2 log(2 n² / δ) / m)`.
+
+This is the "good-event" formulation, obtained by complementing the
+tail set in `ntk_concentration_scalar_hoeffding` and using
+`μ.real univ = 1` for the product probability measure. -/
+theorem ntk_concentration_scalar_hoeffding_confidence
+    {σ : ℝ → ℝ} (hσ_meas : Measurable σ)
+    {σ_inf : ℝ} (hσ_pos : 0 < σ_inf) (hσ_bdd : ∀ z, |σ z| ≤ σ_inf)
+    {n : ℕ} (hn : 0 < n) (xs : Fin n → EuclideanSpace ℝ (Fin d))
+    {m : ℕ} (hm : 0 < m)
+    {ν : Measure (EuclideanSpace ℝ (Fin d) × ℝ)} [IsProbabilityMeasure ν]
+    {δ : ℝ} (hδ_pos : 0 < δ) (hδ_lt : δ < 1) :
+    1 - δ ≤ (Measure.pi (fun _ : Fin m => ν)).real
+        { ω | ‖empiricalNTK σ xs ω - populationNTK σ xs ν‖
+              ≤ (n : ℝ) *
+                (σ_inf ^ 2 * Real.sqrt
+                  (2 * Real.log (2 * (n : ℝ) ^ 2 / δ) / (m : ℝ))) } := by
+  -- Abbreviate the threshold and the probability measure.
+  set μ : Measure (Fin m → EuclideanSpace ℝ (Fin d) × ℝ) :=
+    Measure.pi (fun _ : Fin m => ν) with hμ_def
+  haveI : IsProbabilityMeasure μ := by
+    show IsProbabilityMeasure (Measure.pi (fun _ : Fin m => ν))
+    infer_instance
+  set R : ℝ := (n : ℝ) *
+    (σ_inf ^ 2 * Real.sqrt
+      (2 * Real.log (2 * (n : ℝ) ^ 2 / δ) / (m : ℝ))) with hR_def
+  set Bad : Set (Fin m → EuclideanSpace ℝ (Fin d) × ℝ) :=
+    { ω | R < ‖empiricalNTK σ xs ω - populationNTK σ xs ν‖ } with hBad_def
+  set Good : Set (Fin m → EuclideanSpace ℝ (Fin d) × ℝ) :=
+    { ω | ‖empiricalNTK σ xs ω - populationNTK σ xs ν‖ ≤ R } with hGood_def
+  -- Tail bound from `ntk_concentration_scalar_hoeffding`.
+  have h_tail : μ.real Bad ≤ δ := by
+    show μ.real Bad ≤ δ
+    have := ntk_concentration_scalar_hoeffding (σ := σ) hσ_meas hσ_pos
+      hσ_bdd hn xs hm (ν := ν) hδ_pos hδ_lt
+    exact this
+  -- `Bad ∪ Good = univ` since `<` and `≤` partition `ℝ`.
+  have h_union_univ : Bad ∪ Good = Set.univ := by
+    ext ω
+    simp only [hBad_def, hGood_def, Set.mem_union, Set.mem_setOf_eq,
+      Set.mem_univ, iff_true]
+    by_cases h : R < ‖empiricalNTK σ xs ω - populationNTK σ xs ν‖
+    · exact Or.inl h
+    · exact Or.inr (le_of_not_gt h)
+  -- Combine via union bound + total mass.
+  have h_one_le : (1 : ℝ) ≤ μ.real Bad + μ.real Good := by
+    have h_univ : μ.real Set.univ = 1 := probReal_univ
+    have h_le : μ.real Set.univ ≤ μ.real Bad + μ.real Good := by
+      rw [← h_union_univ]
+      exact measureReal_union_le _ _
+    linarith
+  linarith
+
 end ProbabilityTheory
