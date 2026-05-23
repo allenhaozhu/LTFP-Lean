@@ -8,6 +8,7 @@ AdaBoost algorithm (§10.3.4) optimizes the exponential surrogate
 -/
 import LTFP.Ch04_ERM.Convexification
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import Mathlib.Algebra.BigOperators.Field
 import Mathlib.Data.Fintype.BigOperators
 import Mathlib.Analysis.SpecialFunctions.Exp
 
@@ -114,5 +115,27 @@ theorem exp_boostedPredictor_eq_prod
     Real.exp (boostedPredictor h α x) = ∏ t, Real.exp (α t * h t x) := by
   unfold boostedPredictor
   rw [Real.exp_sum]
+
+/-- §10.3.4 — AdaBoost exponential-loss multiplicative update: the
+    exponential surrogate on a sample with margin label `y` factorizes
+    over an additive update `F ↦ F + α · h`:
+    `exp(-(F + α·h) · y) = exp(-F·y) · exp(-α·h·y)`. This is the algebraic
+    core that makes the AdaBoost reweighting per-round multiplicative on
+    each training point. Bach (2024) §10.3.4, eq. (10.26)-(10.27). -/
+theorem adaBoost_exp_loss_update (F α h y : ℝ) :
+    Real.exp (-(F + α * h) * y) = Real.exp (-F * y) * Real.exp (-α * h * y) := by
+  rw [← Real.exp_add]
+  ring_nf
+
+/-- §10.3.4 — Normalized-weight sum preservation: when the total
+    pre-normalization mass `Z = ∑ⱼ wⱼ · uⱼ` is strictly positive, the
+    renormalized weights `wᵢ' = (wᵢ · uᵢ) / Z` sum to one. This is the
+    invariant that lets AdaBoost treat the next-round weights as a
+    probability distribution on the training set. Bach (2024) §10.3.4. -/
+theorem adaBoost_weights_sum_eq_one
+    {n : ℕ} (w u : Fin n → ℝ) (h_pos : 0 < ∑ i, w i * u i) :
+    ∑ i, (w i * u i) / (∑ j, w j * u j) = 1 := by
+  rw [← Finset.sum_div Finset.univ (fun i => w i * u i) (∑ j, w j * u j)]
+  exact div_self h_pos.ne'
 
 end LTFP
