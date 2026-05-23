@@ -957,6 +957,129 @@ theorem wide_network_two_rademacher_complexity_via_dudley_paramBall
   have h2_nn : (0 : ℝ) ≤ 2 := by norm_num
   exact mul_le_mul_of_nonneg_left hbase h2_nn
 
+/-- B8 N6 — Abstract i.i.d.-measure parameterised lift of the
+deterministic wide-network Rademacher bound.
+
+Composes `wide_network_two_rademacher_complexity_via_dudley_paramBall`
+(deterministic, per-sample) with a `ν`-almost-everywhere bundle of the
+linearised-risk wide-network hypotheses (`hx`, `hbound`, `hcs`) to
+obtain a sample-averaged (i.e. expected over `ν`) upper bound on
+`2 * empiricalRademacherComplexity_without_abs`. The RHS is the same
+deterministic Dudley-integral expression as in
+`wide_network_two_rademacher_complexity_via_dudley_paramBall`, lifted
+verbatim — it does not depend on the realised sample `S` because the
+Dudley integrand only sees `d, m, B_param, R, B, c, ε`.
+
+## Honest scope (Option B in the dispatch sheet)
+
+This theorem deliberately takes the sample measure `ν` as an abstract
+probability measure on `Fin m → (EuclideanSpace ℝ (Fin d) × ℝ)`, with
+the wide-network hypotheses bundled as a single `ν`-a.e. statement and
+the LHS integrability assumed as a hypothesis (`hint`). It does **not**:
+
+* construct the i.i.d. measure on `[−R,R]^d × [−B_Y, B_Y]` from scratch;
+* derive the integrability of the empirical Rademacher complexity from
+  the wide-network hypotheses (it could in principle be derived from
+  the bounded-loss bound `B²`, but doing so cleanly requires a
+  measurability lemma for `empiricalRademacherComplexity_without_abs`
+  in the product variable, which is not yet in LTFP/Foundations);
+* connect to the *with-abs* `rademacherComplexity` from
+  `LTFP/Foundations/Defs.lean:38` — the standard symmetrisation argument
+  in `LTFP.Foundations.Main.uniform_deviation_expectation_le_two_smul_rademacher_complexity`
+  bounds `E[uniformDeviation]` by `2 • rademacherComplexity` *with*
+  absolute values inside the sup, whereas the Dudley chain in
+  `LTFP/Foundations/DudleyEntropy.lean` bounds the *without-abs*
+  variant. The remaining gap is the with-abs Dudley analogue, which
+  is downstream of this theorem and not discharged here.
+
+What this theorem *does* provide is the cleanest verifiable bridge
+between the deterministic per-sample Dudley bound and a
+measure-theoretic expectation bound: the RHS is sample-independent, so
+once you have the per-sample deterministic bound a.s., integration is
+just `integral_mono_ae` against a constant.
+
+The hypothesis bundle `hae` is the natural a.e.-version of the
+deterministic theorem's `(hx, hbound, hcs)` triple, rephrased to live
+on the pair-valued sample `S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ`.
+For an i.i.d. measure obtained as `ν = (μ_x ⊗ μ_y)^m` with `μ_x`
+supported on the closed `R`-ball and `μ_y` supported on the closed
+`B_Y`-ball, `hae` holds with `ν`-probability one once one verifies
+the deterministic bounds on the supports — that verification is the
+remaining piece for full Option A and is genuine measure-theoretic
+plumbing not yet in LTFP/Foundations.
+
+The factor `2` placement matches
+`uniform_deviation_expectation_le_two_smul_rademacher_complexity`. -/
+theorem wide_network_expected_two_rademacher_le_dudley_paramBall_of_ae
+    {d m : ℕ}
+    (ν : MeasureTheory.Measure (Fin m → EuclideanSpace ℝ (Fin d) × ℝ))
+    [MeasureTheory.IsProbabilityMeasure ν]
+    (B_param R B c ε : ℝ)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
+    (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
+    (hae :
+      ∀ᵐ (S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ) ∂ν,
+        (∀ i, ‖(S i).1‖ ≤ R) ∧
+        (∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+          ∀ i, |@inner ℝ _ _ θ (S i).1 - (S i).2| ≤ B) ∧
+        (∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+          empiricalNorm (linearizedRiskSample (fun i => (S i).1) (fun i => (S i).2))
+            (linearizedRiskFamily (d := d) B_param θ) ≤ c))
+    (hint : MeasureTheory.Integrable
+      (fun S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+        2 * empiricalRademacherComplexity_without_abs m
+              (linearizedRiskFamily (d := d) B_param) S) ν) :
+    ∫ S, 2 * empiricalRademacherComplexity_without_abs m
+            (linearizedRiskFamily (d := d) B_param) S ∂ν ≤
+      2 * (4 * ε + (12 / Real.sqrt m) *
+        (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (coveringNumber
+              (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+              (x / (2 * B * R)))))) := by
+  classical
+  -- Abbreviation for the deterministic Dudley RHS (sample-independent).
+  set DudleyRHS : ℝ :=
+    2 * (4 * ε + (12 / Real.sqrt m) *
+      (∫ (x : ℝ) in ε..(c/2),
+        √(Real.log (coveringNumber
+            (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+            (x / (2 * B * R)))))) with hDudleyRHS_def
+  -- Pointwise a.e. bound: for ν-a.e. S, the deterministic theorem applies.
+  have hae_bound :
+      (fun S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+          2 * empiricalRademacherComplexity_without_abs m
+                (linearizedRiskFamily (d := d) B_param) S)
+        ≤ᵐ[ν] (fun _ => DudleyRHS) := by
+    filter_upwards [hae] with S hS
+    obtain ⟨hx_S, hbound_S, hcs_S⟩ := hS
+    -- Reconstruct xs, ys from S and apply the deterministic theorem.
+    set xs : Fin m → EuclideanSpace ℝ (Fin d) := fun i => (S i).1 with hxs_def
+    set ys : Fin m → ℝ := fun i => (S i).2 with hys_def
+    have hS_eq : S = linearizedRiskSample xs ys := by
+      funext i
+      simp [linearizedRiskSample, xs, ys]
+    have hbase :=
+      wide_network_two_rademacher_complexity_via_dudley_paramBall
+        (d := d) (m := m) xs ys B_param R B c ε
+        hR_nn hB_nn hB_param_nn hBR_pos hε_pos hm_pos hεc
+        hx_S hbound_S hcs_S
+    -- Rewrite S as linearizedRiskSample xs ys to match the deterministic bound.
+    rw [hS_eq]
+    exact hbase
+  -- Integrate.
+  have hConst_int : MeasureTheory.Integrable
+      (fun _ : Fin m → EuclideanSpace ℝ (Fin d) × ℝ => DudleyRHS) ν :=
+    MeasureTheory.integrable_const _
+  have hstep1 : ∫ S, 2 * empiricalRademacherComplexity_without_abs m
+                  (linearizedRiskFamily (d := d) B_param) S ∂ν ≤
+                ∫ _ : Fin m → EuclideanSpace ℝ (Fin d) × ℝ, DudleyRHS ∂ν :=
+    MeasureTheory.integral_mono_ae hint hConst_int hae_bound
+  have hstep2 : ∫ _ : Fin m → EuclideanSpace ℝ (Fin d) × ℝ, DudleyRHS ∂ν = DudleyRHS := by
+    rw [MeasureTheory.integral_const, MeasureTheory.probReal_univ]
+    simp
+  linarith [hstep1, hstep2.le, hstep2.ge]
+
 end ClosureViaDudley
 
 end LTFP
