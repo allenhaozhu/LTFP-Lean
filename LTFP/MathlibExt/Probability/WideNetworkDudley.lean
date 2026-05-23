@@ -1559,6 +1559,309 @@ theorem wide_network_dudley_integral_paramBall_endpoint_bound_with_abs
     simp [smul_eq_mul]
   linarith [hintegral_le, hConst_int.le, hConst_int.ge]
 
+/-! ### Subtype-lift bridge: `paramBall` covering ≤ Euclidean external covering
+
+The bridge `coveringNumber_le_externalCoveringNumber`
+(`LTFP/Foundations/CoveringNumber.lean`) connects LTFP's internal
+`coveringNumber` to Mathlib's `externalCoveringNumber` *on the same
+space*. The endpoint Dudley integrand uses
+`coveringNumber (param_ball_subtype_univ_totallyBounded B_param) δ`
+(in the parameter-ball **subtype** metric), while
+`covering_number_euclidean_ball` bounds
+`externalCoveringNumber ε (Metric.closedBall 0 B_param)` in the
+ambient `EuclideanSpace ℝ (Fin d)` metric.
+
+To bridge them, we lift any closed-ball external cover of
+`closedBall 0 B_param ⊆ EuclideanSpace ℝ (Fin d)` at radius `ε` to an
+open-ball internal cover of the subtype universe at radius `4 * ε`,
+preserving cardinality. The factor of `4` is composed from two
+factors of `2`: one for converting closed balls to open balls (as in
+the original `coveringNumber_le_externalCoveringNumber` bridge), and
+one for picking subtype representatives via the triangle inequality.
+
+This is the **honest replacement** for the dispatch sheet's
+`(⌈8 √d B R B_param / ε⌉₊ + 1)^d` mental model with the factor-of-2
+shift acknowledged. The final composed constant is
+`(⌈16 √d B R B_param / ε⌉₊ + 1)^d` — see
+`wide_network_dudley_integral_explicit_polynomial_bound` below. -/
+
+private lemma coveringNumber_paramBall_subtype_le_externalCoveringNumber_closedBall
+    {d : ℕ} {B_param : ℝ} (hB : 0 ≤ B_param)
+    {ε : ℝ≥0} (hε : 0 < ε) :
+    (coveringNumber (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+        (4 * (ε : ℝ)) : ℕ∞)
+    ≤ Metric.externalCoveringNumber ε
+        (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param) := by
+  classical
+  have hε_real : (0 : ℝ) < (ε : ℝ) := by exact_mod_cast hε
+  have h4ε_pos : (0 : ℝ) < 4 * (ε : ℝ) := by linarith
+  set hTB := param_ball_subtype_univ_totallyBounded (d := d) B_param with hTB_def
+  -- Reduce to: for every external cover, LTFP.coveringNumber ≤ |C|.
+  refine le_iInf₂ (fun C hC => ?_)
+  by_cases hCfin : C.Finite
+  · set t : Finset (EuclideanSpace ℝ (Fin d)) := hCfin.toFinset with ht_def
+    -- Closed-ball-cover form of `IsCover`.
+    have hC_cb : (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param) ⊆
+        ⋃ y ∈ C, Metric.closedBall y (ε : ℝ) := by
+      have := hC.subset_iUnion_closedBall
+      simpa using this
+    -- Predicate: closedBall y ε intersects the parameter ball.
+    set P : EuclideanSpace ℝ (Fin d) → Prop := fun y =>
+      (Metric.closedBall y (ε : ℝ) ∩
+        Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param).Nonempty
+      with hP_def
+    -- Lift: for each y ∈ t, pick a subtype representative from the
+    -- intersection if nonempty; fall back to 0 (subtype member since
+    -- B_param ≥ 0).
+    set lift : EuclideanSpace ℝ (Fin d) →
+        {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} := fun y =>
+      if h : P y then
+        ⟨h.choose, by
+          have hmem := h.choose_spec.2
+          simpa [Metric.mem_closedBall, dist_zero_right] using hmem⟩
+      else ⟨0, by simpa using hB⟩
+      with hlift_def
+    -- The lifted finset cover (in subtype).
+    set t' : Finset {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} :=
+      t.image lift with ht'_def
+    have ht'_card_le : t'.card ≤ t.card := Finset.card_image_le
+    -- Cover property: every subtype point lies in some 4ε-open ball.
+    have hCover :
+        (Set.univ : Set {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}) ⊆
+        ⋃ y ∈ t', Metric.ball y (4 * (ε : ℝ)) := by
+      intro q _hq
+      have hqball : q.val ∈
+          Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param := by
+        simpa [Metric.mem_closedBall, dist_zero_right] using q.property
+      rcases Set.mem_iUnion₂.mp (hC_cb hqball) with ⟨y, hyC, hqy⟩
+      -- P y holds with witness q.val.
+      have hPy : P y := ⟨q.val, hqy, hqball⟩
+      refine Set.mem_iUnion₂.mpr ⟨lift y, ?_, ?_⟩
+      · have hyt : y ∈ t := hCfin.mem_toFinset.mpr hyC
+        exact Finset.mem_image.mpr ⟨y, hyt, rfl⟩
+      · -- dist q (lift y) < 4ε
+        have hlift_val : (lift y).val = hPy.choose := by
+          simp only [lift, dif_pos hPy]
+        have h1 : dist q.val y ≤ (ε : ℝ) := by
+          rw [Metric.mem_closedBall] at hqy
+          exact hqy
+        have h2 : dist hPy.choose y ≤ (ε : ℝ) := by
+          have := hPy.choose_spec.1
+          rw [Metric.mem_closedBall] at this
+          exact this
+        have hdistq : dist q (lift y) = dist q.val (lift y).val :=
+          Subtype.dist_eq _ _
+        rw [Metric.mem_ball, hdistq, hlift_val]
+        calc dist q.val hPy.choose
+            ≤ dist q.val y + dist y hPy.choose := dist_triangle _ _ _
+          _ = dist q.val y + dist hPy.choose y := by rw [dist_comm y]
+          _ ≤ (ε : ℝ) + (ε : ℝ) := by linarith
+          _ = 2 * (ε : ℝ) := by ring
+          _ < 4 * (ε : ℝ) := by linarith
+    -- Witness for coveringNumber_exists at scale 4ε.
+    have hwitness :
+        ∃ s : Finset {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+          s.card = t'.card ∧
+          (Set.univ : Set {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}) ⊆
+            ⋃ y ∈ s, Metric.ball y (4 * (ε : ℝ)) :=
+      ⟨t', rfl, hCover⟩
+    have hfind :
+        Nat.find (coveringNumber_exists hTB h4ε_pos) ≤ t'.card :=
+      Nat.find_min' (coveringNumber_exists hTB h4ε_pos) hwitness
+    have hLTFP_le : coveringNumber hTB (4 * (ε : ℝ)) ≤ t'.card := by
+      calc coveringNumber hTB (4 * (ε : ℝ))
+          = Nat.find (coveringNumber_exists hTB h4ε_pos) :=
+            coveringNumber_eq hTB h4ε_pos
+        _ ≤ t'.card := hfind
+    have hLTFP_le_t : coveringNumber hTB (4 * (ε : ℝ)) ≤ t.card :=
+      hLTFP_le.trans ht'_card_le
+    have ht_card : (t.card : ℕ∞) = C.encard := by
+      have h₁ : C.encard = t.card := by
+        simp [ht_def, hCfin.encard_eq_coe_toFinset_card]
+      exact h₁.symm
+    have hcast : (coveringNumber hTB (4 * (ε : ℝ)) : ℕ∞) ≤ (t.card : ℕ∞) := by
+      exact_mod_cast hLTFP_le_t
+    exact hcast.trans ht_card.le
+  · have hCinf : C.Infinite := hCfin
+    simp [hCinf.encard_eq]
+
+/-- **B8 N6 end-to-end explicit polynomial-rate bound.**
+
+End-to-end composition of three pieces:
+1. `covering_number_euclidean_ball` (`34db5c9`,
+   `LTFP/MathlibExt/Probability/CoveringNumberEuclidean.lean`): the
+   `(⌈2 √d B / δ⌉₊ + 1) ^ d` external-covering-number bound on the
+   Euclidean closed ball.
+2. `coveringNumber_paramBall_subtype_le_externalCoveringNumber_closedBall`
+   (this file, factor-of-4 subtype-lift bridge composed from the
+   open-vs-closed-ball factor of 2 from the bridge `e5d71b4` and the
+   triangle-inequality factor of 2 from picking subtype reps).
+3. `wide_network_dudley_integral_paramBall_endpoint_bound` (`f103f58`,
+   above in this file): the endpoint Dudley integral bound
+   `∫ ≤ (c/2 − ε) · √(log (coveringNumber paramBall (ε/(2BR))))`.
+
+Composing (1) and (2) gives the cardinality bound
+`coveringNumber paramBall (x/(2BR)) ≤ (⌈16 √d B R B_param / x⌉₊+1)^d`
+on `ℕ`. Substituting under the `√ ∘ log` integrand (via `Real.log_pow`
+to push the exponent `d` out as a multiplicative factor) and using
+(3) gives:
+
+  `∫_ε^{c/2} √(log (coveringNumber paramBall (x/(2BR)))) dx
+    ≤ (c/2 − ε) · √(d · log (⌈16 √d B R B_param / ε⌉₊ + 1))`
+
+This is the explicit O((BR · B_param / ε)^{d/2} · (c/2 − ε))-style
+polynomial-rate bound for the B8 N6 wide-network Rademacher complexity
+Dudley integral.
+
+**Constant deviation from dispatch sheet:** the dispatch sheet's mental
+model expected the leading constant inside the ceiling to be `8` (one
+factor of 2 from the bridge `e5d71b4`). The honest constant is `16`:
+the bridge applies between `coveringNumber` and `externalCoveringNumber`
+*on the same space*, and to connect the parameter-ball subtype's
+internal covering number to the ambient Euclidean closed ball's
+external covering number requires an additional factor of 2 from
+picking subtype representatives via the triangle inequality
+(`closedBall y ε ⊆ closedBall y' (2 ε)` when `y'` is the nearest
+subtype point to `y`). Total constant: `4 · 2 · 2 = 16`. -/
+theorem wide_network_dudley_integral_explicit_polynomial_bound
+    {d : ℕ} (B_param B R c ε : ℝ)
+    (hd : 1 ≤ d)
+    (hB_param_nn : 0 ≤ B_param) (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hεc : ε < c / 2) :
+    (∫ (x : ℝ) in ε..(c/2),
+        √(Real.log (coveringNumber
+            (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+            (x / (2 * B * R))))) ≤
+      (c / 2 - ε) *
+        √((d : ℝ) *
+          Real.log ((⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 : ℕ) : ℝ)) := by
+  classical
+  set L : ℝ := 2 * B * R with hL_def
+  have hL_pos : 0 < L := hBR_pos
+  set hTB := param_ball_subtype_univ_totallyBounded (d := d) B_param with hTB_def
+  have hε_le_half : ε ≤ c / 2 := le_of_lt hεc
+  have h_half_minus_ε_nn : 0 ≤ c / 2 - ε := by linarith
+  have hεL_pos : 0 < ε / L := div_pos hε_pos hL_pos
+  -- Nonemptiness of the parameter-ball subtype.
+  have hnonemp_param :
+      (Set.univ :
+        Set {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}).Nonempty :=
+    ⟨⟨0, by simpa using hB_param_nn⟩, Set.mem_univ _⟩
+  -- Step 1: apply the f103f58 endpoint bound.
+  have h_endpoint :=
+    wide_network_dudley_integral_paramBall_endpoint_bound (d := d)
+      B_param B R c ε hB_param_nn hBR_pos hε_pos hεc
+  -- Step 2: bound the endpoint integrand by the explicit polynomial.
+  -- Let δ := ε / L (the scale at the lower endpoint). Pick η : ℝ≥0
+  -- such that 4 * η = δ, i.e., η = δ / 4 = ε / (8 * B * R).
+  set δ : ℝ := ε / L with hδ_def
+  have hδ_pos : 0 < δ := hεL_pos
+  set η_real : ℝ := δ / 4 with hη_real_def
+  have hη_real_pos : 0 < η_real := by
+    show 0 < δ / 4
+    positivity
+  set η : ℝ≥0 := ⟨η_real, hη_real_pos.le⟩ with hη_def
+  have hη_pos : 0 < η := by
+    rw [hη_def, ← NNReal.coe_pos]; exact hη_real_pos
+  have hη_ne : η ≠ 0 := ne_of_gt hη_pos
+  have hη_coe : (η : ℝ) = η_real := rfl
+  have h4η_eq : 4 * (η : ℝ) = δ := by
+    rw [hη_coe, hη_real_def]; ring
+  -- Apply the subtype-lift bridge:
+  -- `coveringNumber paramBall δ ≤ externalCoveringNumber η (closedBall 0 B_param)`.
+  have h_bridge :
+      (coveringNumber hTB δ : ℕ∞)
+        ≤ Metric.externalCoveringNumber η
+            (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param) := by
+    have h := coveringNumber_paramBall_subtype_le_externalCoveringNumber_closedBall
+      (d := d) (B_param := B_param) hB_param_nn hη_pos
+    rwa [h4η_eq] at h
+  -- Apply the Euclidean ball external cover bound.
+  have h_euclid :
+      Metric.externalCoveringNumber η
+          (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param) ≤
+        ((⌈2 * Real.sqrt d * B_param / (η : ℝ)⌉₊ + 1 : ℕ) ^ d : ℕ) :=
+    covering_number_euclidean_ball d B_param η hd hB_param_nn hη_ne
+  -- Identify the ceiling argument:
+  -- 2 * √d * B_param / η = 2 * √d * B_param * (8 * B * R / ε) = 16 √d B R B_param / ε.
+  have h_ratio_eq :
+      2 * Real.sqrt d * B_param / (η : ℝ) = 16 * Real.sqrt d * B * R * B_param / ε := by
+    rw [hη_coe, hη_real_def, hδ_def, hL_def]
+    have hε_ne : ε ≠ 0 := ne_of_gt hε_pos
+    have hBR_ne : 2 * B * R ≠ 0 := ne_of_gt hBR_pos
+    field_simp
+    ring
+  -- Set the explicit count N := (⌈16 √d B R B_param / ε⌉₊ + 1)^d.
+  set N : ℕ := (⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1) ^ d with hN_def
+  have h_euclid_N :
+      Metric.externalCoveringNumber η
+          (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param) ≤
+        (N : ℕ∞) := by
+    have := h_euclid
+    rw [h_ratio_eq] at this
+    exact_mod_cast this
+  -- Combine bridge + Euclidean: `coveringNumber paramBall δ ≤ N` in ℕ.
+  have h_cn_le : (coveringNumber hTB δ : ℕ∞) ≤ (N : ℕ∞) :=
+    h_bridge.trans h_euclid_N
+  have h_cn_le_nat : coveringNumber hTB δ ≤ N := by
+    exact_mod_cast h_cn_le
+  -- Cast to ℝ.
+  have h_cn_le_real :
+      (coveringNumber hTB δ : ℝ) ≤ (N : ℝ) := by exact_mod_cast h_cn_le_nat
+  -- Bound log: log(coveringNumber) ≤ log(N) = d * log(⌈...⌉ + 1).
+  have h_cn_pos_real : (0 : ℝ) < (coveringNumber hTB δ : ℝ) := by
+    exact_mod_cast coveringNumber_nonzero hnonemp_param hTB hδ_pos
+  have h_log_le_N :
+      Real.log (coveringNumber hTB δ : ℝ) ≤ Real.log (N : ℝ) := by
+    apply Real.log_le_log h_cn_pos_real h_cn_le_real
+  -- Rewrite log(N) = d * log(⌈...⌉ + 1).
+  set K : ℕ := ⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 with hK_def
+  have hN_eq : N = K ^ d := by rw [hN_def, hK_def]
+  have h_log_N_eq :
+      Real.log (N : ℝ) = (d : ℝ) * Real.log (K : ℝ) := by
+    rw [hN_eq]
+    push_cast
+    exact Real.log_pow (K : ℝ) d
+  have h_K_pos_real : (0 : ℝ) < (K : ℝ) := by
+    have hK_pos : 0 < K := by
+      rw [hK_def]; exact Nat.succ_pos _
+    exact_mod_cast hK_pos
+  have h_K_ge_one : (1 : ℝ) ≤ (K : ℝ) := by
+    have : 1 ≤ K := by rw [hK_def]; exact Nat.succ_le_succ (Nat.zero_le _)
+    exact_mod_cast this
+  -- log(K) ≥ 0.
+  have h_logK_nn : 0 ≤ Real.log (K : ℝ) := Real.log_nonneg h_K_ge_one
+  have h_d_nn : (0 : ℝ) ≤ (d : ℝ) := by exact_mod_cast Nat.zero_le d
+  have h_d_logK_nn : 0 ≤ (d : ℝ) * Real.log (K : ℝ) :=
+    mul_nonneg h_d_nn h_logK_nn
+  -- √(log (coveringNumber)) ≤ √(d * log K).
+  have h_sqrt_le :
+      Real.sqrt (Real.log (coveringNumber hTB δ : ℝ)) ≤
+        Real.sqrt ((d : ℝ) * Real.log (K : ℝ)) := by
+    apply Real.sqrt_le_sqrt
+    rw [← h_log_N_eq]
+    exact h_log_le_N
+  -- Multiply both sides by `(c/2 - ε) ≥ 0`.
+  have h_rhs_le :
+      (c / 2 - ε) *
+        Real.sqrt (Real.log (coveringNumber hTB δ : ℝ)) ≤
+      (c / 2 - ε) * Real.sqrt ((d : ℝ) * Real.log (K : ℝ)) := by
+    exact mul_le_mul_of_nonneg_left h_sqrt_le h_half_minus_ε_nn
+  -- Chain with the endpoint bound.
+  calc (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (coveringNumber hTB (x / L))))
+      ≤ (c / 2 - ε) *
+          √(Real.log (coveringNumber hTB (ε / L))) := h_endpoint
+    _ = (c / 2 - ε) *
+          √(Real.log (coveringNumber hTB δ : ℝ)) := by
+        rw [hδ_def]
+    _ ≤ (c / 2 - ε) *
+          √((d : ℝ) * Real.log (K : ℝ)) := h_rhs_le
+    _ = (c / 2 - ε) *
+          √((d : ℝ) *
+            Real.log ((⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 : ℕ) : ℝ)) := by
+        rw [hK_def]
+
 end ClosureViaDudley
 
 end LTFP
