@@ -29,6 +29,51 @@ theorem sketch_smul (Φ : Matrix (Fin k) (Fin d) ℝ) (c : ℝ) (x : Fin d → �
   unfold sketch
   exact Matrix.mulVec_smul Φ c x
 
+/-- §10.2 — Negation commutes with the sketch operator. Completes the
+    linear-map API on the input side. -/
+theorem sketch_neg (Φ : Matrix (Fin k) (Fin d) ℝ) (x : Fin d → ℝ) :
+    sketch Φ (-x) = -sketch Φ x := by
+  unfold sketch
+  exact Matrix.mulVec_neg x Φ
+
+/-- §10.2 — Subtraction commutes with the sketch operator. Completes
+    the linear-map API on the input side. -/
+theorem sketch_sub (Φ : Matrix (Fin k) (Fin d) ℝ) (x y : Fin d → ℝ) :
+    sketch Φ (x - y) = sketch Φ x - sketch Φ y := by
+  rw [sub_eq_add_neg, sketch_add, sketch_neg, sub_eq_add_neg]
+
+/-- §10.2 — Explicit component formula for the sketch operator:
+    the `i`-th coordinate of `Φx` is the dot product of the `i`-th
+    row of `Φ` with `x`. This is the algebraic core of every
+    sketch-norm calculation: it makes the `(Φx)ᵢ = ∑ⱼ Φᵢⱼ xⱼ`
+    expansion available as a one-liner downstream. -/
+theorem sketch_apply (Φ : Matrix (Fin k) (Fin d) ℝ) (x : Fin d → ℝ)
+    (i : Fin k) :
+    sketch Φ x i = ∑ j, Φ i j * x j := by
+  unfold sketch
+  rfl
+
+/-- §10.2 — Explicit squared-norm expansion of the sketch:
+    `‖Φx‖² = ∑ᵢ (∑ⱼ Φᵢⱼ xⱼ)²`. Pure matrix/vector algebra; this is
+    the deterministic anchor underneath the probabilistic Johnson–
+    Lindenstrauss norm-preservation analysis, which bounds the
+    expectation and concentration of this exact sum. -/
+theorem sketch_norm_sq_expansion (Φ : Matrix (Fin k) (Fin d) ℝ)
+    (x : Fin d → ℝ) :
+    ∑ i, (sketch Φ x i) ^ 2 = ∑ i, (∑ j, Φ i j * x j) ^ 2 := by
+  refine Finset.sum_congr rfl (fun i _ => ?_)
+  rw [sketch_apply]
+
+/-- §10.2 — Identity sketch preserves the squared norm exactly:
+    `∑ᵢ ((1 · x)ᵢ)² = ∑ᵢ xᵢ²`. This is the deterministic boundary
+    case of the JL bound (`Φ = I` is trivially an isometry); the
+    randomized JL result extends this to high-probability isometry
+    for random Gaussian `Φ` of much smaller output dimension. -/
+theorem sketch_one_norm_sq (x : Fin k → ℝ) :
+    ∑ i, (sketch (1 : Matrix (Fin k) (Fin k) ℝ) x i) ^ 2 =
+      ∑ i, (x i) ^ 2 := by
+  simp [sketch_one]
+
 /-- §10.1.2 — Bagging predictor: average of `B` predictors fit on
     different bootstrap samples. We capture the algebraic core:
     average of `B` real-valued predictions. -/
