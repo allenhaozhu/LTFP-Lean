@@ -142,6 +142,78 @@ theorem cStarAlgebraOperatorAntitoneOnStrictlyPos_neg_log :
   exact neg_le_neg
     (cStarAlgebraOperatorMonotoneOnStrictlyPos_log.{uA} (A := A) ha hb hab)
 
+/-! #### Algebraic combinators at the CStarAlgebra level
+
+Basic compositional combinators on the CStarAlgebra-level operator-monotonicity
+predicates, mirroring the analogous combinators on the universal
+`OperatorMonotone` predicate (over `Matrix n n 𝕜`). These allow downstream
+callers to chain pointwise CFC lemmas without reproving the cone preservation
+each time.
+-/
+
+/-- The identity function is operator monotone on the nonnegative cone of every
+unital C⋆-algebra: `cfc id` reduces to the identity by `cfc_id'`, so the goal
+is just `a ≤ b`. -/
+theorem cStarAlgebraOperatorMonotoneOnNonneg_id :
+    CStarAlgebraOperatorMonotoneOnNonneg.{uA} (fun t : ℝ => t) := by
+  intro A _ _ _ a ha b hb hab
+  change cfc (fun t : ℝ => t) a ≤ cfc (fun t : ℝ => t) b
+  rw [cfc_id' ℝ a, cfc_id' ℝ b]
+  exact hab
+
+/-- A constant function is (trivially) operator monotone on the nonnegative cone
+of every unital C⋆-algebra: `cfc (fun _ => c) a = algebraMap ℝ A c` by
+`cfc_const`, and both sides equal that same algebra-map image, so the inequality
+holds reflexively. -/
+theorem cStarAlgebraOperatorMonotoneOnNonneg_const (c : ℝ) :
+    CStarAlgebraOperatorMonotoneOnNonneg.{uA} (fun _ : ℝ => c) := by
+  intro A _ _ _ a ha b hb _
+  change cfc (fun _ : ℝ => c) a ≤ cfc (fun _ : ℝ => c) b
+  rw [cfc_const (R := ℝ) c a, cfc_const (R := ℝ) c b]
+
+/-- Sum of two operator-monotone functions (on the nonnegative cone of every
+unital C⋆-algebra) is operator monotone. Uses `cfc_add` to split the CFC, then
+adds the two pointwise inequalities. Requires continuity of both summands on the
+spectrum of each element, auto-discharged by `cfc_cont_tac` when the assumption
+is supplied. -/
+theorem CStarAlgebraOperatorMonotoneOnNonneg.add {f g : ℝ → ℝ}
+    (hf : CStarAlgebraOperatorMonotoneOnNonneg.{uA} f)
+    (hg : CStarAlgebraOperatorMonotoneOnNonneg.{uA} g)
+    (hf_cont : Continuous f) (hg_cont : Continuous g) :
+    CStarAlgebraOperatorMonotoneOnNonneg.{uA} (fun t => f t + g t) := by
+  intro A _ _ _ a ha b hb hab
+  change cfc (fun t => f t + g t) a ≤ cfc (fun t => f t + g t) b
+  rw [cfc_add (R := ℝ) f g (a := a) hf_cont.continuousOn hg_cont.continuousOn,
+      cfc_add (R := ℝ) f g (a := b) hf_cont.continuousOn hg_cont.continuousOn]
+  exact add_le_add (hf ha hb hab) (hg ha hb hab)
+
+/-- Nonneg scalar multiple of an operator-monotone function (on the nonnegative
+cone of every unital C⋆-algebra) is operator monotone. Uses `cfc_const_mul` to
+factor the scalar through the CFC, then `smul_le_smul_of_nonneg_left` to
+preserve order. -/
+theorem CStarAlgebraOperatorMonotoneOnNonneg.const_smul {f : ℝ → ℝ}
+    (hf : CStarAlgebraOperatorMonotoneOnNonneg.{uA} f)
+    (hf_cont : Continuous f) {c : ℝ} (hc : 0 ≤ c) :
+    CStarAlgebraOperatorMonotoneOnNonneg.{uA} (fun t => c * f t) := by
+  intro A _ _ _ a ha b hb hab
+  change cfc (fun t => c * f t) a ≤ cfc (fun t => c * f t) b
+  rw [cfc_const_mul (R := ℝ) c f a hf_cont.continuousOn,
+      cfc_const_mul (R := ℝ) c f b hf_cont.continuousOn]
+  exact smul_le_smul_of_nonneg_left (hf ha hb hab) hc
+
+/-- Negation of an operator-monotone function (on the strictly-positive cone of
+every unital C⋆-algebra) is operator antitone. Mirrors the
+`cStarAlgebraOperatorAntitoneOnStrictlyPos_neg_log` construction at the
+combinator level. -/
+theorem CStarAlgebraOperatorMonotoneOnStrictlyPos.neg {f : ℝ → ℝ}
+    (hf : CStarAlgebraOperatorMonotoneOnStrictlyPos.{uA} f) :
+    CStarAlgebraOperatorAntitoneOnStrictlyPos.{uA} (fun t => -f t) := by
+  intro A _ _ _ a ha b hb hab
+  -- `AntitoneOn` flips: goal is `cfc (-f) b ≤ cfc (-f) a`.
+  change cfc (fun t => -f t) b ≤ cfc (fun t => -f t) a
+  rw [cfc_neg (R := ℝ) f b, cfc_neg (R := ℝ) f a]
+  exact neg_le_neg (hf ha hb hab)
+
 /-! ### Finite `CStarMatrix` wrappers -/
 
 /-- A real function is operator monotone on the nonnegative cone of finite
