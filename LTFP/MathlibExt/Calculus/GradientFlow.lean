@@ -579,6 +579,79 @@ theorem gradient_flow_lyapunov_deriv_nonpos
     mul_nonneg ht (sq_nonneg _)
   linarith
 
+/-- **Convex O(1/t) gradient-flow decay theorem.**
+Let `f : ℝ → ℝ` be convex and differentiable on all of `ℝ`, and let
+`α : ℝ → ℝ` be a gradient-flow trajectory of `f` (i.e.
+`α'(t) = -(deriv f)(α t)` for all `t`) with `α 0 = x₀`. Then for any
+`xstar : ℝ` (interpreted as a candidate minimiser) and any `t > 0`,
+the optimality gap along the trajectory decays at the rate `1 / (2t)`:
+```
+f (α t) - f xstar ≤ (x₀ - xstar) ^ 2 / (2 * t).
+```
+
+This is the classical scalar version of Bach's §5 result on the
+continuous-time convergence rate of gradient flow on convex
+functions. The proof composes the Lyapunov function
+`V t := t · (f (α t) - f xstar) + (α t - xstar)² / 2` together with
+the dissipation inequality `V'(t) ≤ 0`:
+
+* By `antitoneOn_of_deriv_nonpos` on `Set.Ici 0`, `V` is antitone on
+  the nonnegative reals, so `V t ≤ V 0` for `0 ≤ t`.
+* At `t = 0`: `V 0 = 0 · (·) + (α 0 - xstar)² / 2 = (x₀ - xstar)² / 2`.
+* For `0 < t`: dropping the nonnegative squared term yields
+  `t · (f (α t) - f xstar) ≤ V t`.
+* Chaining and dividing by `t > 0` gives the stated rate.
+
+The hypothesis `α 0 = x₀` only enters at the boundary computation of
+`V 0`; the upstream Lyapunov machinery is fully independent of the
+initial-value normalisation. -/
+theorem gradient_flow_convex_decay_one_div_t
+    {f α : ℝ → ℝ} {x₀ xstar t : ℝ}
+    (hconv : ConvexOn ℝ Set.univ f) (hf : Differentiable ℝ f)
+    (hα : IsGradientFlow f α) (hα0 : α 0 = x₀) (ht : 0 < t) :
+    f (α t) - f xstar ≤ (x₀ - xstar) ^ 2 / (2 * t) := by
+  -- Abbreviate the Lyapunov function.
+  set V : ℝ → ℝ := gradientFlowLyapunov f α xstar with hV_def
+  -- `V` is differentiable everywhere via `gradient_flow_lyapunov_hasDerivAt`.
+  have hV_diff : Differentiable ℝ V := by
+    intro s
+    exact (gradient_flow_lyapunov_hasDerivAt hα hf xstar s).differentiableAt
+  -- Apply `antitoneOn_of_deriv_nonpos` on `Set.Ici 0`.
+  have h_antitone : AntitoneOn V (Set.Ici (0 : ℝ)) := by
+    refine antitoneOn_of_deriv_nonpos (convex_Ici 0)
+      hV_diff.continuous.continuousOn hV_diff.differentiableOn ?_
+    intro s hs
+    -- `s ∈ interior (Set.Ici 0) = Set.Ioi 0`.
+    rw [interior_Ici] at hs
+    exact gradient_flow_lyapunov_deriv_nonpos hconv hf hα xstar s (le_of_lt hs)
+  -- `V t ≤ V 0` since `0 ≤ t` and `V` is antitone on `Ici 0`.
+  have h_Vt_le_V0 : V t ≤ V 0 :=
+    h_antitone (Set.self_mem_Ici) (Set.mem_Ici.mpr ht.le) ht.le
+  -- Compute `V 0 = (x₀ - xstar)^2 / 2`.
+  have h_V0 : V 0 = (x₀ - xstar) ^ 2 / 2 := by
+    simp [hV_def, gradientFlowLyapunov, hα0]
+  -- Lower bound: `t · (f (α t) - f xstar) ≤ V t`.
+  have h_sq_nn : 0 ≤ (α t - xstar) ^ 2 / 2 :=
+    div_nonneg (sq_nonneg _) (by norm_num)
+  have h_tgap_le_Vt : t * (f (α t) - f xstar) ≤ V t := by
+    have : V t = t * (f (α t) - f xstar) + (α t - xstar) ^ 2 / 2 := by
+      simp [hV_def, gradientFlowLyapunov]
+    linarith
+  -- Chain: `t · (f (α t) - f xstar) ≤ V t ≤ V 0 = (x₀ - xstar)^2 / 2`.
+  have h_tgap_le_half : t * (f (α t) - f xstar) ≤ (x₀ - xstar) ^ 2 / 2 := by
+    calc t * (f (α t) - f xstar)
+        ≤ V t := h_tgap_le_Vt
+      _ ≤ V 0 := h_Vt_le_V0
+      _ = (x₀ - xstar) ^ 2 / 2 := h_V0
+  -- Divide both sides by `t > 0`.
+  have h_div : f (α t) - f xstar ≤ (x₀ - xstar) ^ 2 / 2 / t := by
+    rw [le_div_iff₀ ht]
+    linarith [h_tgap_le_half]
+  -- Normalise `(x₀ - xstar)^2 / 2 / t = (x₀ - xstar)^2 / (2 * t)`.
+  have h_norm : (x₀ - xstar) ^ 2 / 2 / t = (x₀ - xstar) ^ 2 / (2 * t) := by
+    rw [div_div]
+  linarith [h_div, h_norm.symm.le, h_norm.le]
+
 /-- Three iterations of gradient descent on `f y = y² / 2` with step
 size `η = 1/2` starting at `x = 1` produce `(1/2)^3 = 1/8`. -/
 example : gradIter (fun y : ℝ => y ^ 2 / 2) (1 / 2) 3 1 = 1 / 8 := by
