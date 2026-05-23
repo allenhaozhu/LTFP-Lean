@@ -1187,6 +1187,15 @@ theorem hellingerSquared_le_two (μ ν : Measure α) :
   have h := bhattacharyya_nonneg μ ν
   linarith
 
+/-- **Symmetry.** The squared Hellinger distance is symmetric in its two
+arguments: `hellingerSquared μ ν = hellingerSquared ν μ`. This follows
+from `bhattacharyya_comm` together with the defining identity
+`Hsq(μ, ν) = 2 (1 - ρ(μ, ν))`. -/
+theorem hellingerSquared_comm (μ ν : Measure α) :
+    hellingerSquared μ ν = hellingerSquared ν μ := by
+  unfold hellingerSquared
+  rw [bhattacharyya_comm]
+
 /-- **Le Cam estimate in Hellinger form.**
 
 For two probability measures `μ`, `ν`, the squared total-variation
@@ -1331,6 +1340,27 @@ theorem bhattacharyya_self_eq_one (μ : Measure α) [IsProbabilityMeasure μ] :
     simp [ENNReal.toReal_one, Real.sqrt_one]
   rw [MeasureTheory.integral_congr_ae h_pt, MeasureTheory.integral_const,
     probReal_univ, smul_eq_mul, mul_one]
+
+/-- **Squared Hellinger self-distance for probability measures.** For any
+probability measure `μ`, the squared Hellinger distance from `μ` to
+itself vanishes: `hellingerSquared μ μ = 0`. Direct corollary of
+`bhattacharyya_self_eq_one`: with `ρ(μ, μ) = 1`, the defining identity
+`Hsq(μ, μ) = 2 (1 - ρ(μ, μ))` collapses to `0`. -/
+theorem hellingerSquared_self_eq_zero (μ : Measure α) [IsProbabilityMeasure μ] :
+    hellingerSquared μ μ = 0 := by
+  unfold hellingerSquared
+  rw [bhattacharyya_self_eq_one]
+  ring
+
+/-- **Equal probability measures give zero squared Hellinger distance.**
+If two probability measures coincide (`μ = ν`), then
+`hellingerSquared μ ν = 0`. This is a packaging of
+`hellingerSquared_self_eq_zero` against substitution along `μ = ν`. -/
+theorem hellingerSquared_eq_zero_of_eq
+    (μ ν : Measure α) [IsProbabilityMeasure μ] (h : μ = ν) :
+    hellingerSquared μ ν = 0 := by
+  subst h
+  exact hellingerSquared_self_eq_zero μ
 
 /-!
 ## TODO
