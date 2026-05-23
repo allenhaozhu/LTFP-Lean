@@ -60,4 +60,72 @@ theorem empiricalRisk_le_penalizedEmpiricalRisk
   unfold penalizedEmpiricalRisk
   linarith
 
+/-! ### Finite SRM / oracle algebraic core (Bach §4.6, p. 103-105)
+
+Given a finite indexed family `f : ι → (𝒳 → 𝒵)` of candidate predictors
+(one per hypothesis class in `H₁ ⊆ H₂ ⊆ …`, e.g. each `f i` is an ERM
+on `H i`) with complexity penalty `pen : ι → ℝ`, the structural risk
+minimizer selects the index that minimizes `R̂(f i) + pen i`.
+
+The deterministic algebraic content of the oracle inequality is:
+**the selected predictor's empirical risk is bounded above by the
+oracle's empirical risk plus the penalty gap `pen oracle - pen selected`.**
+Bach states the high-probability oracle inequality on top of this
+deterministic algebra; here we land the deterministic core. -/
+
+/-- §4.6 — **SRM oracle algebraic core.** If `selected` minimizes the
+    penalized empirical risk over a finite family `f : ι → (𝒳 → 𝒵)`
+    with penalty `pen : ι → ℝ`, then for *any* `oracle` index, the
+    empirical risk of the selected predictor is at most the oracle's
+    empirical risk plus the penalty gap `pen oracle - pen selected`.
+
+    This is the deterministic algebraic content of Bach §4.6's oracle
+    inequality (p. 104-105): the statistical part adds uniform
+    concentration on top of this algebra. -/
+theorem srm_selected_empiricalRisk_le_oracle_add_penalty_gap
+    {ι : Type*} (ℓ : LossFunction 𝒴 𝒵) (n : ℕ) (S : Fin n → 𝒳 × 𝒴)
+    (f : ι → (𝒳 → 𝒵)) (pen : ι → ℝ) (selected oracle : ι)
+    (hsel : ∀ i, penalizedEmpiricalRisk ℓ n S (f selected) (pen selected) ≤
+      penalizedEmpiricalRisk ℓ n S (f i) (pen i)) :
+    empiricalRisk ℓ n S (f selected) ≤
+      empiricalRisk ℓ n S (f oracle) + pen oracle - pen selected := by
+  have h := hsel oracle
+  unfold penalizedEmpiricalRisk at h
+  linarith
+
+/-- §4.6 — **SRM oracle inequality, nonneg-penalty corollary.** When
+    every penalty `pen i` is non-negative (the standard case: penalty
+    measures complexity ≥ 0), the SRM selector's empirical risk is at
+    most the oracle's empirical risk plus the oracle's penalty alone
+    (no minus term). This is the form Bach typically states. -/
+theorem srm_selected_empiricalRisk_le_oracle_add_oracle_penalty
+    {ι : Type*} (ℓ : LossFunction 𝒴 𝒵) (n : ℕ) (S : Fin n → 𝒳 × 𝒴)
+    (f : ι → (𝒳 → 𝒵)) (pen : ι → ℝ) (selected oracle : ι)
+    (hsel : ∀ i, penalizedEmpiricalRisk ℓ n S (f selected) (pen selected) ≤
+      penalizedEmpiricalRisk ℓ n S (f i) (pen i))
+    (hpen : ∀ i, 0 ≤ pen i) :
+    empiricalRisk ℓ n S (f selected) ≤
+      empiricalRisk ℓ n S (f oracle) + pen oracle := by
+  have h := srm_selected_empiricalRisk_le_oracle_add_penalty_gap
+    ℓ n S f pen selected oracle hsel
+  have hs : 0 ≤ pen selected := hpen selected
+  linarith
+
+/-- §4.6 — **SRM selected achieves the minimum penalized risk.** The
+    penalized empirical risk of the selected index is the minimum over
+    the (finite, nonempty) family — the elementary `Finset.inf'`
+    formulation of the SRM selection rule. -/
+theorem srm_penalizedEmpiricalRisk_selected_eq_inf'
+    {ι : Type*} [Fintype ι] [Nonempty ι]
+    (ℓ : LossFunction 𝒴 𝒵) (n : ℕ) (S : Fin n → 𝒳 × 𝒴)
+    (f : ι → (𝒳 → 𝒵)) (pen : ι → ℝ) (selected : ι)
+    (hsel : ∀ i, penalizedEmpiricalRisk ℓ n S (f selected) (pen selected) ≤
+      penalizedEmpiricalRisk ℓ n S (f i) (pen i)) :
+    penalizedEmpiricalRisk ℓ n S (f selected) (pen selected) =
+      (Finset.univ : Finset ι).inf' Finset.univ_nonempty
+        (fun i => penalizedEmpiricalRisk ℓ n S (f i) (pen i)) := by
+  apply le_antisymm
+  · exact Finset.le_inf' _ _ (fun i _ => hsel i)
+  · exact Finset.inf'_le _ (Finset.mem_univ selected)
+
 end LTFP
