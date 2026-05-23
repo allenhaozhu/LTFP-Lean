@@ -9,15 +9,16 @@ import LTFP.MathlibExt.Probability.LinearClassSampleCoverCard
 import LTFP.MathlibExt.Probability.LinearizedRiskSampleCover
 
 /-!
-# Wide-network generalization carrier: explicit linearized-risk cover via Euclidean cover
+# Wide-network generalization carrier: linearized-risk cover from a totally-bounded parameter ball
 
-Composes the five existing ingredients on the B8 N6 wide-network
-generalization path into one statement that exposes everything the
-Dudley entropy integral needs:
+Composes several existing ingredients on the B8 N6 wide-network
+generalization path into one statement that exposes the *qualitative*
+shape the Dudley entropy integral needs:
 
 1. `covering_number_euclidean_ball` (this file's dependency) — the
-   `(⌈2 √d B / δ⌉₊ + 1) ^ d` external-cover-cardinality bound for the
-   parameter closed ball.
+   `(⌈2 √d B / δ⌉₊ + 1) ^ d` *external*-cover-cardinality bound for the
+   parameter closed ball. **NOTE: this explicit cardinality is NOT yet
+   composed into the carrier theorem below; see "Residual bridge".**
 2. `linear_class_closed_ball_exists_finite_cover` — existence of a
    finite finset cover of the parameter ball at any positive radius.
 3. `linear_class_sample_pred_card_le` — sample-prediction tuple cover
@@ -27,36 +28,77 @@ Dudley entropy integral needs:
    sample.
 5. `linear_predictor_lipschitz_on_ball` (transitive via 4 above).
 
-The composition target is the *carrier* statement consumed by the B8
-N6 Dudley step: an explicit finite cover of the parameter ball,
-together with its lifted linearized-risk and prediction-tuple covers,
-all with size bounded by `(⌈2 √d B_param / δ⌉₊ + 1) ^ d`.
-
 We work entirely with internal finset covers (every cover element is
 in the parameter ball). The grid construction in
 `covering_number_euclidean_ball` produces *external* cover points
 (corners of a bounding square that may lie slightly outside the
 `L²`-ball); to land an *internal* cover with the same cardinality
-bound we fall back on `linear_class_closed_ball_exists_finite_cover`
-to extract a finset and accept that its size is bounded by the
-external covering number plus 1 unit — but since the user-facing
-Dudley bound only needs an existence-of-finite-cover with explicit
-upper-bound, we surface both:
+bound one would have to either project the external grid back into the
+ball with a Lipschitz factor, or compose a fresh "Lipschitz-image-of-
+cover" lemma on LTFP's internal `coveringNumber` (see below). The
+file surfaces:
 
 - `wide_network_param_finset_cover` — *internal* finset cover at
-  resolution `δ` (size existentially bounded).
+  resolution `δ` (size existentially bounded, no explicit number).
 - `wide_network_linearized_risk_explicit_cover` — the full composite
-  carrier theorem, with linearized-risk sample-cover accuracy and
-  sample-prediction-tuple cardinality.
+  carrier theorem in its honest current form: it produces an internal
+  finset cover `C` of the parameter ball, together with the lifted
+  linearized-risk sample-cover accuracy and the sample-prediction-
+  tuple cardinality bound `≤ |C|`, *without* attaching an explicit
+  numeric bound on `|C|`.
+- `wide_network_linearized_risk_explicit_cover_card` — a *weaker*
+  companion that, despite its current name, only exposes the explicit
+  external-covering-number bound for the parameter ball itself; it
+  does **not** lift to a linearized-risk-cover or to a sample-loss
+  cover. See its docstring for the honest characterization and the
+  rename note.
+
+## Residual Lipschitz-image-of-cover bridge
+
+To feed `dudley_entropy_integral'` on the squared-loss class one needs
+both (i) the lifted linearized-risk cover (provided here) AND (ii) an
+explicit numeric cardinality bound for that lifted cover, expressed
+on LTFP's internal `coveringNumber` (in
+`LTFP/Foundations/CoveringNumber.lean`). The missing link is a
+**Lipschitz-image-of-cover** lemma of the form
+
+  "if `f : X → Y` is `L`-Lipschitz on `A` and `C` is an `ε`-cover of
+   `A` in `X`, then `f '' C` is an `(L * ε)`-cover of `f '' A` in `Y`,
+   and `coveringNumber (f '' A) (L*ε) ≤ coveringNumber A ε`"
+
+stated on LTFP's `coveringNumber`. This lemma does not yet exist in
+either Mathlib or LTFP-MathlibExt. Once it lands, the composition
+`covering_number_euclidean_ball` → Lipschitz-image-of-cover →
+linearized-risk lift will produce a single carrier statement with
+both the explicit `(⌈2 √d B / δ⌉₊ + 1) ^ d` cardinality and the
+sample-loss cover lift, which is what the Dudley step actually
+consumes. Until that lemma is built, the two halves remain factored
+as the two theorems below.
 -/
 
 open scoped NNReal ENNReal RealInnerProductSpace
 
 namespace LTFP
 
+-- TODO(upstream-or-replace): this helper is largely redundant. Mathlib's
+-- `Metric.finite_approx_of_totallyBounded`
+-- (`Mathlib/Topology/MetricSpace/Pseudo/Basic.lean`) is strictly stronger:
+-- it returns a finite *Set* (immediately convertible to a `Finset`) of
+-- internal centres at any positive resolution, with the same δ-cover
+-- conclusion. The only thing this helper adds is the packaging into a
+-- `Finset` directly and a slightly different cover predicate
+-- (`dist x c ≤ δ` rather than the strict version). Future cleanup:
+-- replace internal call sites with `Metric.finite_approx_of_totallyBounded`
+-- plus `Set.Finite.toFinset`, then delete this lemma.
 /-- Auxiliary: a `TotallyBounded` set in a `PseudoMetricSpace` admits,
 for every `δ > 0`, a finite *finset* cover by points in the set itself.
-A bridge from `TotallyBounded` to a usable explicit finset form. -/
+A bridge from `TotallyBounded` to a usable explicit finset form.
+
+**Note (2026-05-23 audit):** mostly redundant with
+`Metric.finite_approx_of_totallyBounded` in Mathlib; kept here only
+because its `Finset`-shaped conclusion is the form consumed downstream
+by `wide_network_param_finset_cover`. See the `TODO(upstream-or-replace)`
+comment above. -/
 theorem totallyBounded_exists_finset_subset_cover
     {X : Type*} [PseudoMetricSpace X] {A : Set X}
     (hA : TotallyBounded A) {δ : ℝ} (hδ : 0 < δ) :
@@ -148,8 +190,8 @@ theorem wide_network_param_finset_cover
     refine ⟨c, hcC, ?_⟩
     simpa [dist_eq_norm] using hdist
 
-/-- **Wide-network generalization carrier (Option A pre-Dudley).**
-Composes the five ingredients on the B8 N6 path into one statement.
+/-- **Wide-network generalization carrier (Option A pre-Dudley): honest
+form.**
 
 For a wide linear-predictor class indexed by the closed parameter ball
 `‖θ‖ ≤ B_param` in `EuclideanSpace ℝ (Fin d)`, a bounded sample
@@ -164,8 +206,17 @@ there exists a *finite finset* `C` of cover parameters such that:
   `linear_predictor_lipschitz_on_ball`), and the induced
   prediction-tuple finset has cardinality `≤ |C|`.
 
-This is the natural carrier statement consumed by the Dudley
-entropy-integral step on the B8 N6 path. -/
+**Honest scope (2026-05-23 audit):** this theorem produces the finite
+finset `C` from `TotallyBounded`ness of the parameter ball (via
+`wide_network_param_finset_cover`); it does **NOT** attach the
+explicit Euclidean cardinality bound `|C| ≤ (⌈2 √d B_param / δ⌉₊ + 1)^d`
+from `covering_number_euclidean_ball`. The explicit cardinality lives
+on an *external* grid cover and would need a Lipschitz-image-of-cover
+bridge (see the module docstring's "Residual bridge" section) before
+it can be attached to this `C`. Downstream consumers that need the
+explicit number must currently invoke
+`wide_network_linearized_risk_explicit_cover_card` separately for the
+parameter-ball cardinality and combine it by hand. -/
 theorem wide_network_linearized_risk_explicit_cover
     {d m : ℕ}
     (xs : Fin m → EuclideanSpace ℝ (Fin d))
@@ -221,22 +272,42 @@ theorem wide_network_linearized_risk_explicit_cover
   rcases hLifted θ hθ with ⟨c, hcCset, h_acc⟩
   exact ⟨c, by exact_mod_cast hcCset, h_acc⟩
 
-/-- **Wide-network generalization carrier (Option A, explicit
-cardinality bound).**
+/-- **Parameter-ball external covering-number bound (honest form).**
 
-Strengthening of `wide_network_linearized_risk_explicit_cover` that
-makes the cardinality of the linearized-risk sample-prediction cover
-explicit using `covering_number_euclidean_ball`.
+**Misleading historical name (2026-05-23 audit):** despite the suffix
+`linearized_risk_..._cover_card`, this theorem does **not** mention
+`ys`, the squared loss, the sample-prediction tuple cover, or the
+linearized-risk-class cover at all. It is literally just
+`covering_number_euclidean_ball` (the external cardinality bound for
+the parameter ball) packaged together with the trivial restatement of
+the sample bound `∀ θ ..., ‖xs i‖ ≤ R`. The honest name for what is
+actually proved here is `wide_network_param_ball_external_cover_card`;
+the current name is retained to avoid breaking any out-of-tree callers
+but is scheduled for rename.
 
-For `d ≥ 1`, `B_param ≥ 0`, and `δ : ℝ≥0` positive, the external
-covering number of the parameter ball is at most
-`(⌈2 √d B_param / δ⌉₊ + 1) ^ d`. Combined with the linearized-risk
-cover lifting, this gives a Dudley-input statement with explicit
-cardinality. We surface it as a separate theorem because the
-externally-located cover points from `covering_number_euclidean_ball`
-need not live inside the parameter ball, so the prediction-error
-boundedness hypothesis must be stated uniformly over the (slightly
-larger) bounding ball `‖θ‖ ≤ B_param + δ`. -/
+What this theorem ACTUALLY proves, for `d ≥ 1`, `B_param ≥ 0`, and
+`δ : ℝ≥0` positive:
+
+1. **First conjunct:** the *external* covering number of the
+   parameter ball `Metric.closedBall 0 B_param ⊆ EuclideanSpace ℝ (Fin d)`
+   at resolution `δ` is at most `(⌈2 √d B_param / δ⌉₊ + 1) ^ d`.
+2. **Second conjunct:** the sample bound `‖xs i‖ ≤ R` (trivially
+   re-quantified over `θ`).
+
+What this theorem does **NOT** prove (despite the historical name):
+
+- No linearized-risk cover is constructed.
+- No sample-prediction-tuple cover is constructed.
+- No squared-loss accuracy guarantee is stated.
+- The targets `ys` are not even a hypothesis.
+- The bound uses *external* covering points which need not live in
+  the parameter ball; lifting them to an internal finset cover (the
+  form `wide_network_linearized_risk_explicit_cover` uses) requires
+  the Lipschitz-image-of-cover bridge noted in the module docstring.
+
+Composing this cardinality bound with
+`wide_network_linearized_risk_explicit_cover` to obtain a single
+Dudley-input statement is the residual bridge work. -/
 theorem wide_network_linearized_risk_explicit_cover_card
     {d m : ℕ}
     (xs : Fin m → EuclideanSpace ℝ (Fin d))
