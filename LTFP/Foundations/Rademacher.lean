@@ -6,6 +6,7 @@ import Mathlib.Algebra.Order.Group.CompleteLattice
 import Mathlib.MeasureTheory.Order.Group.Lattice
 import LTFP.Foundations.Symmetrization
 import LTFP.Foundations.MeasurePiLemmas
+import LTFP.Foundations.PseudoMetric
 
 open MeasureTheory ProbabilityTheory Real
 open scoped ENNReal
@@ -1499,5 +1500,103 @@ theorem empiricalRademacherComplexity_eq_without_abs_negDoubleFamily
     intro k _
     rw [if_neg hs]
     rfl
+
+/-! ### Covering-number doubling for `negDoubleFamily`
+
+Concrete corollary of `coveringNumber_le_two_mul_of_isometric_double_cover`
+(`LTFP/Foundations/CoveringNumber.lean`, commit `1d0f9b1`) instantiated at
+`X = EmpiricalFunctionSpace F S`, `Y = EmpiricalFunctionSpace (negDoubleFamily F) S`,
+with the positive embedding `e₀ q = ⟨((0 : Fin 2), q.index)⟩` (coercion `F q.index`)
+and the negative embedding `e₁ q = ⟨((1 : Fin 2), q.index)⟩` (coercion `-(F q.index)`).
+Both are isometries of the empirical-L² pseudometric — the positive copy by
+definitional unfolding of `negDoubleFamily` at `(0, _)`, the negative copy via
+`empiricalNorm S (-(g)) = empiricalNorm S g` (squares are invariant under
+negation). The cover `B ⊆ e₀ '' Set.univ ∪ e₁ '' Set.univ` is exhaustive:
+every `q : EmpiricalFunctionSpace (negDoubleFamily F) S` has
+`q.index.1 ∈ {0, 1}` and is therefore in the image of one of the two
+embeddings.
+
+Combined with `empiricalRademacherComplexity_eq_without_abs_negDoubleFamily`
+above (commit `1d71e7e`) and `dudley_entropy_integral'`, this closes the
+with-abs Dudley analogue downstream. -/
+
+/-- **Covering-number doubling for `negDoubleFamily`.**
+
+The covering number of `EmpiricalFunctionSpace (negDoubleFamily F) S` at
+scale `ε` is at most twice the covering number of
+`EmpiricalFunctionSpace F S` at scale `ε`. -/
+theorem coveringNumber_negDoubleFamily_le
+    {Z : Type*} {ι : Type*} (F : ι → Z → ℝ) {m : ℕ} (S : Fin m → Z)
+    (hA : TotallyBounded (Set.univ : Set (EmpiricalFunctionSpace F S)))
+    (hB : TotallyBounded
+      (Set.univ : Set (EmpiricalFunctionSpace (negDoubleFamily F) S)))
+    {ε : ℝ} (hε : 0 < ε) :
+    coveringNumber hB ε ≤ 2 * coveringNumber hA ε := by
+  classical
+  -- Positive embedding: `q ↦ ⟨(0, q.index)⟩`.
+  set e₀ : EmpiricalFunctionSpace F S →
+      EmpiricalFunctionSpace (negDoubleFamily F) S :=
+    fun q => ⟨((0 : Fin 2), q.index)⟩ with he₀_def
+  -- Negative embedding: `q ↦ ⟨(1, q.index)⟩`.
+  set e₁ : EmpiricalFunctionSpace F S →
+      EmpiricalFunctionSpace (negDoubleFamily F) S :=
+    fun q => ⟨((1 : Fin 2), q.index)⟩ with he₁_def
+  -- `e₀` is an isometry: the underlying function is unchanged, since
+  -- `negDoubleFamily F (0, i) x = F i x` by `if`-reduction.
+  have he₀ : Isometry e₀ := by
+    refine Isometry.of_dist_eq (fun q q' => ?_)
+    -- Both distances unfold to `empiricalDist S (F q.index) (F q'.index)`.
+    show empiricalDist S (negDoubleFamily F (e₀ q).index)
+        (negDoubleFamily F (e₀ q').index)
+      = empiricalDist S (F q.index) (F q'.index)
+    -- `(e₀ q).index = (0, q.index)`, so `negDoubleFamily F (0, q.index) = F q.index`.
+    have h₁ : negDoubleFamily F ((0 : Fin 2), q.index) = F q.index := by
+      funext x; simp [negDoubleFamily]
+    have h₂ : negDoubleFamily F ((0 : Fin 2), q'.index) = F q'.index := by
+      funext x; simp [negDoubleFamily]
+    simp only [he₀_def, h₁, h₂]
+  -- `e₁` is an isometry: the underlying function is negated, and
+  -- `empiricalNorm S (-(g)) = empiricalNorm S g` since squares ignore signs.
+  have he₁ : Isometry e₁ := by
+    refine Isometry.of_dist_eq (fun q q' => ?_)
+    show empiricalDist S (negDoubleFamily F (e₁ q).index)
+        (negDoubleFamily F (e₁ q').index)
+      = empiricalDist S (F q.index) (F q'.index)
+    have h₁ : negDoubleFamily F ((1 : Fin 2), q.index) = -(F q.index) := by
+      funext x; simp [negDoubleFamily]
+    have h₂ : negDoubleFamily F ((1 : Fin 2), q'.index) = -(F q'.index) := by
+      funext x; simp [negDoubleFamily]
+    simp only [he₁_def, h₁, h₂]
+    -- Expand `empiricalNorm` and apply pointwise squaring; the two squared
+    -- pointwise terms agree by `ring` (negation cancels).
+    dsimp [empiricalDist, empiricalNorm]
+    congr 1
+    congr 1
+    apply Finset.sum_congr rfl
+    intro i _
+    ring
+  -- Cover property: every `q : EmpiricalFunctionSpace (negDoubleFamily F) S`
+  -- has `q.index.1 : Fin 2`; case-split on `q.index.1` to land in `e₀ '' _`
+  -- or `e₁ '' _`.
+  have hcov : (Set.univ : Set (EmpiricalFunctionSpace (negDoubleFamily F) S))
+      ⊆ e₀ '' (Set.univ : Set (EmpiricalFunctionSpace F S))
+        ∪ e₁ '' (Set.univ : Set (EmpiricalFunctionSpace F S)) := by
+    intro q _
+    rcases q with ⟨⟨s, i⟩⟩
+    -- `s : Fin 2`; split on `s = 0` vs `s = 1`.
+    have hs : s = 0 ∨ s = 1 := by
+      fin_cases s
+      · exact Or.inl rfl
+      · exact Or.inr rfl
+    rcases hs with hs0 | hs1
+    · -- `q = ⟨(0, i)⟩ = e₀ ⟨i⟩`.
+      left
+      refine ⟨⟨i⟩, Set.mem_univ _, ?_⟩
+      simp [he₀_def, hs0]
+    · -- `q = ⟨(1, i)⟩ = e₁ ⟨i⟩`.
+      right
+      refine ⟨⟨i⟩, Set.mem_univ _, ?_⟩
+      simp [he₁_def, hs1]
+  exact coveringNumber_le_two_mul_of_isometric_double_cover hA hB he₀ he₁ hcov hε
 
 end
