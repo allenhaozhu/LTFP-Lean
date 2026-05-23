@@ -129,4 +129,24 @@ theorem l2_opNorm_le_card_mul_of_entry_le (A : Matrix n n ℝ)
   -- From squared bound, deduce the bound on norms.
   exact le_of_sq_le_sq h_target_sq hM_x_nonneg
 
+/-- Squared form of `l2_opNorm_le_card_mul_of_entry_le`: convenient
+when the downstream estimate naturally expresses itself as a bound on
+the squared spectral norm (e.g., Hoeffding-style concentration on
+`A * Aᵀ`-shaped quantities). -/
+theorem l2_opNorm_sq_le_card_sq_mul_of_entry_le (A : Matrix n n ℝ)
+    {s : ℝ} (hs : 0 ≤ s) (h_entry : ∀ i j : n, ‖A i j‖ ≤ s) :
+    ‖A‖ ^ 2 ≤ ((Fintype.card n : ℝ) * s) ^ 2 :=
+  pow_le_pow_left₀ (norm_nonneg _)
+    (l2_opNorm_le_card_mul_of_entry_le A hs h_entry) 2
+
+/-- Entrywise-`nnnorm` variant of `l2_opNorm_le_card_mul_of_entry_le`:
+sometimes the bound on entries is supplied via `‖A i j‖₊ ≤ s` rather
+than `‖A i j‖ ≤ s`. -/
+theorem l2_opNorm_le_card_mul_of_nnnorm_entry_le (A : Matrix n n ℝ)
+    {s : NNReal} (h_entry : ∀ i j : n, ‖A i j‖₊ ≤ s) :
+    ‖A‖ ≤ (Fintype.card n : ℝ) * (s : ℝ) := by
+  refine l2_opNorm_le_card_mul_of_entry_le A s.coe_nonneg ?_
+  intro i j
+  exact_mod_cast h_entry i j
+
 end Matrix

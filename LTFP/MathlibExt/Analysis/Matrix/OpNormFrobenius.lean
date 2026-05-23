@@ -71,4 +71,36 @@ theorem l2_opNorm_le_frobenius (A : Matrix n n ℝ) :
       _ = (F * ‖x‖) ^ 2 := by ring
   exact le_of_sq_le_sq h_sq (mul_nonneg hF_nonneg (norm_nonneg x))
 
+/-- Squared form of `l2_opNorm_le_frobenius`: convenient when chaining
+through Cauchy–Schwarz-style inequalities that naturally produce
+squared norms. -/
+theorem l2_opNorm_sq_le_frobenius_sq (A : Matrix n n ℝ) :
+    ‖A‖ ^ 2 ≤ (@norm (Matrix n n ℝ)
+      (Matrix.frobeniusNormedAddCommGroup (m := n) (n := n) (α := ℝ)).toNorm A) ^ 2 := by
+  have hF_nonneg : 0 ≤ (@norm (Matrix n n ℝ)
+      (Matrix.frobeniusNormedAddCommGroup (m := n) (n := n) (α := ℝ)).toNorm A) := by
+    change 0 ≤ ((Matrix.frobeniusNormedAddCommGroup (m := n) (n := n) (α := ℝ)).toNorm.norm A)
+    change 0 ≤ ‖(WithLp.toLp 2 fun i => WithLp.toLp 2 fun j => A i j)‖
+    exact norm_nonneg _
+  exact pow_le_pow_left₀ (norm_nonneg _) (l2_opNorm_le_frobenius A) 2
+
+/-- Frobenius-norm expansion of `l2_opNorm_sq_le_frobenius_sq`:
+the squared spectral norm is bounded by the entrywise sum of squares. -/
+theorem l2_opNorm_sq_le_sum_sq_entries (A : Matrix n n ℝ) :
+    ‖A‖ ^ 2 ≤ ∑ i, ∑ j, ‖A i j‖ ^ 2 := by
+  have hF_sq : (@norm (Matrix n n ℝ)
+      (Matrix.frobeniusNormedAddCommGroup (m := n) (n := n) (α := ℝ)).toNorm A) ^ 2
+      = ∑ i, ∑ j, ‖A i j‖ ^ 2 := by
+    change ((Matrix.frobeniusNormedAddCommGroup (m := n) (n := n) (α := ℝ)).toNorm.norm A) ^ 2
+        = ∑ i, ∑ j, ‖A i j‖ ^ 2
+    change ‖(WithLp.toLp 2 fun i => WithLp.toLp 2 fun j => A i j)‖ ^ 2
+        = ∑ i, ∑ j, ‖A i j‖ ^ 2
+    rw [PiLp.norm_sq_eq_of_L2]
+    simp [PiLp.norm_sq_eq_of_L2]
+  calc ‖A‖ ^ 2
+      ≤ (@norm (Matrix n n ℝ)
+          (Matrix.frobeniusNormedAddCommGroup (m := n) (n := n) (α := ℝ)).toNorm A) ^ 2 :=
+        l2_opNorm_sq_le_frobenius_sq A
+    _ = ∑ i, ∑ j, ‖A i j‖ ^ 2 := hF_sq
+
 end Matrix
