@@ -2,12 +2,13 @@ import Mathlib.Topology.MetricSpace.Pseudo.Basic
 import Mathlib.Topology.MetricSpace.Pseudo.Defs
 import Mathlib.Topology.MetricSpace.Lipschitz
 import Mathlib.Topology.MetricSpace.Isometry
+import Mathlib.Topology.MetricSpace.CoveringNumbers
 import Mathlib.Data.Finset.Basic
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Order
 import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 
 open Classical
-open scoped NNReal
+open scoped NNReal ENNReal
 
 lemma coveringNumber_exists {X : Type*} {A : Set X} [PseudoMetricSpace X] (ha : TotallyBounded A) {ε : ℝ} (εpos: ε > 0):
   ∃ n : Nat, ∃ t : Finset X, t.card = n ∧ A ⊆ ⋃ y ∈ t, Metric.ball y ε := by
@@ -239,3 +240,86 @@ theorem coveringNumber_le_two_mul_of_isometric_double_cover
       = Nat.find (coveringNumber_exists hb hε) := coveringNumber_eq hb hε
     _ ≤ D.card := hfind
     _ ≤ 2 * coveringNumber ha ε := hcard
+
+/-!
+### Internal-vs-external covering-number bridge
+
+LTFP's internal `coveringNumber ha ε : ℕ` is defined via open `ε`-balls
+with centers in the ambient pseudometric space (not required to lie in
+`A`). Mathlib's `Metric.externalCoveringNumber ε A : ℕ∞` is the
+infimum cardinality of a `closedBall ε`-cover of `A` with centers in
+the ambient space. Since `closedBall x ε ⊆ ball x (2 * ε)` whenever
+`ε > 0`, any finite external `ε`-cover (closed balls) is also a finite
+open `(2 * ε)`-cover, hence:
+
+  `(coveringNumber ha (2 * ε) : ℕ∞) ≤ Metric.externalCoveringNumber ε A`.
+
+This bridge allows substituting the explicit Euclidean covering count
+`(⌈2 * √d * B / δ⌉₊ + 1) ^ d` (proved for `externalCoveringNumber` in
+`LTFP/MathlibExt/Probability/CoveringNumberEuclidean.lean`) into the
+endpoint Dudley integrand (which uses LTFP's internal `coveringNumber`).
+-/
+
+/-- **Internal-vs-external covering-number bridge.**
+
+LTFP's `coveringNumber` at scale `2 * ε` is bounded by Mathlib's
+`externalCoveringNumber` at scale `ε`. The factor of two comes from
+the `closedBall x ε ⊆ ball x (2 * ε)` inclusion (LTFP uses open balls;
+Mathlib's `IsCover` uses closed balls). -/
+theorem coveringNumber_le_externalCoveringNumber
+    {X : Type*} [PseudoMetricSpace X] {A : Set X}
+    (ha : TotallyBounded A) {ε : ℝ≥0} (hε : 0 < ε) :
+    (coveringNumber ha (2 * (ε : ℝ)) : ℕ∞)
+      ≤ Metric.externalCoveringNumber ε A := by
+  classical
+  have hε_real : (0 : ℝ) < (ε : ℝ) := by exact_mod_cast hε
+  have h2ε_pos : (0 : ℝ) < 2 * (ε : ℝ) := by linarith
+  -- Reduce to: for every external cover `C`, LTFP.coveringNumber ≤ |C|.
+  refine le_iInf₂ (fun C hC => ?_)
+  -- Case on whether `C` is finite or infinite.
+  by_cases hCfin : C.Finite
+  · -- Finite case: build a `Finset` witness and apply `Nat.find_min'`.
+    set t : Finset X := hCfin.toFinset with ht_def
+    -- The external cover `C` is a `closedBall ε`-cover; inflate to open
+    -- `(2 * ε)`-balls via `closedBall x ε ⊆ ball x (2 * ε)`.
+    have hclosedSub :
+        ∀ y : X, Metric.closedBall y (ε : ℝ) ⊆ Metric.ball y (2 * (ε : ℝ)) := by
+      intro y
+      apply Metric.closedBall_subset_ball
+      linarith
+    -- Extract the closed-ball-cover form of `IsCover`.
+    have hC_cb : A ⊆ ⋃ y ∈ C, Metric.closedBall y (ε : ℝ) := by
+      have := hC.subset_iUnion_closedBall
+      simpa using this
+    -- Translate to an open `(2 * ε)`-ball cover with centers in `t`.
+    have hCover : A ⊆ ⋃ y ∈ t, Metric.ball y (2 * (ε : ℝ)) := by
+      intro x hxA
+      rcases Set.mem_iUnion₂.mp (hC_cb hxA) with ⟨y, hyC, hxy⟩
+      refine Set.mem_iUnion₂.mpr ⟨y, ?_, ?_⟩
+      · exact hCfin.mem_toFinset.mpr hyC
+      · exact hclosedSub y hxy
+    -- Witness for `coveringNumber_exists` at scale `2 * ε`.
+    have hwitness :
+        ∃ s : Finset X, s.card = t.card ∧
+          A ⊆ ⋃ y ∈ s, Metric.ball y (2 * (ε : ℝ)) :=
+      ⟨t, rfl, hCover⟩
+    -- `coveringNumber ha (2 * ε)` is the `Nat.find` of the existential.
+    have hfind :
+        Nat.find (coveringNumber_exists ha h2ε_pos) ≤ t.card :=
+      Nat.find_min' (coveringNumber_exists ha h2ε_pos) hwitness
+    have hLTFP_le_card : coveringNumber ha (2 * (ε : ℝ)) ≤ t.card := by
+      calc coveringNumber ha (2 * (ε : ℝ))
+          = Nat.find (coveringNumber_exists ha h2ε_pos) :=
+            coveringNumber_eq ha h2ε_pos
+        _ ≤ t.card := hfind
+    -- Convert the `ℕ`-bound to an `ℕ∞`-bound and identify `t.card` with `C.encard`.
+    have ht_card : (t.card : ℕ∞) = C.encard := by
+      have h₁ : C.encard = t.card := by
+        simp [ht_def, hCfin.encard_eq_coe_toFinset_card]
+      exact h₁.symm
+    have : (coveringNumber ha (2 * (ε : ℝ)) : ℕ∞) ≤ (t.card : ℕ∞) := by
+      exact_mod_cast hLTFP_le_card
+    exact this.trans ht_card.le
+  · -- Infinite case: `C.encard = ⊤`, so the bound is vacuous.
+    have hCinf : C.Infinite := hCfin
+    simp [hCinf.encard_eq]
