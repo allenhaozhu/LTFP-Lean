@@ -261,6 +261,43 @@ def CStarOperatorAntitoneOnStrictlyPos (f : ℝ → ℝ) : Prop :=
     AntitoneOn (fun M : CStarMatrix n n A => cfc f M)
       {M | IsStrictlyPositive M}
 
+/-! #### Finite ⇐ CStarAlgebra-level connection
+
+The finite `CStarMatrix n n A` predicates above are direct specializations of
+the CStarAlgebra-level predicates at `B = CStarMatrix n n A` (which carries
+`[CStarAlgebra]`, `[PartialOrder]`, `[StarOrderedRing]` instances from Mathlib
+when `[CStarAlgebra A]`). Each `.toFinite` corollary lets downstream callers
+quote a single CStarAlgebra-level fact and obtain the finite-`CStarMatrix`
+version for free, unifying the two predicate families. -/
+
+/-- Specializing `CStarAlgebraOperatorMonotoneOnNonneg` at `B = CStarMatrix n n A`
+yields the finite `CStarOperatorMonotoneOnNonneg` predicate, since
+`CStarMatrix n n A` has the required `[CStarAlgebra]`/`[PartialOrder]`/
+`[StarOrderedRing]` instances from Mathlib. -/
+theorem CStarAlgebraOperatorMonotoneOnNonneg.toFinite {f : ℝ → ℝ}
+    (hf : CStarAlgebraOperatorMonotoneOnNonneg.{max uA un} f) :
+    CStarOperatorMonotoneOnNonneg.{uA, un} f := by
+  intro A _ _ _ n _ _ M hM N hN hMN
+  exact hf (A := CStarMatrix n n A) hM hN hMN
+
+/-- Specializing `CStarAlgebraOperatorMonotoneOnStrictlyPos` at
+`B = CStarMatrix n n A` yields the finite
+`CStarOperatorMonotoneOnStrictlyPos` predicate. -/
+theorem CStarAlgebraOperatorMonotoneOnStrictlyPos.toFinite {f : ℝ → ℝ}
+    (hf : CStarAlgebraOperatorMonotoneOnStrictlyPos.{max uA un} f) :
+    CStarOperatorMonotoneOnStrictlyPos.{uA, un} f := by
+  intro A _ _ _ n _ _ M hM N hN hMN
+  exact hf (A := CStarMatrix n n A) hM hN hMN
+
+/-- Specializing `CStarAlgebraOperatorAntitoneOnStrictlyPos` at
+`B = CStarMatrix n n A` yields the finite
+`CStarOperatorAntitoneOnStrictlyPos` predicate. -/
+theorem CStarAlgebraOperatorAntitoneOnStrictlyPos.toFinite {f : ℝ → ℝ}
+    (hf : CStarAlgebraOperatorAntitoneOnStrictlyPos.{max uA un} f) :
+    CStarOperatorAntitoneOnStrictlyPos.{uA, un} f := by
+  intro A _ _ _ n _ _ M hM N hN hMN
+  exact hf (A := CStarMatrix n n A) hM hN hMN
+
 /-- Löwner inversion on finite `CStarMatrix`: `t ↦ t ^ (-1 : ℝ)` is operator
 antitone on the strictly-positive cone, via
 `CStarAlgebra.rpow_neg_one_le_rpow_neg_one`. -/
