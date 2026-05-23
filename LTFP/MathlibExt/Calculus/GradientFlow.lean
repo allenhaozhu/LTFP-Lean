@@ -472,6 +472,113 @@ theorem convex_first_order_inequality
     -- `hslope : deriv f y * (x - y) ≤ f x - f y`.
     linarith
 
+/-- **Lyapunov function for scalar convex gradient flow.**
+`V(t) := t · (f(α t) - f(x*)) + (α t - x*)² / 2`.
+
+This is the standard Lyapunov function whose derivative-sign analysis
+yields the O(1/t) convergence rate for the continuous-time gradient
+flow of a convex objective. The first summand captures the
+time-weighted optimality gap; the second is the (kinetic-style)
+squared distance to the optimiser. -/
+noncomputable def gradientFlowLyapunov (f α : ℝ → ℝ) (xstar : ℝ) : ℝ → ℝ :=
+  fun t => t * (f (α t) - f xstar) + (α t - xstar) ^ 2 / 2
+
+/-- **Derivative of the gradient-flow Lyapunov function.**
+Along any gradient flow `α'(t) = -(deriv f) (α t)` with `f`
+differentiable, `V := gradientFlowLyapunov f α xstar` satisfies
+`V'(t) = (f(α t) - f xstar) - t · (deriv f (α t))² - deriv f (α t) · (α t - xstar)`.
+
+This is the load-bearing identity for the convex O(1/t) decay theorem:
+plugging in the convex first-order inequality
+`f(α t) - f xstar ≤ deriv f (α t) · (α t - xstar)` shows the first and
+third summands cancel down to a nonpositive residual, with the middle
+`-t · (deriv f)²` term contributing the negative-definite dissipation. -/
+theorem gradient_flow_lyapunov_hasDerivAt
+    {f α : ℝ → ℝ} (hα : IsGradientFlow f α) (hf : Differentiable ℝ f)
+    (xstar t : ℝ) :
+    HasDerivAt (gradientFlowLyapunov f α xstar)
+      ((f (α t) - f xstar) - t * (deriv f (α t)) ^ 2
+        - deriv f (α t) * (α t - xstar)) t := by
+  -- Part 1: derivative of `t ↦ t · (f (α t) - f xstar)`.
+  have h_energy : HasDerivAt (fun s : ℝ => f (α s)) (-(deriv f (α t)) ^ 2) t :=
+    gradient_flow_energy_hasDerivAt_of_differentiable hα hf t
+  have h_energy_sub : HasDerivAt (fun s : ℝ => f (α s) - f xstar)
+      (-(deriv f (α t)) ^ 2) t := by
+    simpa using h_energy.sub_const (f xstar)
+  have h_id : HasDerivAt (fun s : ℝ => s) (1 : ℝ) t := hasDerivAt_id t
+  have h_part1 :
+      HasDerivAt (fun s : ℝ => s * (f (α s) - f xstar))
+        (1 * (f (α t) - f xstar) + t * (-(deriv f (α t)) ^ 2)) t :=
+    h_id.mul h_energy_sub
+  -- Part 2: derivative of `t ↦ (α t - xstar)^2 / 2`.
+  have h_α : HasDerivAt α (-(deriv f) (α t)) t := hα t
+  have h_α_sub : HasDerivAt (fun s : ℝ => α s - xstar) (-(deriv f) (α t)) t := by
+    simpa using h_α.sub_const xstar
+  have h_sq : HasDerivAt (fun s : ℝ => (α s - xstar) ^ 2)
+      ((2 : ℕ) * (α t - xstar) ^ (2 - 1) * (-(deriv f) (α t))) t :=
+    h_α_sub.fun_pow 2
+  have h_sq' : HasDerivAt (fun s : ℝ => (α s - xstar) ^ 2)
+      (2 * (α t - xstar) * (-(deriv f) (α t))) t := by
+    simpa [pow_one] using h_sq
+  have h_part2 :
+      HasDerivAt (fun s : ℝ => (α s - xstar) ^ 2 / 2)
+        ((2 * (α t - xstar) * (-(deriv f) (α t))) / 2) t :=
+    h_sq'.div_const 2
+  -- Sum the two parts.
+  have h_sum :
+      HasDerivAt (fun s : ℝ => s * (f (α s) - f xstar) + (α s - xstar) ^ 2 / 2)
+        ((1 * (f (α t) - f xstar) + t * (-(deriv f (α t)) ^ 2))
+          + (2 * (α t - xstar) * (-(deriv f) (α t))) / 2) t :=
+    h_part1.add h_part2
+  -- Normalise to the stated derivative value.
+  have h_eq :
+      (1 * (f (α t) - f xstar) + t * (-(deriv f (α t)) ^ 2))
+        + (2 * (α t - xstar) * (-(deriv f) (α t))) / 2
+      = (f (α t) - f xstar) - t * (deriv f (α t)) ^ 2
+          - deriv f (α t) * (α t - xstar) := by
+    ring
+  -- Unfold `gradientFlowLyapunov` to expose the underlying sum.
+  have h_fun :
+      (fun s : ℝ => s * (f (α s) - f xstar) + (α s - xstar) ^ 2 / 2)
+        = gradientFlowLyapunov f α xstar := rfl
+  rw [← h_fun, ← h_eq]
+  exact h_sum
+
+/-- **Derivative of the gradient-flow Lyapunov function is nonpositive.**
+For `0 ≤ t` and `f` convex differentiable, the Lyapunov function
+`V := gradientFlowLyapunov f α xstar` along any gradient flow satisfies
+`V'(t) ≤ 0`.
+
+Combining `gradient_flow_lyapunov_hasDerivAt` with the convex first-order
+inequality `f(α t) - f xstar ≤ deriv f (α t) · (α t - xstar)` shows the
+non-dissipative summands cancel, leaving `V'(t) ≤ -t · (deriv f (α t))² ≤ 0`. -/
+theorem gradient_flow_lyapunov_deriv_nonpos
+    {f α : ℝ → ℝ} (hconv : ConvexOn ℝ Set.univ f) (hf : Differentiable ℝ f)
+    (hα : IsGradientFlow f α) (xstar t : ℝ) (ht : 0 ≤ t) :
+    deriv (gradientFlowLyapunov f α xstar) t ≤ 0 := by
+  -- Compute the derivative via `gradient_flow_lyapunov_hasDerivAt`.
+  have h_hasDeriv :
+      HasDerivAt (gradientFlowLyapunov f α xstar)
+        ((f (α t) - f xstar) - t * (deriv f (α t)) ^ 2
+          - deriv f (α t) * (α t - xstar)) t :=
+    gradient_flow_lyapunov_hasDerivAt hα hf xstar t
+  rw [h_hasDeriv.deriv]
+  -- Convex first-order inequality at `x = xstar`, `y = α t`:
+  --   `f (α t) + deriv f (α t) * (xstar - α t) ≤ f xstar`.
+  have h_conv := convex_first_order_inequality hconv hf xstar (α t)
+  -- Rearrange to `f (α t) - f xstar ≤ deriv f (α t) * (α t - xstar)`.
+  have h_gap :
+      f (α t) - f xstar ≤ deriv f (α t) * (α t - xstar) := by
+    have h_rw : deriv f (α t) * (xstar - α t)
+        = -(deriv f (α t) * (α t - xstar)) := by
+      ring
+    rw [h_rw] at h_conv
+    linarith
+  -- The middle term is `-t · (deriv f (α t))² ≤ 0`.
+  have h_sq_nn : 0 ≤ t * (deriv f (α t)) ^ 2 :=
+    mul_nonneg ht (sq_nonneg _)
+  linarith
+
 /-- Three iterations of gradient descent on `f y = y² / 2` with step
 size `η = 1/2` starting at `x = 1` produce `(1/2)^3 = 1/8`. -/
 example : gradIter (fun y : ℝ => y ^ 2 / 2) (1 / 2) 3 1 = 1 / 8 := by
