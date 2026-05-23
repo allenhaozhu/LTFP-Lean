@@ -229,4 +229,111 @@ theorem gramMatrix_transpose_of_symm
   ext i j
   simp [gramMatrix, Matrix.transpose_apply, Matrix.of_apply, hk (xs j) (xs i)]
 
+/-! ### Bridge to Mathlib's `Matrix.PosSemidef` on Gram matrices
+
+The `IsPSDKernel` predicate unfolds to: the matrix
+`Matrix.of fun i j => k (xs i) (xs j)` is positive semidefinite for
+every finite sample. Since this matrix is by definition `gramMatrix k xs`,
+we record a named bridge that turns the PSD-kernel hypothesis directly
+into a `Matrix.PosSemidef` fact on the Gram matrix, ready for use with
+Mathlib's PSD-matrix infrastructure. -/
+
+/-- §7.1 — **Gram matrix of a PSD kernel is PSD.**
+
+If `k` is a positive-semidefinite kernel and `xs : Fin n → 𝒳` is any
+sample, then the Gram matrix `gramMatrix k xs` is a positive
+semidefinite matrix in the sense of `Matrix.PosSemidef`. This is the
+named bridge from the LTFP `IsPSDKernel` predicate to Mathlib's
+PSD-matrix API. -/
+theorem gramMatrix_posSemidef_of_psdKernel {k : 𝒳 → 𝒳 → ℝ}
+    (hk : IsPSDKernel k) (xs : Fin n → 𝒳) :
+    (gramMatrix k xs).PosSemidef := by
+  -- `gramMatrix k xs` is by definition the matrix `Matrix.of …` that
+  -- `IsPSDKernel` asserts is PSD.
+  exact hk xs
+
+/-! ### Finite nonneg-weighted combinations of PSD kernels
+
+Bach (2024) §7.1, pp. 184-185 states that the set of PSD kernels is a
+convex cone: closed under addition and nonnegative scalar multiplication,
+and therefore under arbitrary finite nonnegative linear combinations.
+The binary statements `IsPSDKernel.add` and `IsPSDKernel.smul_nonneg`
+above give the convex-cone generators; the lemma below packages the
+arbitrary finite case directly, which is the reusable form for kernel
+algebra in the rest of Chapter 7. -/
+
+/-- §7.1 (Bach 2024, p. 184) — **Finite nonneg-weighted sum of PSD
+    kernels is PSD.**
+
+Given a finite index set `s : Finset ι`, a family of PSD kernels
+`k : ι → 𝒳 → 𝒳 → ℝ` (with `k i` PSD for each `i ∈ s`), and
+nonnegative weights `w i ≥ 0` on `s`, the pointwise nonneg-weighted
+combination `(x, y) ↦ ∑ i ∈ s, w i * k i x y` is again PSD.
+
+Proof: induction on `s`. The empty sum is the zero kernel
+(`isPSDKernel_zero`); the inductive step combines `IsPSDKernel.add`
+with `IsPSDKernel.smul_nonneg`. -/
+theorem IsPSDKernel.finset_weighted_sum {ι : Type*} (s : Finset ι)
+    (w : ι → ℝ) (hw : ∀ i ∈ s, 0 ≤ w i)
+    (k : ι → 𝒳 → 𝒳 → ℝ) (hk : ∀ i ∈ s, IsPSDKernel (k i)) :
+    IsPSDKernel (fun x y => ∑ i ∈ s, w i * k i x y) := by
+  classical
+  induction s using Finset.induction_on with
+  | empty =>
+      -- Empty sum is the zero kernel, which is PSD.
+      intro n xs
+      show (Matrix.of fun p q : Fin n =>
+              ∑ idx ∈ (∅ : Finset ι),
+                w idx * k idx (xs p) (xs q)).PosSemidef
+      have hzero :
+          (Matrix.of fun p q : Fin n =>
+              ∑ idx ∈ (∅ : Finset ι),
+                w idx * k idx (xs p) (xs q)) =
+            (0 : Matrix (Fin n) (Fin n) ℝ) := by
+        ext p q; simp
+      rw [hzero]
+      exact Matrix.PosSemidef.zero
+  | @insert a t ha ih =>
+      -- Split off the new term.
+      have hw_a : 0 ≤ w a := hw a (Finset.mem_insert_self a t)
+      have hk_a : IsPSDKernel (k a) := hk a (Finset.mem_insert_self a t)
+      have hw_t : ∀ i ∈ t, 0 ≤ w i := fun i hi =>
+        hw i (Finset.mem_insert_of_mem hi)
+      have hk_t : ∀ i ∈ t, IsPSDKernel (k i) := fun i hi =>
+        hk i (Finset.mem_insert_of_mem hi)
+      -- Inductive hypothesis on `t`: PSD of the kernel `∑_{i∈t} w i * k i`.
+      have h_tail :
+          IsPSDKernel (fun x y => ∑ i ∈ t, w i * k i x y) := ih hw_t hk_t
+      -- Head term `w a * k a x y` is PSD by nonneg scaling.
+      have h_head : IsPSDKernel (fun x y => w a * k a x y) :=
+        hk_a.smul_nonneg hw_a
+      -- Combine head + tail by binary additivity.
+      have h_sum :
+          IsPSDKernel
+            (fun x y : 𝒳 =>
+              w a * k a x y + ∑ i ∈ t, w i * k i x y) :=
+        IsPSDKernel.add
+          (k₁ := fun x y => w a * k a x y)
+          (k₂ := fun x y => ∑ i ∈ t, w i * k i x y)
+          h_head h_tail
+      -- Reduce the goal pointwise to `head + tail`.
+      intro n xs
+      show (Matrix.of fun p q : Fin n =>
+              ∑ idx ∈ insert a t,
+                w idx * k idx (xs p) (xs q)).PosSemidef
+      have h_sum_app := h_sum xs
+      -- `h_sum_app` already has the right shape modulo beta-reduction;
+      -- convert via matrix equality.
+      have hrw :
+          (Matrix.of fun p q : Fin n =>
+              ∑ idx ∈ insert a t,
+                w idx * k idx (xs p) (xs q)) =
+            (Matrix.of fun p q : Fin n =>
+              w a * k a (xs p) (xs q) +
+                ∑ i ∈ t, w i * k i (xs p) (xs q)) := by
+        ext p q
+        simp [Finset.sum_insert ha]
+      rw [hrw]
+      exact h_sum_app
+
 end LTFP
