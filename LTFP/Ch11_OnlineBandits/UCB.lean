@@ -170,6 +170,25 @@ theorem ucbBonus_mono_in_log {n : ℕ} {t₁ t₂ : ℕ}
   have h2 : (2 : ℝ) * Real.log t₁ ≤ 2 * Real.log t₂ := by linarith
   exact div_le_div_of_nonneg_right h2 hn_nonneg
 
+/-- §11.3.3 — UCB confidence radius is antitone in number of pulls:
+    more pulls ⇒ tighter confidence bonus. Under `1 ≤ t` and `0 < n₁`,
+    if `n₁ ≤ n₂` then `ucbBonus t n₂ ≤ ucbBonus t n₁`. This is the
+    core confidence-radius monotonicity used in Bach (2024) §11.3.3's
+    UCB regret analysis: as an arm gets pulled more, its uncertainty
+    shrinks. Companion to `ucbBonus_mono_in_log` (monotone in time). -/
+theorem ucbBonus_antitone_in_pulls {t : ℕ} {n₁ n₂ : ℕ}
+    (ht : 1 ≤ (t : ℝ)) (hn₁ : 0 < n₁) (h12 : n₁ ≤ n₂) :
+    ucbBonus t n₂ ≤ ucbBonus t n₁ := by
+  unfold ucbBonus
+  apply Real.sqrt_le_sqrt
+  have hn₁_pos : (0 : ℝ) < (n₁ : ℝ) := by exact_mod_cast hn₁
+  have hn₁_le_n₂ : (n₁ : ℝ) ≤ (n₂ : ℝ) := by exact_mod_cast h12
+  have hlog_nonneg : 0 ≤ Real.log t := by
+    have : Real.log 1 ≤ Real.log t := Real.log_le_log (by norm_num) ht
+    simpa using this
+  have hnum_nonneg : (0 : ℝ) ≤ 2 * Real.log t := by linarith
+  exact div_le_div_of_nonneg_left hnum_nonneg hn₁_pos hn₁_le_n₂
+
 /-- §11.3 — Gap-dependent regret lower-shape: bandit regret is at
     least `(min over played arms of gap) · T`. Concretely, if every
     played arm has gap ≥ `Δ_min ≥ 0`, then the total regret is at
