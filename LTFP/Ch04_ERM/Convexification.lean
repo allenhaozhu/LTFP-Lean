@@ -191,4 +191,55 @@ theorem phiHinge_pos_iff_lt_one (u : ℝ) :
     have : (1 - u) ≤ max (1 - u) 0 := le_max_left _ _
     linarith
 
+/-- §4.1.4 — **Square surrogate majorizes the 0-1 surrogate.** Together
+    with `phiZeroOne_le_phiHinge` and `phiZeroOne_le_phiExponential`,
+    this is the third pillar of surrogate-majorization (Bach §4.1.4,
+    pp. 76-77). For `u ≤ 0`: `(u-1)^2 ≥ 1 = phiZeroOne u` since
+    `u - 1 ≤ -1`. For `u > 0`: `phiZeroOne u = 0 ≤ (u-1)^2`. -/
+theorem phiZeroOne_le_phiSquare (u : ℝ) :
+    phiZeroOne u ≤ phiSquare u := by
+  unfold phiZeroOne phiSquare
+  split_ifs with h
+  · -- u ≤ 0, so u - 1 ≤ -1, so (u - 1)^2 ≥ 1
+    have h1 : u - 1 ≤ -1 := by linarith
+    -- (u - 1)^2 = (1 - u)^2 ≥ 1 since 1 - u ≥ 1
+    have h2 : (1 : ℝ) ≤ 1 - u := by linarith
+    have h3 : (u - 1)^2 = (1 - u)^2 := by ring
+    rw [h3]
+    have h4 : (1 : ℝ)^2 ≤ (1 - u)^2 :=
+      pow_le_pow_left₀ (by norm_num) h2 2
+    simpa using h4
+  · -- u > 0, RHS nonneg, LHS = 0
+    exact sq_nonneg _
+
+/-- §4.1.4 — **Scaled logistic surrogate majorizes the 0-1 surrogate.**
+    `phiZeroOne u ≤ phiLogistic u / log 2`. Together with the hinge,
+    exponential, and square majorizations, this completes the four
+    classical Φ-risk bounds (Bach §4.1.4, eq. (4.4)). For `u ≤ 0`:
+    `phiLogistic u ≥ phiLogistic 0 = log 2`, so the quotient is `≥ 1`.
+    For `u > 0`: `phiLogistic u ≥ 0` and `log 2 > 0`, so quotient ≥ 0. -/
+theorem phiZeroOne_le_phiLogistic_div_log_two (u : ℝ) :
+    phiZeroOne u ≤ phiLogistic u / Real.log 2 := by
+  have hlog2 : (0 : ℝ) < Real.log 2 := Real.log_pos (by norm_num)
+  unfold phiZeroOne phiLogistic
+  split_ifs with h
+  · -- u ≤ 0, so -u ≥ 0, so exp(-u) ≥ 1, so 1 + exp(-u) ≥ 2,
+    -- so log(1 + exp(-u)) ≥ log 2, so the quotient ≥ 1.
+    have hexp : (1 : ℝ) ≤ Real.exp (-u) := by
+      rw [show (1 : ℝ) = Real.exp 0 from by rw [Real.exp_zero]]
+      exact Real.exp_le_exp.mpr (by linarith)
+    have h2 : (2 : ℝ) ≤ 1 + Real.exp (-u) := by linarith
+    have hpos : (0 : ℝ) < 1 + Real.exp (-u) := by
+      have := Real.exp_pos (-u); linarith
+    have hlog : Real.log 2 ≤ Real.log (1 + Real.exp (-u)) :=
+      Real.log_le_log (by norm_num) h2
+    rw [le_div_iff₀ hlog2]
+    linarith
+  · -- u > 0, RHS nonneg, LHS = 0
+    apply div_nonneg _ hlog2.le
+    have hpos : (1 : ℝ) ≤ 1 + Real.exp (-u) := by
+      have := Real.exp_pos (-u); linarith
+    calc (0 : ℝ) = Real.log 1 := by simp
+      _ ≤ Real.log (1 + Real.exp (-u)) := Real.log_le_log one_pos hpos
+
 end LTFP
