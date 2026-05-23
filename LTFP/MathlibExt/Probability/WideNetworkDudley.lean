@@ -2323,6 +2323,140 @@ theorem wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBa
     rw [hK_def]
   linarith [h_iid'.trans (h_add.trans h_final.le)]
 
+/-! ### Concrete Dirac-measure instantiation of the B8 N6 abstract bound
+
+The abstract i.i.d. theorem
+`wide_network_expected_two_rademacher_le_explicit_polynomial_paramBall`
+(`cb6fb3f`) is parameterised over an arbitrary probability measure `ν`
+on the sample type with bounded-support a.e. hypotheses. The smallest
+tractable *concrete* instantiation is the Dirac measure at a fixed
+sample point: the a.e. hypotheses become pointwise statements at that
+single point, and the integral collapses (`integral_dirac`) to a single
+evaluation.
+
+This serves as a sanity check that the abstract framework composes into
+a concrete bound, without requiring the multi-day measure-construction
+work that would be needed for a richer concrete measure (e.g., a
+uniform product measure on `closedBall × Icc`). -/
+
+/-- **Dirac concrete instantiation of the B8 N6 polynomial bound.**
+
+Given a fixed sample point `(x₀, y₀)` in the bounded support — i.e.
+`‖x₀‖ ≤ R` and, for every parameter `θ` in the closed `B_param`-ball,
+`|⟨θ, x₀⟩ - y₀| ≤ B` — and a normalisation `c` with `B^2 ≤ c`, the
+abstract i.i.d. polynomial-rate bound
+`wide_network_expected_two_rademacher_le_explicit_polynomial_paramBall`
+specialises to the Dirac product measure `Measure.dirac (fun _ =>
+(x₀, y₀))`.
+
+Because `∫ S, f S ∂(Measure.dirac S₀) = f S₀`, the conclusion is a
+deterministic polynomial-rate bound on the (without-abs) doubled
+empirical Rademacher complexity at the constant sample `S₀`. -/
+theorem wide_network_dirac_concrete_polynomial_paramBall
+    {d m : ℕ}
+    (x₀ : EuclideanSpace ℝ (Fin d)) (y₀ : ℝ)
+    (B_param R B c ε : ℝ)
+    (hd : 1 ≤ d)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
+    (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
+    (hx₀ : ‖x₀‖ ≤ R)
+    (hθx₀ : ∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+      |@inner ℝ _ _ θ x₀ - y₀| ≤ B)
+    (hBsq_le_c : B ^ 2 ≤ c) :
+    2 * empiricalRademacherComplexity_without_abs m
+          (linearizedRiskFamily (d := d) B_param)
+          ((fun _ => (x₀, y₀)) : Fin m → EuclideanSpace ℝ (Fin d) × ℝ) ≤
+      2 * (4 * ε + (12 / Real.sqrt m) *
+        ((c / 2 - ε) *
+          √((d : ℝ) *
+            Real.log ((⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 : ℕ) : ℝ)))) := by
+  classical
+  -- The constant Dirac sample point.
+  set S₀ : Fin m → EuclideanSpace ℝ (Fin d) × ℝ := fun _ => (x₀, y₀) with hS₀_def
+  -- The Dirac measure at S₀. Mathlib provides `IsProbabilityMeasure` automatically.
+  set ν : MeasureTheory.Measure (Fin m → EuclideanSpace ℝ (Fin d) × ℝ) :=
+    MeasureTheory.Measure.dirac S₀ with hν_def
+  -- Bounded-support a.e. bundle. For Dirac, `∀ᵐ S ∂(dirac S₀), P S ↔ P S₀`
+  -- (via `ae_dirac_eq` and `MeasurableSingletonClass` on the function space,
+  --  inherited from `EuclideanSpace`'s T1 → measurable-singletons instance
+  --  and `Pi.instMeasurableSingletonClass`).
+  have hB_nn' : 0 ≤ B := hB_nn
+  have hBsq_nn : 0 ≤ B ^ 2 := sq_nonneg _
+  have hc_nn : 0 ≤ c := le_trans hBsq_nn hBsq_le_c
+  -- The empiricalNorm-at-θ bound at the constant sample S₀.
+  have h_empNorm : ∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+      empiricalNorm (linearizedRiskSample (fun _ : Fin m => x₀) (fun _ : Fin m => y₀))
+        (linearizedRiskFamily (d := d) B_param θ) ≤ c := by
+    intro θ
+    -- Pointwise: linearizedRiskFamily B_param θ (x₀, y₀) = (⟨θ, x₀⟩ - y₀)^2 ≤ B^2.
+    have h_pt : ∀ i : Fin m,
+        |linearizedRiskFamily (d := d) B_param θ
+            (linearizedRiskSample (fun _ : Fin m => x₀) (fun _ : Fin m => y₀) i)| ≤ B ^ 2 := by
+      intro i
+      have hθ_in : ‖θ.val‖ ≤ B_param := θ.property
+      have h_inner_abs : |@inner ℝ _ _ θ.val x₀ - y₀| ≤ B := hθx₀ θ.val hθ_in
+      show |(@inner ℝ _ _ θ.val x₀ - y₀) ^ 2| ≤ B ^ 2
+      have habs_sq : |(@inner ℝ _ _ θ.val x₀ - y₀) ^ 2| =
+          (@inner ℝ _ _ θ.val x₀ - y₀) ^ 2 := abs_of_nonneg (sq_nonneg _)
+      rw [habs_sq, sq_abs (@inner ℝ _ _ θ.val x₀ - y₀) |>.symm]
+      exact pow_le_pow_left₀ (abs_nonneg _) h_inner_abs 2
+    -- Apply the helper, then chain B^2 ≤ c.
+    have h_le_Bsq :
+        empiricalNorm (linearizedRiskSample (fun _ : Fin m => x₀) (fun _ : Fin m => y₀))
+          (linearizedRiskFamily (d := d) B_param θ) ≤ B ^ 2 :=
+      empiricalNorm_le_of_pointwise_bound _ _ (B ^ 2) hBsq_nn h_pt
+    linarith
+  -- The bundled a.e. statement, instantiated at the Dirac point.
+  have h_at_S₀ :
+      (∀ i, ‖(S₀ i).1‖ ≤ R) ∧
+      (∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+        ∀ i, |@inner ℝ _ _ θ (S₀ i).1 - (S₀ i).2| ≤ B) ∧
+      (∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+        empiricalNorm (linearizedRiskSample (fun i => (S₀ i).1) (fun i => (S₀ i).2))
+          (linearizedRiskFamily (d := d) B_param θ) ≤ c) := by
+    refine ⟨?_, ?_, ?_⟩
+    · intro i; simpa [hS₀_def] using hx₀
+    · intro θ hθ i; simpa [hS₀_def] using hθx₀ θ hθ
+    · intro θ
+      have := h_empNorm θ
+      simpa [hS₀_def, linearizedRiskSample] using this
+  -- Lift to ae via `ae_dirac_eq`: ae (dirac S₀) = pure S₀.
+  have hae :
+      ∀ᵐ (S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ) ∂ν,
+        (∀ i, ‖(S i).1‖ ≤ R) ∧
+        (∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+          ∀ i, |@inner ℝ _ _ θ (S i).1 - (S i).2| ≤ B) ∧
+        (∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+          empiricalNorm (linearizedRiskSample (fun i => (S i).1) (fun i => (S i).2))
+            (linearizedRiskFamily (d := d) B_param θ) ≤ c) := by
+    rw [hν_def, MeasureTheory.ae_dirac_eq]
+    exact Filter.eventually_pure.mpr h_at_S₀
+  -- Integrability: every function is integrable wrt a Dirac measure on a
+  -- measurable-singleton space (Mathlib `integrable_dirac`).
+  have hint :
+      MeasureTheory.Integrable
+        (fun S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+          2 * empiricalRademacherComplexity_without_abs m
+                (linearizedRiskFamily (d := d) B_param) S) ν := by
+    rw [hν_def]
+    exact MeasureTheory.integrable_dirac (by
+      simp only [enorm_lt_top])
+  -- Invoke the abstract theorem.
+  have h_abstract :=
+    wide_network_expected_two_rademacher_le_explicit_polynomial_paramBall
+      (d := d) (m := m) ν B_param R B c ε
+      hd hR_nn hB_nn hB_param_nn hBR_pos hε_pos hm_pos hεc hae hint
+  -- Collapse the Dirac integral to evaluation at S₀.
+  have h_integral_eq :
+      ∫ S, 2 * empiricalRademacherComplexity_without_abs m
+              (linearizedRiskFamily (d := d) B_param) S ∂ν =
+        2 * empiricalRademacherComplexity_without_abs m
+              (linearizedRiskFamily (d := d) B_param) S₀ := by
+    rw [hν_def, MeasureTheory.integral_dirac]
+  rw [h_integral_eq] at h_abstract
+  exact h_abstract
+
 end ClosureViaDudley
 
 end LTFP
