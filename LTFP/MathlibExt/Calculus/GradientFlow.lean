@@ -824,6 +824,25 @@ theorem gradient_flow_polyak_lojasiewicz_exponential_decay
     rw [← mul_assoc, h_inv, one_mul]
   linarith
 
+/-- **PL exponential decay with the initial point `x₀` named as an
+explicit parameter.** Direct corollary of
+`gradient_flow_polyak_lojasiewicz_exponential_decay` that rewrites the
+RHS from `f (α 0) - f xstar` to `f x₀ - f xstar` using the
+hypothesis `α 0 = x₀`.
+
+Bach §5 statements consistently refer to `f(θ₀) - f*` (the initial
+optimality gap) rather than threading `α 0` through every consequence.
+This wrapper makes downstream applications read more directly. -/
+theorem gradient_flow_polyak_lojasiewicz_exponential_decay_from_initial
+    {f α : ℝ → ℝ} {xstar m t x₀ : ℝ}
+    (hf : Differentiable ℝ f) (hα : IsGradientFlow f α)
+    (hPL : ∀ s : ℝ, 0 ≤ s →
+      2 * m * (f (α s) - f xstar) ≤ (deriv f (α s)) ^ 2)
+    (hα0 : α 0 = x₀) (ht : 0 ≤ t) :
+    f (α t) - f xstar ≤ Real.exp (-(2 * m * t)) * (f x₀ - f xstar) := by
+  have h := gradient_flow_polyak_lojasiewicz_exponential_decay hf hα hPL ht
+  simpa [hα0] using h
+
 /-- Three iterations of gradient descent on `f y = y² / 2` with step
 size `η = 1/2` starting at `x = 1` produce `(1/2)^3 = 1/8`. -/
 example : gradIter (fun y : ℝ => y ^ 2 / 2) (1 / 2) 3 1 = 1 / 8 := by
