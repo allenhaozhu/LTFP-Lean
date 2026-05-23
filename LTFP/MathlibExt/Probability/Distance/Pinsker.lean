@@ -251,6 +251,43 @@ theorem bh_monotone_in_kl {x y : ℝ} (hxy : x ≤ y) :
     Real.exp_le_exp.mpr (by linarith)
   exact Real.sqrt_le_sqrt (by linarith)
 
+/-- **Nonnegativity of the Pinsker bound.** The Pinsker upper bound is
+nonnegative for every real `x`, since `Real.sqrt` is nonnegative on all of
+`ℝ`. No hypothesis on `x` is needed: for `x < 0`, `Real.sqrt (x / 2) = 0`. -/
+theorem pinskerBound_nonneg (x : ℝ) : 0 ≤ pinskerBound x := by
+  unfold pinskerBound
+  exact Real.sqrt_nonneg _
+
+/-- **Nonnegativity of the Bretagnolle--Huber bound.** The Bretagnolle--Huber
+upper bound is nonnegative for every real `x`, since `Real.sqrt` is
+nonnegative on all of `ℝ`. -/
+theorem bhBound_nonneg (x : ℝ) : 0 ≤ bhBound x := by
+  unfold bhBound
+  exact Real.sqrt_nonneg _
+
+/-- **Pinsker bound is dominated by `Real.sqrt x`.**
+
+For `x ≥ 0`, the Pinsker upper bound `Real.sqrt (x / 2)` is dominated by the
+universal `Real.sqrt x`, since `x / 2 ≤ x`. This is the qualitative
+counterpart to the `bh_sqrt_form` comparison, exposing the unconditional
+`Real.sqrt`-domination of `pinskerBound` so callers can chain through a
+common `Real.sqrt (kl μ ν)` bound. -/
+theorem pinskerBound_le_sqrt (x : ℝ) (hx : 0 ≤ x) :
+    pinskerBound x ≤ Real.sqrt x := by
+  unfold pinskerBound
+  exact Real.sqrt_le_sqrt (by linarith)
+
+/-- **Bretagnolle--Huber bound is dominated by `Real.sqrt x`.**
+
+For `x ≥ 0`, the Bretagnolle--Huber upper bound `Real.sqrt (1 - exp(-x))` is
+dominated by `Real.sqrt x`, by the algebraic core `1 - exp(-x) ≤ x`. This
+restates `bh_sqrt_form` directly on `bhBound` so downstream callers do not
+need to unfold the definition. -/
+theorem bhBound_le_sqrt (x : ℝ) (hx : 0 ≤ x) :
+    bhBound x ≤ Real.sqrt x := by
+  unfold bhBound
+  exact bh_sqrt_form x hx
+
 /-! ### Examples
 
 These examples demonstrate basic usage of the algebraic Pinsker /
