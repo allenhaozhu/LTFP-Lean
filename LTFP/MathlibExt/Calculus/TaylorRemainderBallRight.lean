@@ -110,3 +110,39 @@ theorem taylor_remainder_bound_ball_two_sided
       simpa [g] using deriv_reflect_at_center (f := f) (x₀ := x₀) hf
     convert hbound using 1
     dsimp [g, x']; rw [hderiv]; ring_nf
+
+/-!
+## Downstream-friendly corollaries
+
+Wrappers around `taylor_remainder_bound_ball_two_sided` that accept the
+membership hypothesis in the more common `‖x - x₀‖ ≤ r` or
+`dist x x₀ ≤ r` form. The conversion uses `Real.closedBall_eq_Icc`
+and `Real.dist_eq` / `Real.norm_eq_abs`.
+-/
+
+theorem taylor_remainder_bound_ball_two_sided_of_dist_le
+    {f : ℝ → ℝ} {x₀ M r : ℝ} (hf : ContDiff ℝ 2 f) (hr : 0 < r)
+    (hM : ∀ y, dist y x₀ ≤ r → |iteratedDeriv 2 f y| ≤ M)
+    {x : ℝ} (hx : dist x x₀ ≤ r) :
+    |f x - (f x₀ + deriv f x₀ * (x - x₀))| ≤ (M / 2) * r ^ 2 := by
+  have hM' : ∀ y ∈ Set.Icc (x₀ - r) (x₀ + r), |iteratedDeriv 2 f y| ≤ M := by
+    intro y hy
+    refine hM y ?_
+    have : y ∈ Metric.closedBall x₀ r := by
+      rw [Real.closedBall_eq_Icc]; exact hy
+    simpa [Metric.mem_closedBall] using this
+  have hxmem : x ∈ Set.Icc (x₀ - r) (x₀ + r) := by
+    have : x ∈ Metric.closedBall x₀ r := by
+      simpa [Metric.mem_closedBall] using hx
+    rw [← Real.closedBall_eq_Icc]; exact this
+  exact taylor_remainder_bound_ball_two_sided hf hr hM' x hxmem
+
+theorem taylor_remainder_bound_ball_two_sided_of_norm_le
+    {f : ℝ → ℝ} {x₀ M r : ℝ} (hf : ContDiff ℝ 2 f) (hr : 0 < r)
+    (hM : ∀ y, ‖y - x₀‖ ≤ r → |iteratedDeriv 2 f y| ≤ M)
+    {x : ℝ} (hx : ‖x - x₀‖ ≤ r) :
+    |f x - (f x₀ + deriv f x₀ * (x - x₀))| ≤ (M / 2) * r ^ 2 := by
+  refine taylor_remainder_bound_ball_two_sided_of_dist_le hf hr
+    (fun y hy => hM y ?_) ?_
+  · simpa [Real.dist_eq, Real.norm_eq_abs] using hy
+  · simpa [Real.dist_eq, Real.norm_eq_abs] using hx
