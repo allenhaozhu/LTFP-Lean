@@ -652,6 +652,178 @@ theorem gradient_flow_convex_decay_one_div_t
     rw [div_div]
   linarith [h_div, h_norm.symm.le, h_norm.le]
 
+/-- **Exponential Lyapunov function for the PL / strongly-convex case.**
+`W(t) := exp(2m · t) · (f(α t) - f(xstar))`.
+
+The strongly-convex (or more generally PL) gradient-flow analysis uses
+this multiplicative envelope Lyapunov. Under the
+Polyak–Łojasiewicz inequality
+`(deriv f (α t))² ≥ 2m · (f(α t) - f(xstar))`, one shows `W'(t) ≤ 0`,
+so `W` is antitone on `[0, ∞)`. Dividing the bound `W(t) ≤ W(0)` by
+`exp(2m·t)` then yields the standard exponential rate
+`f(α t) - f xstar ≤ exp(-2m·t) · (f(α 0) - f xstar)`.
+
+The Lyapunov differs structurally from the convex O(1/t) case (which
+uses an additive `t · gap + ‖θ - θ*‖² / 2` Lyapunov): the PL setting
+admits the multiplicative envelope precisely because the dissipation
+rate is *proportional* to the energy, not merely nonnegative. -/
+noncomputable def gradientFlowExpLyapunov
+    (f α : ℝ → ℝ) (xstar m : ℝ) : ℝ → ℝ :=
+  fun t => Real.exp (2 * m * t) * (f (α t) - f xstar)
+
+/-- **Derivative of the exponential Lyapunov function.**
+Along any gradient flow `α'(t) = -(deriv f) (α t)` with `f` differentiable,
+`W := gradientFlowExpLyapunov f α xstar m` satisfies
+`W'(t) = exp(2m·t) · (2m · (f(α t) - f xstar) - (deriv f (α t))²)`.
+
+This is the load-bearing identity for the strongly-convex / PL
+exponential decay theorem: under the Polyak–Łojasiewicz inequality
+`(deriv f (α t))² ≥ 2m · (f(α t) - f xstar)` the bracket is `≤ 0`,
+and since `exp > 0` we get `W'(t) ≤ 0`. -/
+theorem gradient_flow_exp_lyapunov_hasDerivAt
+    {f α : ℝ → ℝ} (hα : IsGradientFlow f α) (hf : Differentiable ℝ f)
+    (xstar m t : ℝ) :
+    HasDerivAt (gradientFlowExpLyapunov f α xstar m)
+      (Real.exp (2 * m * t) *
+        (2 * m * (f (α t) - f xstar) - (deriv f (α t)) ^ 2)) t := by
+  -- Derivative of the linear `s ↦ 2 * m * s` is the constant `2 * m`.
+  have h_lin : HasDerivAt (fun s : ℝ => 2 * m * s) (2 * m) t := by
+    simpa using (hasDerivAt_id t).const_mul (2 * m)
+  -- Derivative of the exponential envelope `s ↦ exp (2 * m * s)`.
+  have h_exp : HasDerivAt (fun s : ℝ => Real.exp (2 * m * s))
+      (Real.exp (2 * m * t) * (2 * m)) t := h_lin.exp
+  -- Derivative of the energy gap `s ↦ f (α s) - f xstar`.
+  have h_energy : HasDerivAt (fun s : ℝ => f (α s)) (-(deriv f (α t)) ^ 2) t :=
+    gradient_flow_energy_hasDerivAt_of_differentiable hα hf t
+  have h_gap : HasDerivAt (fun s : ℝ => f (α s) - f xstar)
+      (-(deriv f (α t)) ^ 2) t := by
+    simpa using h_energy.sub_const (f xstar)
+  -- Product rule.
+  have h_prod :
+      HasDerivAt (fun s : ℝ => Real.exp (2 * m * s) * (f (α s) - f xstar))
+        (Real.exp (2 * m * t) * (2 * m) * (f (α t) - f xstar)
+          + Real.exp (2 * m * t) * (-(deriv f (α t)) ^ 2)) t :=
+    h_exp.mul h_gap
+  -- Normalise to the stated derivative value.
+  have h_eq :
+      Real.exp (2 * m * t) * (2 * m) * (f (α t) - f xstar)
+        + Real.exp (2 * m * t) * (-(deriv f (α t)) ^ 2)
+        = Real.exp (2 * m * t) *
+            (2 * m * (f (α t) - f xstar) - (deriv f (α t)) ^ 2) := by
+    ring
+  -- Unfold `gradientFlowExpLyapunov` to expose the underlying product.
+  have h_fun :
+      (fun s : ℝ => Real.exp (2 * m * s) * (f (α s) - f xstar))
+        = gradientFlowExpLyapunov f α xstar m := rfl
+  rw [← h_fun, ← h_eq]
+  exact h_prod
+
+/-- **Derivative of the exponential Lyapunov function is nonpositive
+under the Polyak–Łojasiewicz inequality.** For `f` differentiable, `α`
+a gradient flow, and the PL inequality
+`(deriv f (α t))² ≥ 2m · (f(α t) - f xstar)` at time `t`, the
+exponential Lyapunov `W := gradientFlowExpLyapunov f α xstar m`
+satisfies `W'(t) ≤ 0`.
+
+Combining `gradient_flow_exp_lyapunov_hasDerivAt` with PL: the bracket
+`(2m · gap - (deriv f)²)` is `≤ 0`, and `exp > 0` preserves the sign. -/
+theorem gradient_flow_exp_lyapunov_deriv_nonpos
+    {f α : ℝ → ℝ} (hf : Differentiable ℝ f) (hα : IsGradientFlow f α)
+    (xstar m t : ℝ)
+    (hPL : 2 * m * (f (α t) - f xstar) ≤ (deriv f (α t)) ^ 2) :
+    deriv (gradientFlowExpLyapunov f α xstar m) t ≤ 0 := by
+  -- Compute the derivative.
+  have h_hasDeriv :
+      HasDerivAt (gradientFlowExpLyapunov f α xstar m)
+        (Real.exp (2 * m * t) *
+          (2 * m * (f (α t) - f xstar) - (deriv f (α t)) ^ 2)) t :=
+    gradient_flow_exp_lyapunov_hasDerivAt hα hf xstar m t
+  rw [h_hasDeriv.deriv]
+  -- PL ⟹ bracket `≤ 0`; exp `> 0` ⟹ product `≤ 0`.
+  have h_bracket :
+      2 * m * (f (α t) - f xstar) - (deriv f (α t)) ^ 2 ≤ 0 := by
+    linarith
+  have h_exp_pos : 0 < Real.exp (2 * m * t) := Real.exp_pos _
+  exact mul_nonpos_of_nonneg_of_nonpos h_exp_pos.le h_bracket
+
+/-- **Strongly-convex / Polyak–Łojasiewicz exponential decay theorem
+for scalar gradient flow.** Let `f : ℝ → ℝ` be differentiable on all of
+`ℝ`, let `α : ℝ → ℝ` be a gradient-flow trajectory of `f` (i.e.
+`α'(t) = -(deriv f)(α t)` for all `t`), and assume the
+Polyak–Łojasiewicz inequality
+`(deriv f (α s))² ≥ 2m · (f(α s) - f xstar)` for all `s ≥ 0`. Then for
+any `t ≥ 0` the optimality gap decays exponentially:
+```
+f (α t) - f xstar ≤ exp (-2m · t) · (f (α 0) - f xstar).
+```
+
+This is the classical scalar version of Bach's §5 result on the
+continuous-time convergence rate of gradient flow under the
+Polyak–Łojasiewicz condition, which is in particular implied by
+`m`-strong convexity. The proof composes the exponential Lyapunov
+`W(t) := exp(2m · t) · (f(α t) - f xstar)` with its dissipation
+inequality `W'(t) ≤ 0`:
+
+* By `antitoneOn_of_deriv_nonpos` on `Set.Ici 0`, `W` is antitone on
+  the nonnegative reals, so `W(t) ≤ W(0)` for `0 ≤ t`.
+* At `t = 0`: `W(0) = exp(0) · (f(α 0) - f xstar) = f(α 0) - f xstar`.
+* Dividing both sides by `exp(2m · t) > 0` (equivalently, multiplying
+  by `exp(-2m · t)`) yields the stated rate.
+
+We do *not* require strong convexity directly: the PL inequality is
+the weaker sufficient condition, and the proof requires no convexity
+assumption on `f`. This matches Bach's emphasis that PL is the
+"right" hypothesis for exponential gradient-flow decay. -/
+theorem gradient_flow_polyak_lojasiewicz_exponential_decay
+    {f α : ℝ → ℝ} {xstar m t : ℝ}
+    (hf : Differentiable ℝ f) (hα : IsGradientFlow f α)
+    (hPL : ∀ s : ℝ, 0 ≤ s →
+      2 * m * (f (α s) - f xstar) ≤ (deriv f (α s)) ^ 2)
+    (ht : 0 ≤ t) :
+    f (α t) - f xstar ≤ Real.exp (-(2 * m * t)) * (f (α 0) - f xstar) := by
+  -- Abbreviate the Lyapunov function.
+  set W : ℝ → ℝ := gradientFlowExpLyapunov f α xstar m with hW_def
+  -- `W` is differentiable everywhere via `gradient_flow_exp_lyapunov_hasDerivAt`.
+  have hW_diff : Differentiable ℝ W := by
+    intro s
+    exact (gradient_flow_exp_lyapunov_hasDerivAt hα hf xstar m s).differentiableAt
+  -- Apply `antitoneOn_of_deriv_nonpos` on `Set.Ici 0`.
+  have h_antitone : AntitoneOn W (Set.Ici (0 : ℝ)) := by
+    refine antitoneOn_of_deriv_nonpos (convex_Ici 0)
+      hW_diff.continuous.continuousOn hW_diff.differentiableOn ?_
+    intro s hs
+    -- `s ∈ interior (Set.Ici 0) = Set.Ioi 0`, so `0 ≤ s`.
+    rw [interior_Ici] at hs
+    exact gradient_flow_exp_lyapunov_deriv_nonpos hf hα xstar m s
+      (hPL s (le_of_lt hs))
+  -- `W t ≤ W 0` since `0 ≤ t` and `W` is antitone on `Ici 0`.
+  have h_Wt_le_W0 : W t ≤ W 0 :=
+    h_antitone (Set.self_mem_Ici) (Set.mem_Ici.mpr ht) ht
+  -- Compute `W 0 = f (α 0) - f xstar` and unpack `W t`.
+  have h_W0 : W 0 = f (α 0) - f xstar := by
+    simp [hW_def, gradientFlowExpLyapunov]
+  have h_Wt : W t = Real.exp (2 * m * t) * (f (α t) - f xstar) := by
+    simp [hW_def, gradientFlowExpLyapunov]
+  -- Rewrite the antitonicity bound in concrete form.
+  have h_bound :
+      Real.exp (2 * m * t) * (f (α t) - f xstar) ≤ f (α 0) - f xstar := by
+    rw [← h_Wt, ← h_W0]; exact h_Wt_le_W0
+  -- Multiply both sides by `exp(-(2 m t)) > 0`.
+  have h_exp_pos : 0 < Real.exp (-(2 * m * t)) := Real.exp_pos _
+  have h_mul :
+      Real.exp (-(2 * m * t)) * (Real.exp (2 * m * t) * (f (α t) - f xstar))
+        ≤ Real.exp (-(2 * m * t)) * (f (α 0) - f xstar) :=
+    mul_le_mul_of_nonneg_left h_bound h_exp_pos.le
+  -- Simplify `exp(-(2mt)) · exp(2mt) = 1`.
+  have h_inv :
+      Real.exp (-(2 * m * t)) * Real.exp (2 * m * t) = 1 := by
+    rw [← Real.exp_add]; simp
+  have h_lhs :
+      Real.exp (-(2 * m * t)) * (Real.exp (2 * m * t) * (f (α t) - f xstar))
+        = f (α t) - f xstar := by
+    rw [← mul_assoc, h_inv, one_mul]
+  linarith
+
 /-- Three iterations of gradient descent on `f y = y² / 2` with step
 size `η = 1/2` starting at `x = 1` produce `(1/2)^3 = 1/8`. -/
 example : gradIter (fun y : ℝ => y ^ 2 / 2) (1 / 2) 3 1 = 1 / 8 := by
