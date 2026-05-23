@@ -15,6 +15,7 @@ import LTFP.MathlibExt.Calculus.FunctionMovementAlongCurve
 import LTFP.MathlibExt.Calculus.GradientFlow
 import LTFP.MathlibExt.Calculus.GradientFlowMovementBound
 import LTFP.MathlibExt.Calculus.GradientFlowRandomInit
+import LTFP.MathlibExt.Calculus.MultivariateHessianTaylor
 import LTFP.MathlibExt.Calculus.ParameterMovementBoundedDeriv
 import LTFP.MathlibExt.Calculus.TaylorRemainderBallRight
 import LTFP.MathlibExt.Calculus.TaylorRemainderRightSided
