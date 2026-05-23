@@ -11,6 +11,7 @@ import LTFP.MathlibExt.Analysis.Smoothness
 import LTFP.MathlibExt.Analysis.Subgradient.L1
 import LTFP.MathlibExt.Analysis.Subgradient.SumRule
 import LTFP.MathlibExt.Analysis.InnerProductSpace.RKHS
+import LTFP.MathlibExt.Calculus.FDerivInnerGradient
 import LTFP.MathlibExt.Calculus.FunctionMovementAlongCurve
 import LTFP.MathlibExt.Calculus.GradientFlow
 import LTFP.MathlibExt.Calculus.GradientFlowMovementBound

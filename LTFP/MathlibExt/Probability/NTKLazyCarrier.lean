@@ -6,6 +6,7 @@ Authors: LTFP-Lean contributors
 import LTFP.MathlibExt.Probability.NTKConcentration
 import LTFP.MathlibExt.Analysis.LazyTrainingLinearization
 import LTFP.MathlibExt.Calculus.MultivariateHessianTaylor
+import LTFP.MathlibExt.Calculus.FDerivInnerGradient
 
 /-!
 # B8 N5 framework carrier: NTK concentration ⟹ lazy linearization tail
@@ -196,5 +197,61 @@ theorem ntk_concentration_to_lazy_linearization_via_hessian_bound
   exact ntk_concentration_to_lazy_linearization_framework
     hσ_meas hσ_pos hσ_bdd hn xs hm (ν := ν) hδ_pos hδ_lt
     f θ₀ θt grad₀ A L hA hL hbridge
+
+/-- §56 EuclideanSpace specialization: the `hgrad` Riesz hypothesis is
+auto-discharged.
+
+On the finite-dimensional Hilbert space `EuclideanSpace ℝ (Fin p)`, the
+Riesz representation identifies `fderiv ℝ (fun θ => f θ x) (θ₀ ω) v`
+with `inner ℝ (gradient (fun θ => f θ x) (θ₀ ω)) v` whenever the inner
+function is differentiable at `θ₀ ω`. Under the `ContDiff ℝ 2`
+hypothesis `hcont`, differentiability is automatic, so `hgrad` is
+redundant — we instantiate `grad₀ ω x` as Mathlib's
+`gradient (fun θ => f θ x) (θ₀ ω)` and discharge the Riesz bridge with
+`LTFP.MathlibExt.Calculus.fderiv_eq_inner_gradient_of_contDiff`.
+
+This wrapper packages the EuclideanSpace-specific shape that §56's
+downstream clients actually consume. -/
+theorem ntk_concentration_to_lazy_linearization_via_hessian_bound_euclidean
+    {σ : ℝ → ℝ} (hσ_meas : Measurable σ)
+    {σ_inf : ℝ} (hσ_pos : 0 < σ_inf) (hσ_bdd : ∀ z, |σ z| ≤ σ_inf)
+    {d n p : ℕ} (hn : 0 < n)
+    (xs : Fin n → EuclideanSpace ℝ (Fin d))
+    {m : ℕ} (hm : 0 < m)
+    {ν : Measure (EuclideanSpace ℝ (Fin d) × ℝ)} [IsProbabilityMeasure ν]
+    {δ : ℝ} (hδ_pos : 0 < δ) (hδ_lt : δ < 1)
+    {X : Type*}
+    (f : EuclideanSpace ℝ (Fin p) → X → ℝ)
+    (θ₀ θt : (Fin m → EuclideanSpace ℝ (Fin d) × ℝ) → EuclideanSpace ℝ (Fin p))
+    (A L : ℝ) (hA : 0 ≤ A) (hL : 0 ≤ L)
+    (hmove : ∀ ω,
+      ¬ ((n : ℝ) *
+            (σ_inf ^ 2 * Real.sqrt (2 * Real.log (2 * (n : ℝ) ^ 2 / δ) / (m : ℝ)))
+          < ‖empiricalNTK σ xs ω - populationNTK σ xs ν‖) →
+        ‖θt ω - θ₀ ω‖ ≤ A / Real.sqrt (m : ℝ))
+    (hcont : ∀ x : X,
+      ContDiff ℝ 2 (fun θ : EuclideanSpace ℝ (Fin p) => f θ x))
+    (hHess : ∀ ω,
+      ¬ ((n : ℝ) *
+            (σ_inf ^ 2 * Real.sqrt (2 * Real.log (2 * (n : ℝ) ^ 2 / δ) / (m : ℝ)))
+          < ‖empiricalNTK σ xs ω - populationNTK σ xs ν‖) →
+      ∀ x : X, ∀ z ∈ segment ℝ (θ₀ ω) (θt ω),
+        ‖iteratedFDeriv ℝ 2 (fun θ : EuclideanSpace ℝ (Fin p) => f θ x) z‖ ≤ L) :
+    (Measure.pi (fun _ : Fin m => ν)).real
+        {ω | ∃ x : X,
+          (L / 2) * (A / Real.sqrt (m : ℝ)) ^ 2 <
+            |f (θt ω) x - (f (θ₀ ω) x +
+                inner ℝ (gradient (fun θ : EuclideanSpace ℝ (Fin p) => f θ x) (θ₀ ω))
+                      (θt ω - θ₀ ω))|}
+      ≤ δ := by
+  -- Instantiate `grad₀ ω x := gradient (fun θ => f θ x) (θ₀ ω)` and discharge
+  -- `hgrad` via the Riesz bridge `fderiv_eq_inner_gradient_of_contDiff`.
+  refine ntk_concentration_to_lazy_linearization_via_hessian_bound
+    hσ_meas hσ_pos hσ_bdd hn xs hm (ν := ν) hδ_pos hδ_lt
+    f θ₀ θt
+    (fun ω x => gradient (fun θ : EuclideanSpace ℝ (Fin p) => f θ x) (θ₀ ω))
+    A L hA hL ?_ hmove hcont hHess
+  intro ω x v
+  exact LTFP.MathlibExt.Calculus.fderiv_eq_inner_gradient_of_contDiff (hcont x) (θ₀ ω) v
 
 end ProbabilityTheory
