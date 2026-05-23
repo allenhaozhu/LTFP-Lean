@@ -1972,6 +1972,357 @@ theorem wide_network_expected_two_rademacher_le_explicit_polynomial_paramBall
     mul_le_mul_of_nonneg_left h_add (by norm_num)
   exact h_iid.trans h_outer
 
+/-! ### With-abs i.i.d. × explicit polynomial-rate bound
+
+The with-abs analogues of
+`wide_network_expected_two_rademacher_le_dudley_paramBall_of_ae`
+(`5f861d9`, the abstract i.i.d. lift) and
+`wide_network_expected_two_rademacher_le_explicit_polynomial_paramBall`
+(`cb6fb3f`, the end-to-end polynomial-rate composition).
+
+The without-abs side's per-sample bound is via
+`wide_network_two_rademacher_complexity_via_dudley_paramBall` whose RHS
+contains `√(log(coveringNumber ...))`. The with-abs side's per-sample
+bound (`wide_network_rademacher_complexity_with_abs_via_dudley_paramBall`,
+`ac3a269`) contains `√(log(2 · coveringNumber ...))` — the factor `2`
+inside the log is the negation-closure correction from
+`dudley_entropy_integral_bound_with_abs`. Apart from that and the
+absence of the symmetrisation leading `2 *`, the proof shape is the
+same: integrate the deterministic per-sample bound against a `ν`-a.e.
+bundle of the wide-network hypotheses, then bound the Dudley integral
+endpoint by the explicit polynomial form.
+
+For the polynomial-rate step, we use `log(2 · N) = log 2 + log N`
+under positivity, then bound `log N ≤ d · log K` via the same
+external-covering bridge used by `1bce222`. This gives the closed
+form
+
+  `(c/2 - ε) · √(log 2 + d · log K)`
+
+with `K = ⌈16 √d B R B_param / ε⌉₊ + 1`, matching the without-abs
+form up to the additive `log 2` inside the square root. -/
+
+/-- **With-abs abstract i.i.d. lift.**
+
+The with-abs analogue of
+`wide_network_expected_two_rademacher_le_dudley_paramBall_of_ae`
+(`5f861d9`), composing the i.i.d.-measure a.e. bundle of wide-network
+hypotheses with
+`wide_network_rademacher_complexity_with_abs_via_dudley_paramBall`
+(`ac3a269`) instead of the without-abs deterministic bound.
+
+The RHS matches the with-abs Dudley integrand `log(2 · coveringNumber)`
+and has no leading `2 *` factor (the LHS is the *with-abs*
+`empiricalRademacherComplexity`, which absorbs absolute values into
+the supremum directly). -/
+theorem wide_network_expected_rademacher_with_abs_le_dudley_paramBall_of_ae
+    {d m : ℕ}
+    (ν : MeasureTheory.Measure (Fin m → EuclideanSpace ℝ (Fin d) × ℝ))
+    [MeasureTheory.IsProbabilityMeasure ν]
+    (B_param R B c ε : ℝ)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
+    (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
+    (hae :
+      ∀ᵐ (S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ) ∂ν,
+        (∀ i, ‖(S i).1‖ ≤ R) ∧
+        (∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+          ∀ i, |@inner ℝ _ _ θ (S i).1 - (S i).2| ≤ B) ∧
+        (∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+          empiricalNorm (linearizedRiskSample (fun i => (S i).1) (fun i => (S i).2))
+            (linearizedRiskFamily (d := d) B_param θ) ≤ c))
+    (hint : MeasureTheory.Integrable
+      (fun S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+        empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) S) ν) :
+    ∫ S, empiricalRademacherComplexity m
+            (linearizedRiskFamily (d := d) B_param) S ∂ν ≤
+      (4 * ε + (12 / Real.sqrt m) *
+        (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber
+              (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+              (x / (2 * B * R)) : ℝ))))) := by
+  classical
+  -- Abbreviation for the deterministic with-abs Dudley RHS (sample-independent).
+  set DudleyRHS : ℝ :=
+    (4 * ε + (12 / Real.sqrt m) *
+      (∫ (x : ℝ) in ε..(c/2),
+        √(Real.log (2 * (coveringNumber
+            (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+            (x / (2 * B * R)) : ℝ))))) with hDudleyRHS_def
+  -- Pointwise a.e. bound: for ν-a.e. S, the deterministic with-abs theorem applies.
+  have hae_bound :
+      (fun S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+          empiricalRademacherComplexity m
+                (linearizedRiskFamily (d := d) B_param) S)
+        ≤ᵐ[ν] (fun _ => DudleyRHS) := by
+    filter_upwards [hae] with S hS
+    obtain ⟨hx_S, hbound_S, hcs_S⟩ := hS
+    -- Reconstruct xs, ys from S and apply the deterministic theorem.
+    set xs : Fin m → EuclideanSpace ℝ (Fin d) := fun i => (S i).1 with hxs_def
+    set ys : Fin m → ℝ := fun i => (S i).2 with hys_def
+    have hS_eq : S = linearizedRiskSample xs ys := by
+      funext i
+      simp [linearizedRiskSample, xs, ys]
+    have hbase :=
+      wide_network_rademacher_complexity_with_abs_via_dudley_paramBall
+        (d := d) (m := m) xs ys B_param R B c ε
+        hR_nn hB_nn hB_param_nn hBR_pos hε_pos hm_pos hεc
+        hx_S hbound_S hcs_S
+    rw [hS_eq]
+    exact hbase
+  -- Integrate.
+  have hConst_int : MeasureTheory.Integrable
+      (fun _ : Fin m → EuclideanSpace ℝ (Fin d) × ℝ => DudleyRHS) ν :=
+    MeasureTheory.integrable_const _
+  have hstep1 :
+      ∫ S, empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) S ∂ν ≤
+      ∫ _ : Fin m → EuclideanSpace ℝ (Fin d) × ℝ, DudleyRHS ∂ν :=
+    MeasureTheory.integral_mono_ae hint hConst_int hae_bound
+  have hstep2 : ∫ _ : Fin m → EuclideanSpace ℝ (Fin d) × ℝ, DudleyRHS ∂ν = DudleyRHS := by
+    rw [MeasureTheory.integral_const, MeasureTheory.probReal_univ]
+    simp
+  linarith [hstep1, hstep2.le, hstep2.ge]
+
+/-- **With-abs end-to-end abstract i.i.d. × explicit polynomial-rate
+bound.**
+
+The with-abs analogue of
+`wide_network_expected_two_rademacher_le_explicit_polynomial_paramBall`
+(`cb6fb3f`). Composes the with-abs i.i.d. lift above with the explicit
+Euclidean-cover cardinality bound to give a closed-form
+measure-theoretic expected-rate bound on the with-abs Rademacher
+complexity.
+
+Compared to the without-abs side at `cb6fb3f`, the integrand has
+`log(2 · coveringNumber)` instead of `log(coveringNumber)`, so the
+final rate has an additive `log 2` inside the square root:
+
+  `4 ε + (12 / √m) · (c/2 − ε) · √(log 2 + d · log K)`
+
+with `K = ⌈16 √d B R B_param / ε⌉₊ + 1`. The proof composes the
+with-abs i.i.d. lift, the with-abs endpoint bound (`5dcd80f`-analogue,
+already in this file), and the same external-covering bridge used by
+`1bce222`. -/
+theorem wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall
+    {d m : ℕ}
+    (ν : MeasureTheory.Measure (Fin m → EuclideanSpace ℝ (Fin d) × ℝ))
+    [MeasureTheory.IsProbabilityMeasure ν]
+    (B_param R B c ε : ℝ)
+    (hd : 1 ≤ d)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
+    (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
+    (hae :
+      ∀ᵐ (S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ) ∂ν,
+        (∀ i, ‖(S i).1‖ ≤ R) ∧
+        (∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+          ∀ i, |@inner ℝ _ _ θ (S i).1 - (S i).2| ≤ B) ∧
+        (∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+          empiricalNorm (linearizedRiskSample (fun i => (S i).1) (fun i => (S i).2))
+            (linearizedRiskFamily (d := d) B_param θ) ≤ c))
+    (hint : MeasureTheory.Integrable
+      (fun S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+        empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) S) ν) :
+    ∫ S, empiricalRademacherComplexity m
+            (linearizedRiskFamily (d := d) B_param) S ∂ν ≤
+      (4 * ε + (12 / Real.sqrt m) *
+        ((c / 2 - ε) *
+          √(Real.log 2 +
+            (d : ℝ) *
+              Real.log ((⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 : ℕ) : ℝ)))) := by
+  classical
+  -- Step 1: apply the with-abs i.i.d. lift.
+  have h_iid :=
+    wide_network_expected_rademacher_with_abs_le_dudley_paramBall_of_ae
+      (d := d) (m := m) ν B_param R B c ε
+      hR_nn hB_nn hB_param_nn hBR_pos hε_pos hm_pos hεc hae hint
+  -- Step 2: bound the with-abs Dudley integral by the explicit polynomial form.
+  -- We reproduce the chain from `1bce222` but for the `log(2 · ·)` integrand.
+  set L : ℝ := 2 * B * R with hL_def
+  have hL_pos : 0 < L := hBR_pos
+  set hTB := param_ball_subtype_univ_totallyBounded (d := d) B_param with hTB_def
+  have hε_le_half : ε ≤ c / 2 := le_of_lt hεc
+  have h_half_minus_ε_nn : 0 ≤ c / 2 - ε := by linarith
+  have hεL_pos : 0 < ε / L := div_pos hε_pos hL_pos
+  -- Nonemptiness of the parameter-ball subtype.
+  have hnonemp_param :
+      (Set.univ :
+        Set {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}).Nonempty :=
+    ⟨⟨0, by simpa using hB_param_nn⟩, Set.mem_univ _⟩
+  -- Step 2a: with-abs endpoint bound.
+  have h_endpoint :=
+    wide_network_dudley_integral_paramBall_endpoint_bound_with_abs (d := d)
+      B_param B R c ε hB_param_nn hBR_pos hε_pos hεc
+  -- Step 2b: bound the endpoint integrand `log(2 · N(ε/L))` by `log 2 + d · log K`.
+  -- Replicate the bridge chain from `1bce222`.
+  set δ : ℝ := ε / L with hδ_def
+  have hδ_pos : 0 < δ := hεL_pos
+  set η_real : ℝ := δ / 4 with hη_real_def
+  have hη_real_pos : 0 < η_real := by
+    show 0 < δ / 4
+    positivity
+  set η : ℝ≥0 := ⟨η_real, hη_real_pos.le⟩ with hη_def
+  have hη_pos : 0 < η := by
+    rw [hη_def, ← NNReal.coe_pos]; exact hη_real_pos
+  have hη_ne : η ≠ 0 := ne_of_gt hη_pos
+  have hη_coe : (η : ℝ) = η_real := rfl
+  have h4η_eq : 4 * (η : ℝ) = δ := by
+    rw [hη_coe, hη_real_def]; ring
+  -- Subtype-lift bridge.
+  have h_bridge :
+      (coveringNumber hTB δ : ℕ∞)
+        ≤ Metric.externalCoveringNumber η
+            (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param) := by
+    have h := coveringNumber_paramBall_subtype_le_externalCoveringNumber_closedBall
+      (d := d) (B_param := B_param) hB_param_nn hη_pos
+    rwa [h4η_eq] at h
+  -- Euclidean ball external cover bound.
+  have h_euclid :
+      Metric.externalCoveringNumber η
+          (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param) ≤
+        ((⌈2 * Real.sqrt d * B_param / (η : ℝ)⌉₊ + 1 : ℕ) ^ d : ℕ) :=
+    covering_number_euclidean_ball d B_param η hd hB_param_nn hη_ne
+  -- Identify ceiling argument.
+  have h_ratio_eq :
+      2 * Real.sqrt d * B_param / (η : ℝ) = 16 * Real.sqrt d * B * R * B_param / ε := by
+    rw [hη_coe, hη_real_def, hδ_def, hL_def]
+    have hε_ne : ε ≠ 0 := ne_of_gt hε_pos
+    have hBR_ne : 2 * B * R ≠ 0 := ne_of_gt hBR_pos
+    field_simp
+    ring
+  set N : ℕ := (⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1) ^ d with hN_def
+  have h_euclid_N :
+      Metric.externalCoveringNumber η
+          (Metric.closedBall (0 : EuclideanSpace ℝ (Fin d)) B_param) ≤
+        (N : ℕ∞) := by
+    have := h_euclid
+    rw [h_ratio_eq] at this
+    exact_mod_cast this
+  have h_cn_le : (coveringNumber hTB δ : ℕ∞) ≤ (N : ℕ∞) :=
+    h_bridge.trans h_euclid_N
+  have h_cn_le_nat : coveringNumber hTB δ ≤ N := by
+    exact_mod_cast h_cn_le
+  have h_cn_le_real :
+      (coveringNumber hTB δ : ℝ) ≤ (N : ℝ) := by exact_mod_cast h_cn_le_nat
+  -- Positivity of the covering number.
+  have h_cn_pos_real : (0 : ℝ) < (coveringNumber hTB δ : ℝ) := by
+    exact_mod_cast coveringNumber_nonzero hnonemp_param hTB hδ_pos
+  -- 2 * N > 0.
+  have h_2N_pos : (0 : ℝ) < 2 * (coveringNumber hTB δ : ℝ) := by positivity
+  -- 2 * coveringNumber ≤ 2 * N.
+  have h_2cn_le : 2 * (coveringNumber hTB δ : ℝ) ≤ 2 * (N : ℝ) := by linarith
+  -- Identify K.
+  set K : ℕ := ⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 with hK_def
+  have hN_eq : N = K ^ d := by rw [hN_def, hK_def]
+  have h_K_pos_real : (0 : ℝ) < (K : ℝ) := by
+    have hK_pos : 0 < K := by
+      rw [hK_def]; exact Nat.succ_pos _
+    exact_mod_cast hK_pos
+  have h_K_ge_one : (1 : ℝ) ≤ (K : ℝ) := by
+    have : 1 ≤ K := by rw [hK_def]; exact Nat.succ_le_succ (Nat.zero_le _)
+    exact_mod_cast this
+  have h_logK_nn : 0 ≤ Real.log (K : ℝ) := Real.log_nonneg h_K_ge_one
+  have h_d_nn : (0 : ℝ) ≤ (d : ℝ) := by exact_mod_cast Nat.zero_le d
+  have h_d_logK_nn : 0 ≤ (d : ℝ) * Real.log (K : ℝ) := mul_nonneg h_d_nn h_logK_nn
+  -- log(2 * coveringNumber) ≤ log(2 * N) = log 2 + log N = log 2 + d * log K.
+  have h_2N_real_pos : (0 : ℝ) < 2 * (N : ℝ) := by
+    have hN_real_pos : (0 : ℝ) < (N : ℝ) := lt_of_lt_of_le h_cn_pos_real h_cn_le_real
+    linarith
+  have h_log_2cn_le :
+      Real.log (2 * (coveringNumber hTB δ : ℝ)) ≤ Real.log (2 * (N : ℝ)) :=
+    Real.log_le_log h_2N_pos h_2cn_le
+  have h_log_2N_eq :
+      Real.log (2 * (N : ℝ)) = Real.log 2 + Real.log (N : ℝ) := by
+    have h2_pos : (0 : ℝ) < 2 := by norm_num
+    have hN_real_pos : (0 : ℝ) < (N : ℝ) := lt_of_lt_of_le h_cn_pos_real h_cn_le_real
+    exact Real.log_mul (ne_of_gt h2_pos) (ne_of_gt hN_real_pos)
+  have h_log_N_eq :
+      Real.log (N : ℝ) = (d : ℝ) * Real.log (K : ℝ) := by
+    rw [hN_eq]
+    push_cast
+    exact Real.log_pow (K : ℝ) d
+  have h_log_2cn_bound :
+      Real.log (2 * (coveringNumber hTB δ : ℝ)) ≤
+        Real.log 2 + (d : ℝ) * Real.log (K : ℝ) := by
+    calc Real.log (2 * (coveringNumber hTB δ : ℝ))
+        ≤ Real.log (2 * (N : ℝ)) := h_log_2cn_le
+      _ = Real.log 2 + Real.log (N : ℝ) := h_log_2N_eq
+      _ = Real.log 2 + (d : ℝ) * Real.log (K : ℝ) := by rw [h_log_N_eq]
+  -- √(log(2 · coveringNumber)) ≤ √(log 2 + d · log K).
+  have h_sqrt_le :
+      Real.sqrt (Real.log (2 * (coveringNumber hTB δ : ℝ))) ≤
+        Real.sqrt (Real.log 2 + (d : ℝ) * Real.log (K : ℝ)) :=
+    Real.sqrt_le_sqrt h_log_2cn_bound
+  -- Multiply by (c/2 - ε) ≥ 0.
+  have h_endpoint_le_poly :
+      (c / 2 - ε) *
+        √(Real.log (2 * (coveringNumber hTB δ : ℝ))) ≤
+      (c / 2 - ε) *
+        √(Real.log 2 + (d : ℝ) * Real.log (K : ℝ)) :=
+    mul_le_mul_of_nonneg_left h_sqrt_le h_half_minus_ε_nn
+  -- Chain endpoint + polynomial bound.
+  have h_integral_le :
+      (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ)))) ≤
+        (c / 2 - ε) *
+          √(Real.log 2 + (d : ℝ) * Real.log (K : ℝ)) := by
+    calc (∫ (x : ℝ) in ε..(c/2),
+            √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ))))
+        ≤ (c / 2 - ε) *
+            √(Real.log (2 * (coveringNumber hTB (ε / L) : ℝ))) := h_endpoint
+      _ = (c / 2 - ε) *
+            √(Real.log (2 * (coveringNumber hTB δ : ℝ))) := by rw [hδ_def]
+      _ ≤ (c / 2 - ε) *
+            √(Real.log 2 + (d : ℝ) * Real.log (K : ℝ)) := h_endpoint_le_poly
+  -- Step 3: chain via monotonicity.
+  have h_factor_nn : 0 ≤ 12 / Real.sqrt m := by positivity
+  have h_scaled :
+      (12 / Real.sqrt m) *
+        (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ)))) ≤
+        (12 / Real.sqrt m) *
+          ((c / 2 - ε) *
+            √(Real.log 2 + (d : ℝ) * Real.log (K : ℝ))) :=
+    mul_le_mul_of_nonneg_left h_integral_le h_factor_nn
+  have h_add :
+      (4 * ε +
+        (12 / Real.sqrt m) *
+          (∫ (x : ℝ) in ε..(c/2),
+            √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ))))) ≤
+      (4 * ε +
+        (12 / Real.sqrt m) *
+          ((c / 2 - ε) *
+            √(Real.log 2 + (d : ℝ) * Real.log (K : ℝ)))) := by linarith
+  -- Unfold L and K to match the headline form, then chain with h_iid.
+  -- h_iid has the same LHS and matches our intermediate via `L = 2*B*R`.
+  have h_iid' :
+      ∫ S, empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) S ∂ν ≤
+        (4 * ε +
+          (12 / Real.sqrt m) *
+            (∫ (x : ℝ) in ε..(c/2),
+              √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ))))) := by
+    -- L = 2 * B * R and hTB unfolds matter only for definitional equality.
+    show _ ≤ _
+    convert h_iid using 0
+  have h_final :
+      (4 * ε +
+        (12 / Real.sqrt m) *
+          ((c / 2 - ε) *
+            √(Real.log 2 + (d : ℝ) * Real.log (K : ℝ)))) =
+      (4 * ε +
+        (12 / Real.sqrt m) *
+          ((c / 2 - ε) *
+            √(Real.log 2 +
+              (d : ℝ) *
+                Real.log
+                  ((⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 : ℕ) : ℝ)))) := by
+    rw [hK_def]
+  linarith [h_iid'.trans (h_add.trans h_final.le)]
+
 end ClosureViaDudley
 
 end LTFP
