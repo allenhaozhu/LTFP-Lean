@@ -1862,6 +1862,116 @@ theorem wide_network_dudley_integral_explicit_polynomial_bound
             Real.log ((⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 : ℕ) : ℝ)) := by
         rw [hK_def]
 
+/-! ### End-to-end abstract i.i.d. × explicit polynomial-rate bound
+
+Composes `wide_network_expected_two_rademacher_le_dudley_paramBall_of_ae`
+(the abstract i.i.d.-measure lift) with
+`wide_network_dudley_integral_explicit_polynomial_bound` (the explicit
+polynomial-rate Dudley bound) to give a fully-closed-form
+measure-theoretic expected-rate bound on the wide-network Rademacher
+complexity. The RHS depends only on `(B_param, R, B, d, ε, m, c)` and
+is measure-independent. -/
+
+/-- **End-to-end abstract i.i.d. × explicit polynomial-rate bound.**
+
+Under the hypotheses that the i.i.d. sample measure `ν` a.s. satisfies
+the wide-network bounded-support / parameter-ball / empirical-norm
+assumptions, the expected scaled Rademacher complexity
+`∫ 2 · R̂_m ∂ν` is bounded by the closed-form polynomial rate
+
+  `2 · (4 ε + (12 / √m) · (c/2 − ε) · √(d · log(⌈16 √d B R B_param / ε⌉₊ + 1)))`.
+
+The RHS is a constant in `(B_param, R, B, d, ε, m, c)` and does *not*
+depend on the measure `ν` — the integral against `ν` collapses to a
+pointwise bound by the deterministic polynomial rate.
+
+This is the composition of
+`wide_network_expected_two_rademacher_le_dudley_paramBall_of_ae`
+(`5f861d9`, abstract i.i.d. lift) with
+`wide_network_dudley_integral_explicit_polynomial_bound`
+(`1bce222`, explicit polynomial Dudley bound). -/
+theorem wide_network_expected_two_rademacher_le_explicit_polynomial_paramBall
+    {d m : ℕ}
+    (ν : MeasureTheory.Measure (Fin m → EuclideanSpace ℝ (Fin d) × ℝ))
+    [MeasureTheory.IsProbabilityMeasure ν]
+    (B_param R B c ε : ℝ)
+    (hd : 1 ≤ d)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
+    (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
+    (hae :
+      ∀ᵐ (S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ) ∂ν,
+        (∀ i, ‖(S i).1‖ ≤ R) ∧
+        (∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+          ∀ i, |@inner ℝ _ _ θ (S i).1 - (S i).2| ≤ B) ∧
+        (∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+          empiricalNorm (linearizedRiskSample (fun i => (S i).1) (fun i => (S i).2))
+            (linearizedRiskFamily (d := d) B_param θ) ≤ c))
+    (hint : MeasureTheory.Integrable
+      (fun S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+        2 * empiricalRademacherComplexity_without_abs m
+              (linearizedRiskFamily (d := d) B_param) S) ν) :
+    ∫ S, 2 * empiricalRademacherComplexity_without_abs m
+            (linearizedRiskFamily (d := d) B_param) S ∂ν ≤
+      2 * (4 * ε + (12 / Real.sqrt m) *
+        ((c / 2 - ε) *
+          √((d : ℝ) *
+            Real.log ((⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 : ℕ) : ℝ)))) := by
+  -- Step 1: apply the abstract i.i.d. lift (5f861d9).
+  have h_iid :=
+    wide_network_expected_two_rademacher_le_dudley_paramBall_of_ae
+      (d := d) (m := m) ν B_param R B c ε
+      hR_nn hB_nn hB_param_nn hBR_pos hε_pos hm_pos hεc hae hint
+  -- Step 2: apply the explicit polynomial-rate Dudley bound (1bce222).
+  have h_poly :=
+    wide_network_dudley_integral_explicit_polynomial_bound
+      (d := d) B_param B R c ε hd hB_param_nn hBR_pos hε_pos hεc
+  -- Step 3: chain via monotonicity. We need:
+  --   12 / √m ≥ 0 and 2 ≥ 0 for the outer multipliers.
+  have h_sqrt_m_nn : 0 ≤ Real.sqrt m := Real.sqrt_nonneg _
+  have h_factor_nn : 0 ≤ 12 / Real.sqrt m := by positivity
+  -- Multiply h_poly by (12 / √m).
+  have h_scaled :
+      (12 / Real.sqrt m) *
+        (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (coveringNumber
+              (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+              (x / (2 * B * R))))) ≤
+        (12 / Real.sqrt m) *
+          ((c / 2 - ε) *
+            √((d : ℝ) *
+              Real.log ((⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 : ℕ) : ℝ))) :=
+    mul_le_mul_of_nonneg_left h_poly h_factor_nn
+  -- Add 4*ε.
+  have h_add :
+      4 * ε +
+        (12 / Real.sqrt m) *
+          (∫ (x : ℝ) in ε..(c/2),
+            √(Real.log (coveringNumber
+                (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+                (x / (2 * B * R))))) ≤
+      4 * ε +
+        (12 / Real.sqrt m) *
+          ((c / 2 - ε) *
+            √((d : ℝ) *
+              Real.log ((⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 : ℕ) : ℝ))) :=
+    by linarith
+  -- Multiply by 2.
+  have h_outer :
+      2 * (4 * ε +
+        (12 / Real.sqrt m) *
+          (∫ (x : ℝ) in ε..(c/2),
+            √(Real.log (coveringNumber
+                (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+                (x / (2 * B * R)))))) ≤
+      2 * (4 * ε +
+        (12 / Real.sqrt m) *
+          ((c / 2 - ε) *
+            √((d : ℝ) *
+              Real.log ((⌈16 * Real.sqrt d * B * R * B_param / ε⌉₊ + 1 : ℕ) : ℝ)))) :=
+    mul_le_mul_of_nonneg_left h_add (by norm_num)
+  exact h_iid.trans h_outer
+
 end ClosureViaDudley
 
 end LTFP
