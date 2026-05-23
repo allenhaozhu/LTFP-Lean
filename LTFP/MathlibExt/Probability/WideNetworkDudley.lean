@@ -1325,6 +1325,240 @@ theorem wide_network_expected_two_rademacher_le_dudley_paramBall_of_ae
     simp
   linarith [hstep1, hstep2.le, hstep2.ge]
 
+/-! ### Closed-form endpoint bound on the wide-network Dudley integral
+
+The wide-network Dudley integrals produced by
+`wide_network_rademacher_complexity_via_dudley_paramBall` (without-abs)
+and `wide_network_rademacher_complexity_with_abs_via_dudley_paramBall`
+(with-abs) take the form
+
+  `∫ x in ε..(c/2), √(Real.log (cN · (x / L)))`           -- without-abs
+  `∫ x in ε..(c/2), √(Real.log (2 * cN · (x / L)))`       -- with-abs
+
+with `L = 2 * B * R`. The map `x ↦ √(log (· cN (x/L)))` is *antitone* on
+`[ε, c/2]` because (a) `x ↦ x/L` is monotone, (b) `coveringNumber hTB`
+is antitone on `Set.Ioi 0`, and (c) `Real.log` and `Real.sqrt` are
+monotone. Bounding the integrand pointwise by its value at the lower
+endpoint `ε` yields the closed-form upper bound
+
+  `(c/2 - ε) * √(Real.log (cN · (ε / L)))`                 -- without-abs
+  `(c/2 - ε) * √(Real.log (2 * cN · (ε / L)))`             -- with-abs
+
+These are *not* asymptotic rates — they are honest constant-factor
+bounds at the lower endpoint. To turn either into a polynomial rate one
+composes with the external Euclidean cardinality
+`coveringNumber hTB δ ≤ (⌈2 √d B_param / δ⌉₊ + 1) ^ d` (a separate
+TotallyBounded-internal-vs-external-cover bridge, currently a residual
+slot — see the module docstring's "Lipschitz-image-of-cover" note).
+That composition is downstream of this theorem.
+
+These two lemmas are the cleanest closed-form bound the
+paramBall-Dudley integrals admit without that residual bridge. -/
+
+/-- **Closed-form endpoint bound on the without-abs wide-network Dudley
+integral** (Option C in the dispatch sheet).
+
+For the Dudley integrand produced by
+`wide_network_rademacher_complexity_via_dudley_paramBall`, the integral
+on `[ε, c/2]` is bounded above by `(c/2 - ε)` times the integrand at
+the lower endpoint `ε`. The argument is just antitone-on the integrand
+(monotone composition of `Real.sqrt ∘ Real.log` with the strictly
+positive antitone-in-scale covering number, against the monotone
+rescaling `x ↦ x / (2 B R)`) plus `intervalIntegral.integral_mono_on`
+against a constant majorant.
+
+The covering-number positivity uses `Nonempty` of the parameter-ball
+subtype (via `hB_param_nn : 0 ≤ B_param`, putting `0` in the ball).
+The Lipschitz scale `2 B R` must be positive (`hBR_pos`) so the
+endpoint `ε / (2 B R)` is positive. -/
+theorem wide_network_dudley_integral_paramBall_endpoint_bound
+    {d : ℕ} (B_param B R c ε : ℝ)
+    (hB_param_nn : 0 ≤ B_param) (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hεc : ε < c / 2) :
+    (∫ (x : ℝ) in ε..(c/2),
+        √(Real.log (coveringNumber
+            (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+            (x / (2 * B * R))))) ≤
+      (c / 2 - ε) *
+        √(Real.log (coveringNumber
+          (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+          (ε / (2 * B * R)))) := by
+  classical
+  set L : ℝ := 2 * B * R with hL_def
+  have hL_pos : 0 < L := hBR_pos
+  set hTB := param_ball_subtype_univ_totallyBounded (d := d) B_param with hTB_def
+  have hε_le_half : ε ≤ c / 2 := le_of_lt hεc
+  have hεL_pos : 0 < ε / L := div_pos hε_pos hL_pos
+  -- Nonemptiness of the parameter-ball subtype.
+  have hnonemp_param :
+      (Set.univ :
+        Set {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}).Nonempty :=
+    ⟨⟨0, by simpa using hB_param_nn⟩, Set.mem_univ _⟩
+  -- uIcc = Icc on [ε, c/2].
+  have h_uIcc_eq : Set.uIcc ε (c / 2) = Set.Icc ε (c / 2) := by
+    have : min ε (c / 2) = ε ∧ max ε (c / 2) = c / 2 := by
+      refine ⟨?_, ?_⟩
+      · exact min_eq_left hε_le_half
+      · exact max_eq_right hε_le_half
+    simp [Set.uIcc, this.1, this.2]
+  -- The integrand is antitone on the interval.
+  have h_antitoneOn :
+      AntitoneOn (fun x : ℝ =>
+        √(Real.log (coveringNumber hTB (x / L)))) (Set.uIcc ε (c / 2)) := by
+    rw [h_uIcc_eq]
+    have hsqrt_mono : Monotone (fun x : ℝ => √x) := fun _ _ => Real.sqrt_le_sqrt
+    apply Monotone.comp_antitoneOn hsqrt_mono
+    refine antitoneOn_iff_forall_lt.mpr ?_
+    intro a ha b hb hab
+    have ha_pos : 0 < a := lt_of_lt_of_le hε_pos ha.1
+    have hb_pos : 0 < b := lt_of_lt_of_le hε_pos hb.1
+    have haL_pos : 0 < a / L := div_pos ha_pos hL_pos
+    have hbL_pos : 0 < b / L := div_pos hb_pos hL_pos
+    have habL : a / L ≤ b / L := by
+      apply div_le_div_of_nonneg_right _ (le_of_lt hL_pos)
+      exact le_of_lt hab
+    apply Real.log_le_log
+    · exact_mod_cast coveringNumber_nonzero hnonemp_param hTB hbL_pos
+    · exact_mod_cast
+        converingNumber_antitone hTB (by simp [haL_pos]) (by simp [hbL_pos]) habL
+  -- Pointwise endpoint bound on Icc ε (c/2).
+  have h_point :
+      ∀ x ∈ Set.Icc ε (c / 2),
+        √(Real.log (coveringNumber hTB (x / L))) ≤
+          √(Real.log (coveringNumber hTB (ε / L))) := by
+    intro x hx_mem
+    have hε_in : ε ∈ Set.uIcc ε (c / 2) := by
+      rw [h_uIcc_eq]; exact ⟨le_refl _, hε_le_half⟩
+    have hx_in : x ∈ Set.uIcc ε (c / 2) := by
+      rw [h_uIcc_eq]; exact hx_mem
+    exact h_antitoneOn hε_in hx_in hx_mem.1
+  -- Interval-integrability of the antitone integrand.
+  have hLHS_intInt :
+      IntervalIntegrable
+        (fun x : ℝ => √(Real.log (coveringNumber hTB (x / L))))
+        MeasureTheory.volume ε (c / 2) :=
+    AntitoneOn.intervalIntegrable h_antitoneOn
+  have hRHS_intInt :
+      IntervalIntegrable
+        (fun _ : ℝ =>
+          √(Real.log (coveringNumber hTB (ε / L))))
+        MeasureTheory.volume ε (c / 2) :=
+    intervalIntegrable_const
+  -- Apply integral_mono_on against the constant majorant.
+  have hintegral_le :
+      (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (coveringNumber hTB (x / L)))) ≤
+        ∫ (_ : ℝ) in ε..(c/2),
+          √(Real.log (coveringNumber hTB (ε / L))) :=
+    intervalIntegral.integral_mono_on hε_le_half hLHS_intInt hRHS_intInt h_point
+  -- Constant integral = (b - a) * c.
+  have hConst_int :
+      (∫ (_ : ℝ) in ε..(c/2),
+          √(Real.log (coveringNumber hTB (ε / L)))) =
+        (c / 2 - ε) * √(Real.log (coveringNumber hTB (ε / L))) := by
+    rw [intervalIntegral.integral_const]
+    simp [smul_eq_mul]
+  linarith [hintegral_le, hConst_int.le, hConst_int.ge]
+
+/-- **Closed-form endpoint bound on the with-abs wide-network Dudley
+integral** (Option C, with-abs analogue).
+
+For the Dudley integrand produced by
+`wide_network_rademacher_complexity_with_abs_via_dudley_paramBall`, the
+integral on `[ε, c/2]` is bounded above by `(c/2 - ε)` times the
+integrand at the lower endpoint `ε`. Same antitone argument as the
+without-abs version; the `2 *` factor inside the log is constant so
+preserves antitonicity. -/
+theorem wide_network_dudley_integral_paramBall_endpoint_bound_with_abs
+    {d : ℕ} (B_param B R c ε : ℝ)
+    (hB_param_nn : 0 ≤ B_param) (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hεc : ε < c / 2) :
+    (∫ (x : ℝ) in ε..(c/2),
+        √(Real.log (2 * (coveringNumber
+            (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+            (x / (2 * B * R)) : ℝ)))) ≤
+      (c / 2 - ε) *
+        √(Real.log (2 * (coveringNumber
+          (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+          (ε / (2 * B * R)) : ℝ))) := by
+  classical
+  set L : ℝ := 2 * B * R with hL_def
+  have hL_pos : 0 < L := hBR_pos
+  set hTB := param_ball_subtype_univ_totallyBounded (d := d) B_param with hTB_def
+  have hε_le_half : ε ≤ c / 2 := le_of_lt hεc
+  have hεL_pos : 0 < ε / L := div_pos hε_pos hL_pos
+  have hnonemp_param :
+      (Set.univ :
+        Set {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}).Nonempty :=
+    ⟨⟨0, by simpa using hB_param_nn⟩, Set.mem_univ _⟩
+  have h_uIcc_eq : Set.uIcc ε (c / 2) = Set.Icc ε (c / 2) := by
+    have : min ε (c / 2) = ε ∧ max ε (c / 2) = c / 2 := by
+      refine ⟨?_, ?_⟩
+      · exact min_eq_left hε_le_half
+      · exact max_eq_right hε_le_half
+    simp [Set.uIcc, this.1, this.2]
+  -- Antitone-on for the with-abs integrand on the uIcc.
+  have h_antitoneOn :
+      AntitoneOn (fun x : ℝ =>
+        √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ)))) (Set.uIcc ε (c / 2)) := by
+    rw [h_uIcc_eq]
+    have hsqrt_mono : Monotone (fun x : ℝ => √x) := fun _ _ => Real.sqrt_le_sqrt
+    apply Monotone.comp_antitoneOn hsqrt_mono
+    refine antitoneOn_iff_forall_lt.mpr ?_
+    intro a ha b hb hab
+    have ha_pos : 0 < a := lt_of_lt_of_le hε_pos ha.1
+    have hb_pos : 0 < b := lt_of_lt_of_le hε_pos hb.1
+    have haL_pos : 0 < a / L := div_pos ha_pos hL_pos
+    have hbL_pos : 0 < b / L := div_pos hb_pos hL_pos
+    have habL : a / L ≤ b / L := by
+      apply div_le_div_of_nonneg_right _ (le_of_lt hL_pos)
+      exact le_of_lt hab
+    have hcN_b_pos : (0 : ℝ) < (coveringNumber hTB (b / L) : ℝ) := by
+      exact_mod_cast coveringNumber_nonzero hnonemp_param hTB hbL_pos
+    have hcN_le : (coveringNumber hTB (b / L) : ℝ) ≤
+        (coveringNumber hTB (a / L) : ℝ) := by
+      exact_mod_cast
+        converingNumber_antitone hTB (by simp [haL_pos]) (by simp [hbL_pos]) habL
+    have h_two_b_pos : (0 : ℝ) < 2 * (coveringNumber hTB (b / L) : ℝ) := by
+      positivity
+    have h_two_le : 2 * (coveringNumber hTB (b / L) : ℝ) ≤
+        2 * (coveringNumber hTB (a / L) : ℝ) := by linarith
+    exact Real.log_le_log h_two_b_pos h_two_le
+  have h_point :
+      ∀ x ∈ Set.Icc ε (c / 2),
+        √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ))) ≤
+          √(Real.log (2 * (coveringNumber hTB (ε / L) : ℝ))) := by
+    intro x hx_mem
+    have hε_in : ε ∈ Set.uIcc ε (c / 2) := by
+      rw [h_uIcc_eq]; exact ⟨le_refl _, hε_le_half⟩
+    have hx_in : x ∈ Set.uIcc ε (c / 2) := by
+      rw [h_uIcc_eq]; exact hx_mem
+    exact h_antitoneOn hε_in hx_in hx_mem.1
+  have hLHS_intInt :
+      IntervalIntegrable
+        (fun x : ℝ => √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ))))
+        MeasureTheory.volume ε (c / 2) :=
+    AntitoneOn.intervalIntegrable h_antitoneOn
+  have hRHS_intInt :
+      IntervalIntegrable
+        (fun _ : ℝ =>
+          √(Real.log (2 * (coveringNumber hTB (ε / L) : ℝ))))
+        MeasureTheory.volume ε (c / 2) :=
+    intervalIntegrable_const
+  have hintegral_le :
+      (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ)))) ≤
+        ∫ (_ : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber hTB (ε / L) : ℝ))) :=
+    intervalIntegral.integral_mono_on hε_le_half hLHS_intInt hRHS_intInt h_point
+  have hConst_int :
+      (∫ (_ : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber hTB (ε / L) : ℝ)))) =
+        (c / 2 - ε) * √(Real.log (2 * (coveringNumber hTB (ε / L) : ℝ))) := by
+    rw [intervalIntegral.integral_const]
+    simp [smul_eq_mul]
+  linarith [hintegral_le, hConst_int.le, hConst_int.ge]
+
 end ClosureViaDudley
 
 end LTFP
