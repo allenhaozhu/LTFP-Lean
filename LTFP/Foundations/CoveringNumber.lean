@@ -161,6 +161,26 @@ theorem coveringNumber_image_lipschitz
       _ ≤ n := hfind
       _ ≤ coveringNumber ha ε := hcard_le
 
+/-- **Isometric image of a cover.** If `f` is an isometry, then the covering
+number of `f '' A` at scale `ε` is at most the covering number of `A` at
+scale `ε`. Direct corollary of `coveringNumber_image_lipschitz` with
+`L = 1`, using `Isometry.lipschitz`. Useful for Dudley-type transports
+where a metric-preserving map is used to push a cover from one space
+to another. -/
+theorem coveringNumber_image_isometry_le
+    {X Y : Type*} [PseudoMetricSpace X] [PseudoMetricSpace Y]
+    {A : Set X} (ha : TotallyBounded A)
+    {f : X → Y} (hf : Isometry f)
+    {ε : ℝ} (hε : 0 < ε) :
+    coveringNumber (ha.image hf.lipschitz.uniformContinuous) ε
+      ≤ coveringNumber ha ε := by
+  have hLip : LipschitzWith 1 f := hf.lipschitz
+  have hbase :
+      coveringNumber (ha.image hLip.uniformContinuous) (((1 : ℝ≥0) : ℝ) * ε)
+        ≤ coveringNumber ha ε :=
+    coveringNumber_image_lipschitz ha hLip hε
+  simpa using hbase
+
 /-!
 ### Doubling under negation-closure (and more generally, double covers)
 
