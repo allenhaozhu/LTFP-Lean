@@ -8,6 +8,7 @@ import LTFP.MathlibExt.Probability.LinearClassClosedBallCover
 import LTFP.MathlibExt.Probability.LinearClassSampleCoverCard
 import LTFP.MathlibExt.Probability.LinearizedRiskSampleCover
 import LTFP.Foundations.DudleyEntropy
+import LTFP.Foundations.Main
 
 /-!
 # Wide-network generalization carrier: linearized-risk cover from a totally-bounded parameter ball
@@ -900,6 +901,250 @@ theorem wide_network_rademacher_complexity_via_dudley_paramBall
     _ ≤ 4 * ε + (12 / Real.sqrt m) *
           (∫ (x : ℝ) in ε..(c/2),
             √(Real.log (coveringNumber hTB (x / L)))) := by linarith
+
+/-- **B8 N6 with-abs end-to-end closure: with-abs Rademacher complexity
+bounded by a Dudley integral over the parameter-ball covering number.**
+
+The with-abs analogue of
+`wide_network_rademacher_complexity_via_dudley_paramBall`. Composes
+`dudley_entropy_integral_bound_with_abs` (which contributes a factor of
+`2` inside the log to account for negation-closure of the EFS) with
+`wide_network_linearizedRisk_covering_number_le` (the Lipschitz-image-of-
+cover bridge specialised to the parameter-to-EFS embedding), substituting
+the EFS covering number under the integrand with the parameter-ball
+covering number at the rescaled radius `x / (2 B R)`.
+
+The uniform-boundedness constant for the squared-loss family is `B²`:
+under the hypothesis `hbound : ∀ θ, ‖θ‖ ≤ B_param → ∀ i, |⟨θ, xs i⟩ - ys i| ≤ B`,
+the squared residual `(⟨θ, xs i⟩ - ys i)²` is at most `B²` pointwise.
+
+Downstream this theorem is consumed by the symmetrisation chain via
+`uniform_deviation_expectation_le_two_smul_rademacher_complexity`
+(which bounds `E[uniformDeviation]` by `2 · rademacherComplexity` with
+the *with-abs* convention used by LTFP's `rademacherComplexity`). -/
+theorem wide_network_rademacher_complexity_with_abs_via_dudley_paramBall
+    {d m : ℕ}
+    (xs : Fin m → EuclideanSpace ℝ (Fin d)) (ys : Fin m → ℝ)
+    (B_param R B c ε : ℝ)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
+    (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
+    (hx : ∀ i : Fin m, ‖xs i‖ ≤ R)
+    (hbound :
+      ∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+        ∀ i : Fin m, |inner ℝ θ (xs i) - ys i| ≤ B)
+    (hcs : ∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+      empiricalNorm (linearizedRiskSample xs ys)
+        (linearizedRiskFamily (d := d) B_param θ) ≤ c) :
+    empiricalRademacherComplexity m
+        (linearizedRiskFamily (d := d) B_param)
+        (linearizedRiskSample xs ys) ≤
+      (4 * ε + (12 / Real.sqrt m) *
+        (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber
+              (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+              (x / (2 * B * R)) : ℝ))))) := by
+  classical
+  -- Nonemptiness of the parameter-ball subtype.
+  haveI hNE : Nonempty {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} :=
+    ⟨⟨0, by simpa using hB_param_nn⟩⟩
+  -- Standard names.
+  set L : ℝ := 2 * B * R with hL_def
+  have hL_pos : 0 < L := hBR_pos
+  have hL_ne : L ≠ 0 := ne_of_gt hL_pos
+  set h' := linearizedRisk_efs_univ_totallyBounded xs ys B_param R B
+              hR_nn hB_nn hx hbound with hh'_def
+  set hTB := param_ball_subtype_univ_totallyBounded (d := d) B_param with hTB_def
+  -- The uniform-boundedness constant: `|F θ (S j)| = |(⟨θ, xs j⟩ - ys j)²| ≤ B²`.
+  have hC_bound :
+      ∀ (i : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param})
+        (j : Fin m),
+        |linearizedRiskFamily (d := d) B_param i
+          (linearizedRiskSample xs ys j)| ≤ B ^ 2 := by
+    intro θ j
+    -- |F θ (xs j, ys j)| = |(⟨θ.val, xs j⟩ - ys j)²|
+    have habs := hbound θ.val θ.property j
+    show |(inner ℝ θ.val (xs j) - ys j) ^ 2| ≤ B ^ 2
+    -- (⟨θ.val, xs j⟩ - ys j)² ≥ 0, so |·| = ·.
+    have h_sq_nn : 0 ≤ (inner ℝ θ.val (xs j) - ys j) ^ 2 := sq_nonneg _
+    rw [abs_of_nonneg h_sq_nn]
+    -- (⟨θ.val, xs j⟩ - ys j)² = |⟨θ.val, xs j⟩ - ys j|²
+    rw [← sq_abs (inner ℝ θ.val (xs j) - ys j)]
+    have h0_abs : 0 ≤ |inner ℝ θ.val (xs j) - ys j| := abs_nonneg _
+    exact pow_le_pow_left₀ h0_abs habs 2
+  -- Step (1): apply the with-abs Dudley bound to the linearized-risk EFS.
+  have hDudley :
+      empiricalRademacherComplexity m
+          (linearizedRiskFamily (d := d) B_param)
+          (linearizedRiskSample xs ys) ≤
+        (4 * ε + (12 / Real.sqrt m) *
+          (∫ (x : ℝ) in ε..(c/2),
+            √(Real.log (2 * (coveringNumber h' x : ℝ))))) :=
+    dudley_entropy_integral_bound_with_abs (C := B ^ 2) hC_bound
+      hε_pos h' hm_pos hcs hεc
+  -- Step (2): pointwise bound on the integrand over `[ε, c/2]`.
+  -- For each x ∈ [ε, c/2], `coveringNumber h' x ≤ coveringNumber hTB (x/L)`
+  -- via the Lipschitz cover bridge; lifts through `2 *`, `Real.log`, `Real.sqrt`.
+  have hε_le_half : ε ≤ c / 2 := le_of_lt hεc
+  -- L coercion (NNReal → ℝ).
+  have hLcoe : ((linearizedRiskLipConst B R : ℝ≥0) : ℝ) = L := by
+    unfold linearizedRiskLipConst L
+    rw [Real.coe_toNNReal _ (le_of_lt hL_pos)]
+  -- Pointwise bound on the integrand.
+  have hpoint :
+      ∀ x ∈ Set.Icc ε (c / 2),
+        √(Real.log (2 * (coveringNumber h' x : ℝ))) ≤
+          √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ))) := by
+    intro x hx_mem
+    have hx_pos : 0 < x := lt_of_lt_of_le hε_pos hx_mem.1
+    have hxL_pos : 0 < x / L := div_pos hx_pos hL_pos
+    -- Apply Lipschitz cover bridge at ε' := x / L.
+    have hbridge :=
+      wide_network_linearizedRisk_covering_number_le (d := d) (m := m) xs ys
+        B_param R B (x / L) hxL_pos hR_nn hB_nn hx hbound
+    -- ((linearizedRiskLipConst B R : ℝ≥0) : ℝ) * (x / L) = L * (x / L) = x.
+    have hLcalc : ((linearizedRiskLipConst B R : ℝ≥0) : ℝ) * (x / L) = x := by
+      rw [hLcoe, mul_div_cancel₀ _ hL_ne]
+    rw [hLcalc] at hbridge
+    -- Now hbridge : coveringNumber h' x ≤ coveringNumber hTB (x / L).
+    have h_h'_pos :
+        0 < (coveringNumber h' x : ℝ) := by
+      have hnonemp : (Set.univ :
+          Set (EmpiricalFunctionSpace
+            (linearizedRiskFamily (d := d) B_param)
+            (linearizedRiskSample xs ys))).Nonempty := by
+        haveI := hNE
+        exact ⟨⟨Classical.arbitrary _⟩, Set.mem_univ _⟩
+      have := coveringNumber_nonzero hnonemp h' hx_pos
+      exact_mod_cast this
+    have h_param_pos :
+        0 < (coveringNumber hTB (x / L) : ℝ) := by
+      have hnonemp_param :
+          (Set.univ :
+            Set {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}).Nonempty :=
+        ⟨⟨0, by simpa using hB_param_nn⟩, Set.mem_univ _⟩
+      have := coveringNumber_nonzero hnonemp_param hTB hxL_pos
+      exact_mod_cast this
+    have h_h'_le_param :
+        (coveringNumber h' x : ℝ) ≤
+          (coveringNumber hTB (x / L) : ℝ) := by
+      exact_mod_cast hbridge
+    -- Multiply by 2 (preserves order, both sides positive).
+    have h_two_h'_pos : (0 : ℝ) < 2 * (coveringNumber h' x : ℝ) := by
+      positivity
+    have h_two_le :
+        2 * (coveringNumber h' x : ℝ) ≤
+          2 * (coveringNumber hTB (x / L) : ℝ) := by
+      linarith
+    have h_log_mono :
+        Real.log (2 * (coveringNumber h' x : ℝ)) ≤
+          Real.log (2 * (coveringNumber hTB (x / L) : ℝ)) :=
+      Real.log_le_log h_two_h'_pos h_two_le
+    exact Real.sqrt_le_sqrt h_log_mono
+  -- Step (3): integral monotonicity. Need both sides interval-integrable on [ε, c/2].
+  -- Nonemptiness witnesses.
+  have hnonemp_h' :
+      (Set.univ :
+        Set (EmpiricalFunctionSpace
+          (linearizedRiskFamily (d := d) B_param)
+          (linearizedRiskSample xs ys))).Nonempty := by
+    haveI := hNE
+    exact ⟨⟨Classical.arbitrary _⟩, Set.mem_univ _⟩
+  have hnonemp_param :
+      (Set.univ :
+        Set {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}).Nonempty :=
+    ⟨⟨0, by simpa using hB_param_nn⟩, Set.mem_univ _⟩
+  have h_uIcc_eq : Set.uIcc ε (c / 2) = Set.Icc ε (c / 2) := by
+    have : min ε (c / 2) = ε ∧ max ε (c / 2) = c / 2 := by
+      refine ⟨?_, ?_⟩
+      · exact min_eq_left hε_le_half
+      · exact max_eq_right hε_le_half
+    simp [Set.uIcc, this.1, this.2]
+  -- Antitone-on for the LHS integrand on the uIcc.
+  have h_LHS_antitoneOn :
+      AntitoneOn (fun x : ℝ =>
+        √(Real.log (2 * (coveringNumber h' x : ℝ)))) (Set.uIcc ε (c / 2)) := by
+    rw [h_uIcc_eq]
+    have hsqrt_mono : Monotone (fun x : ℝ => √x) := fun _ _ => Real.sqrt_le_sqrt
+    apply Monotone.comp_antitoneOn hsqrt_mono
+    refine antitoneOn_iff_forall_lt.mpr ?_
+    intro a ha b hb hab
+    have ha_pos : 0 < a := lt_of_lt_of_le hε_pos ha.1
+    have hb_pos : 0 < b := lt_of_lt_of_le hε_pos hb.1
+    have hcN_b_pos : (0 : ℝ) < (coveringNumber h' b : ℝ) := by
+      exact_mod_cast coveringNumber_nonzero hnonemp_h' h' hb_pos
+    have hcN_le : (coveringNumber h' b : ℝ) ≤ (coveringNumber h' a : ℝ) := by
+      exact_mod_cast
+        converingNumber_antitone h' (by simp [ha_pos]) (by simp [hb_pos])
+          (le_of_lt hab)
+    have h_two_b_pos : (0 : ℝ) < 2 * (coveringNumber h' b : ℝ) := by positivity
+    have h_two_le : 2 * (coveringNumber h' b : ℝ) ≤
+        2 * (coveringNumber h' a : ℝ) := by linarith
+    exact Real.log_le_log h_two_b_pos h_two_le
+  -- Antitone-on for the RHS integrand on the uIcc.
+  have h_RHS_antitoneOn :
+      AntitoneOn (fun x : ℝ =>
+        √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ)))) (Set.uIcc ε (c / 2)) := by
+    rw [h_uIcc_eq]
+    have hsqrt_mono : Monotone (fun x : ℝ => √x) := fun _ _ => Real.sqrt_le_sqrt
+    apply Monotone.comp_antitoneOn hsqrt_mono
+    refine antitoneOn_iff_forall_lt.mpr ?_
+    intro a ha b hb hab
+    have ha_pos : 0 < a := lt_of_lt_of_le hε_pos ha.1
+    have hb_pos : 0 < b := lt_of_lt_of_le hε_pos hb.1
+    have haL_pos : 0 < a / L := div_pos ha_pos hL_pos
+    have hbL_pos : 0 < b / L := div_pos hb_pos hL_pos
+    have habL : a / L ≤ b / L := by
+      apply div_le_div_of_nonneg_right _ (le_of_lt hL_pos)
+      exact le_of_lt hab
+    have hcN_b_pos : (0 : ℝ) < (coveringNumber hTB (b / L) : ℝ) := by
+      exact_mod_cast coveringNumber_nonzero hnonemp_param hTB hbL_pos
+    have hcN_le : (coveringNumber hTB (b / L) : ℝ) ≤
+        (coveringNumber hTB (a / L) : ℝ) := by
+      exact_mod_cast
+        converingNumber_antitone hTB (by simp [haL_pos]) (by simp [hbL_pos]) habL
+    have h_two_b_pos : (0 : ℝ) < 2 * (coveringNumber hTB (b / L) : ℝ) := by
+      positivity
+    have h_two_le : 2 * (coveringNumber hTB (b / L) : ℝ) ≤
+        2 * (coveringNumber hTB (a / L) : ℝ) := by linarith
+    exact Real.log_le_log h_two_b_pos h_two_le
+  have hLHS_intInt :
+      IntervalIntegrable
+        (fun x : ℝ => √(Real.log (2 * (coveringNumber h' x : ℝ))))
+        MeasureTheory.volume ε (c / 2) :=
+    AntitoneOn.intervalIntegrable h_LHS_antitoneOn
+  have hRHS_intInt :
+      IntervalIntegrable
+        (fun x : ℝ => √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ))))
+        MeasureTheory.volume ε (c / 2) :=
+    AntitoneOn.intervalIntegrable h_RHS_antitoneOn
+  have hintegral_mono :
+      (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber h' x : ℝ)))) ≤
+        (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ)))) :=
+    intervalIntegral.integral_mono_on hε_le_half hLHS_intInt hRHS_intInt hpoint
+  -- Step (4): combine via nonnegativity of `12 / √m`.
+  have hm_real_pos : (0 : ℝ) < (m : ℝ) := by exact_mod_cast hm_pos
+  have hSqrtm_pos : 0 < Real.sqrt m := Real.sqrt_pos.mpr hm_real_pos
+  have hCoef_nn : 0 ≤ 12 / Real.sqrt m := by positivity
+  have hScaled_le :
+      (12 / Real.sqrt m) *
+        (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber h' x : ℝ)))) ≤
+      (12 / Real.sqrt m) *
+        (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ)))) :=
+    mul_le_mul_of_nonneg_left hintegral_mono hCoef_nn
+  calc empiricalRademacherComplexity m
+        (linearizedRiskFamily (d := d) B_param)
+        (linearizedRiskSample xs ys)
+      ≤ 4 * ε + (12 / Real.sqrt m) *
+          (∫ (x : ℝ) in ε..(c/2),
+            √(Real.log (2 * (coveringNumber h' x : ℝ)))) := hDudley
+    _ ≤ 4 * ε + (12 / Real.sqrt m) *
+          (∫ (x : ℝ) in ε..(c/2),
+            √(Real.log (2 * (coveringNumber hTB (x / L) : ℝ)))) := by linarith
 
 /-- Composition of the wide-network Dudley-parameter-ball bound with the
 symmetrization factor of `2`.
