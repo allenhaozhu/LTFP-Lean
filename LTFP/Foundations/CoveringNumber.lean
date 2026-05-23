@@ -182,6 +182,111 @@ theorem coveringNumber_image_isometry_le
   simpa using hbase
 
 /-!
+### Equality form: covering number is preserved under surjective isometries
+
+The reverse direction of `coveringNumber_image_isometry_le` requires
+**surjectivity**, not just injectivity. The reason is that LTFP's
+`coveringNumber` allows centers to lie anywhere in the ambient space,
+so a cover `t : Finset Y` of `f '' A` may use centers outside `f '' X`.
+With surjectivity, every center `y ∈ t` has a preimage `x = f⁻¹(y)`,
+and because `f` is an isometry we have
+`Metric.ball y ε = f '' Metric.ball x ε`, so the pulled-back finset
+`t.image (Function.surjInv hsurj)` covers `A` at the **same** scale `ε`.
+Injectivity alone would only yield a `2 * ε` cover (via "promote a
+nearest image-point of the ball to a preimage center"), which is not
+strong enough for the equality form. The Dudley-transport caller needs
+the same-`ε` equality, so we route via surjectivity here.
+-/
+
+/-- **Reverse direction for surjective isometries.** If `f : X → Y` is a
+surjective isometry, then the covering number of `A` at scale `ε` is
+bounded by the covering number of `f '' A` at scale `ε`. Combined with
+`coveringNumber_image_isometry_le`, this delivers the equality
+`coveringNumber_image_isometry_eq` for bijective isometries. -/
+theorem coveringNumber_image_isometry_surjective_ge
+    {X Y : Type*} [PseudoMetricSpace X] [PseudoMetricSpace Y]
+    {A : Set X} (ha : TotallyBounded A)
+    {f : X → Y} (hf : Isometry f) (hsurj : Function.Surjective f)
+    {ε : ℝ} (hε : 0 < ε) :
+    coveringNumber ha ε
+      ≤ coveringNumber (ha.image hf.lipschitz.uniformContinuous) ε := by
+  classical
+  -- Image cover of `f '' A` at scale `ε`, pulled back to `X` via `surjInv`.
+  set haImg : TotallyBounded (f '' A) := ha.image hf.lipschitz.uniformContinuous
+    with hhaImg_def
+  set t : Finset Y := coveringFinset haImg hε with ht_def
+  set g : Y → X := Function.surjInv hsurj with hg_def
+  set t' : Finset X := t.image g with ht'_def
+  -- Cardinality bound: `|t'| ≤ |t| = coveringNumber (image)`.
+  have hcard : t'.card ≤ coveringNumber haImg ε := by
+    have h₁ : t'.card ≤ t.card := Finset.card_image_le
+    have h₂ : t.card = coveringNumber haImg ε := coveringFinset_card haImg hε
+    exact h₁.trans h₂.le
+  -- Cover property: every `a ∈ A` lies within `ε` of some `x ∈ t'`.
+  have hcov_img : f '' A ⊆ ⋃ y ∈ t, Metric.ball y ε :=
+    coveringFinset_cover haImg hε
+  have hAcov : A ⊆ ⋃ x ∈ t', Metric.ball x ε := by
+    intro a haA
+    have hfa : f a ∈ f '' A := ⟨a, haA, rfl⟩
+    rcases Set.mem_iUnion₂.mp (hcov_img hfa) with ⟨y, hyt, hfa_ball⟩
+    have hfa_lt : dist (f a) y < ε := by
+      simpa [Metric.mem_ball] using hfa_ball
+    -- Pick the preimage of `y` via `surjInv`; the isometry property gives
+    -- `dist a (g y) = dist (f a) (f (g y)) = dist (f a) y`.
+    have hfgy : f (g y) = y := Function.surjInv_eq hsurj y
+    have hdist : dist a (g y) = dist (f a) y := by
+      have hiso : dist (f a) (f (g y)) = dist a (g y) := hf.dist_eq a (g y)
+      rw [hiso.symm, hfgy]
+    refine Set.mem_iUnion₂.mpr ⟨g y, ?_, ?_⟩
+    · exact Finset.mem_image.mpr ⟨y, hyt, rfl⟩
+    · rw [Metric.mem_ball, hdist]
+      exact hfa_lt
+  -- Witness for `coveringNumber_exists` at scale `ε` on `A`.
+  have hwitness :
+      ∃ s : Finset X, s.card = t'.card ∧
+        A ⊆ ⋃ x ∈ s, Metric.ball x ε :=
+    ⟨t', rfl, hAcov⟩
+  have hfind :
+      Nat.find (coveringNumber_exists ha hε) ≤ t'.card :=
+    Nat.find_min' (coveringNumber_exists ha hε) hwitness
+  calc coveringNumber ha ε
+      = Nat.find (coveringNumber_exists ha hε) := coveringNumber_eq ha hε
+    _ ≤ t'.card := hfind
+    _ ≤ coveringNumber haImg ε := hcard
+
+/-- **Equality form for bijective isometries.** If `f : X → Y` is an
+injective and surjective isometry, then the covering numbers of `A`
+and `f '' A` at scale `ε` coincide. This closes the follow-up flagged
+in `coveringNumber_image_isometry_le`'s NOTES: the Dudley-transport
+caller needs the equality, and the proof now exists.
+
+Note: in `PseudoMetricSpace` injectivity is **not** automatic from
+`Isometry`, so it must be supplied as an explicit hypothesis. In a
+true `MetricSpace`, `hf.injective : Function.Injective f` may be used
+to discharge `hinj`. -/
+theorem coveringNumber_image_isometry_eq
+    {X Y : Type*} [PseudoMetricSpace X] [PseudoMetricSpace Y]
+    {A : Set X} (ha : TotallyBounded A)
+    {f : X → Y} (hf : Isometry f)
+    (_hinj : Function.Injective f) (hsurj : Function.Surjective f)
+    {ε : ℝ} (hε : 0 < ε) :
+    coveringNumber (ha.image hf.lipschitz.uniformContinuous) ε
+      = coveringNumber ha ε := by
+  refine le_antisymm ?_ ?_
+  · exact coveringNumber_image_isometry_le ha hf hε
+  · exact coveringNumber_image_isometry_surjective_ge ha hf hsurj hε
+
+/-- **Equality form via `IsometryEquiv`.** Convenience wrapper for the
+common case where `f` is packaged as an `α ≃ᵢ β`. -/
+theorem coveringNumber_image_isometryEquiv_eq
+    {X Y : Type*} [PseudoMetricSpace X] [PseudoMetricSpace Y]
+    {A : Set X} (ha : TotallyBounded A)
+    (e : X ≃ᵢ Y) {ε : ℝ} (hε : 0 < ε) :
+    coveringNumber (ha.image e.isometry.lipschitz.uniformContinuous) ε
+      = coveringNumber ha ε :=
+  coveringNumber_image_isometry_eq ha e.isometry e.injective e.surjective hε
+
+/-!
 ### Doubling under negation-closure (and more generally, double covers)
 
 If `B ⊆ Y` is covered by the images of two isometric embeddings
