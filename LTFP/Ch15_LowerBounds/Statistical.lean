@@ -501,6 +501,48 @@ theorem tvDist_le_sqrt_one_sub_exp_neg_klDiv_via_hellinger
   exact tvDist_le_sqrt_one_sub_exp_neg_of_hellinger μ ν
     ENNReal.toReal_nonneg hH_nonneg hH_le_two h_lecam h_kl_bridge
 
+/-- §15.1 — **Universal Pinsker `√KL` bound (A-class, unconditional in the
+Csiszár sense).**
+
+The weaker universal Pinsker inequality
+
+  `(tvDist μ ν).toReal ≤ Real.sqrt (klDiv μ ν).toReal`
+
+for two probability measures `μ ≪ ν` with finite KL divergence
+(`klDiv μ ν ≠ ∞`). The factor of `1/2` of the sharper textbook Pinsker
+inequality is *not* recovered here — that requires the pointwise
+**Csiszár scalar bound** `(tvDist).toReal² ≤ klDiv.toReal / 2`, currently
+a Mathlib gap (see `pinsker_inequality_tvDist` in
+`LTFP.MathlibExt.Probability.Distance.Pinsker` for the conditional
+half-KL form).
+
+What *is* unconditional here is the absence of any Csiszár-style scalar
+bridge hypothesis: the proof composes the **A-class Bretagnolle--Huber
+chain** (`tvDist_le_sqrt_one_sub_exp_neg_klDiv`, which is itself fully
+discharged from the Hellinger / Bhattacharyya machinery) with the
+algebraic core `1 - exp(-x) ≤ x` (packaged as
+`LTFP.MathlibExt.Probability.bh_sqrt_form`).
+
+This is the companion to the half-KL conditional form
+`pinsker_inequality_tvDist`: that one is tighter when its hypothesis is
+available; this one is unconditional but loses the factor of `1/2`. -/
+theorem tvDist_le_sqrt_klDiv
+    (μ ν : Measure α) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+    (hμν : μ ≪ ν) (hkl : InformationTheory.klDiv μ ν ≠ ∞) :
+    (tvDist μ ν).toReal ≤ Real.sqrt (InformationTheory.klDiv μ ν).toReal := by
+  -- Step 1: Bach §2.4 chain (A-class BH).
+  have h_BH : (tvDist μ ν).toReal ≤
+      Real.sqrt (1 - Real.exp (-(InformationTheory.klDiv μ ν).toReal)) :=
+    tvDist_le_sqrt_one_sub_exp_neg_klDiv μ ν hμν hkl
+  -- Step 2: scalar `√(1 - exp(-x)) ≤ √x` for `x ≥ 0`.
+  have h_kl_nonneg : 0 ≤ (InformationTheory.klDiv μ ν).toReal :=
+    ENNReal.toReal_nonneg
+  have h_alg : Real.sqrt (1 - Real.exp (-(InformationTheory.klDiv μ ν).toReal))
+      ≤ Real.sqrt (InformationTheory.klDiv μ ν).toReal :=
+    LTFP.MathlibExt.Probability.bh_sqrt_form
+      (InformationTheory.klDiv μ ν).toReal h_kl_nonneg
+  exact h_BH.trans h_alg
+
 end MeasureBretagnolleHuber
 
 /-! ### §15.1 — Fano / Le Cam / Assouad algebraic cores
