@@ -65,6 +65,7 @@ import LTFP.MathlibExt.Probability.Symmetrization
 import LTFP.MathlibExt.Probability.UniformDeviationRademacher
 import LTFP.MathlibExt.Probability.WideNetworkDudley
 import LTFP.MathlibExt.MatrixAnalysis.CStarFin2Adapter
+import LTFP.MathlibExt.MatrixAnalysis.CStarFin2HansenPedersen
 import LTFP.MathlibExt.MatrixAnalysis.CStarMatrixInvAntiOnPos
 import LTFP.MathlibExt.MatrixAnalysis.CStarOperatorMonotone
 import LTFP.MathlibExt.MatrixAnalysis.CStarHansenPedersen
