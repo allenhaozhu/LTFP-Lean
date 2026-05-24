@@ -3,9 +3,13 @@ Copyright (c) 2026 Allen Hao Zhu. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Allen Hao Zhu
 -/
+import Mathlib.Algebra.Star.StarAlgHom
+import Mathlib.Analysis.Matrix.Normed
 import Mathlib.Analysis.Matrix.Order
+import Mathlib.LinearAlgebra.Matrix.FiniteDimensional
 import Mathlib.LinearAlgebra.Matrix.Kronecker
 import Mathlib.LinearAlgebra.Matrix.PosDef
+import Mathlib.Topology.Algebra.Module.FiniteDimension
 
 /-!
 # Lieb superoperators on `Matrix (n × n) (n × n) ℂ`
@@ -180,5 +184,46 @@ lemma R_mul_rev (B₁ B₂ : Matrix n n ℂ) : R (B₁ * B₂) = R B₂ * R B₁
   unfold R
   rw [Matrix.transpose_mul, ← Matrix.mul_kronecker_mul]
   simp
+
+/-! ### `L` as a `*`-algebra homomorphism and its continuity
+
+The affine, multiplicative, unital, and `star`-preserving behaviour of
+`L` established above is repackaged here as a `StarAlgHom` over `ℂ`.
+We then derive continuity from finite dimensionality, using the
+elementwise matrix norm scope (`Matrix.Norms.Elementwise`) to expose
+the relevant `NormedAddCommGroup` / `NormedSpace` instances.
+-/
+
+/-- The left superoperator `L`, packaged as a unital `*`-algebra
+homomorphism from `Matrix n n ℂ` to `Matrix (n × n) (n × n) ℂ`. -/
+noncomputable def LHom :
+    Matrix n n ℂ →⋆ₐ[ℂ] Matrix (n × n) (n × n) ℂ where
+  toFun := L
+  map_one' := L_one
+  map_mul' := L_mul
+  map_zero' := L_zero
+  map_add' := L_add
+  commutes' := fun c => by
+    -- `algebraMap ℂ (Matrix m m ℂ) c = c • 1` on both sides.
+    simp only [Algebra.algebraMap_eq_smul_one, L_smul, L_one]
+  map_star' := L_star
+
+@[simp]
+lemma LHom_apply (A : Matrix n n ℂ) : LHom A = L A := rfl
+
+open scoped Matrix.Norms.Elementwise in
+/-- The left superoperator `L` is continuous: it is a `ℂ`-linear map
+between finite-dimensional `ℂ`-vector spaces (using the elementwise
+matrix norm). -/
+lemma continuous_LHom :
+    Continuous (LHom : Matrix n n ℂ → Matrix (n × n) (n × n) ℂ) := by
+  -- Expose `L` as a `ℂ`-linear map and invoke continuity from finite
+  -- dimensionality.
+  let Llin : Matrix n n ℂ →ₗ[ℂ] Matrix (n × n) (n × n) ℂ :=
+    { toFun := L
+      map_add' := L_add
+      map_smul' := fun c A => L_smul c A }
+  change Continuous (Llin : Matrix n n ℂ → Matrix (n × n) (n × n) ℂ)
+  exact Llin.continuous_of_finiteDimensional
 
 end LiebSuperop
