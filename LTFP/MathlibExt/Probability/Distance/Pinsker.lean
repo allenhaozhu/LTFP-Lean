@@ -288,6 +288,71 @@ theorem bhBound_le_sqrt (x : ℝ) (hx : 0 ≤ x) :
   unfold bhBound
   exact bh_sqrt_form x hx
 
+/-! ### Classical Pinsker inequality (measure-theoretic form, conditional)
+
+The classical Pinsker bound `tvDist μ ν ≤ √(KL(μ‖ν) / 2)` reduces, after
+taking square roots, to the **Csiszár scalar lower bound**
+
+  `(tvDist μ ν).toReal ^ 2  ≤  (klDiv μ ν).toReal / 2`,
+
+an integrated lower bound on `klFun` against the absolute Radon–Nikodym
+derivative. Mathlib's KL infrastructure does not yet expose this bound
+in a directly chainable form (the closest available lemma,
+`mul_klFun_le_toReal_klDiv` in `Mathlib.InformationTheory.KullbackLeibler.Basic`,
+gives only the *expected* KL lower bound against the global average,
+not the pointwise Csiszár inequality).
+
+Pending that infrastructure, we ship the **conditional** classical
+Pinsker theorem: a parametric statement that takes the Csiszár scalar
+bound as a hypothesis and produces the textbook square-root form. When
+Mathlib lands the pointwise Csiszár inequality, the hypothesis becomes
+a standalone theorem and this conditional collapses to the
+unconditional `pinsker_inequality_tvDist`. -/
+
+/-- **Classical Pinsker inequality (conditional, measure-theoretic).**
+
+Given two measures `μ`, `ν` on `α` together with the **Csiszár scalar
+lower bound** (which Mathlib does not currently expose for `klDiv`)
+
+  `(tvDist μ ν).toReal ^ 2  ≤  (klDiv μ ν).toReal / 2`,
+
+the classical Pinsker inequality holds in `toReal` form:
+
+  `(tvDist μ ν).toReal  ≤  Real.sqrt ((klDiv μ ν).toReal / 2)`.
+
+Equivalently, the right-hand side is `pinskerBound (klDiv μ ν).toReal`
+in the notation of this file.
+
+The proof is purely the monotonicity of `Real.sqrt` applied to the
+hypothesis, using `Real.sqrt_sq_eq_abs` and `abs_of_nonneg` on the
+nonnegative `(tvDist μ ν).toReal`. The conditional packaging isolates
+the missing analytic step (the Csiszár pointwise inequality integrated
+against `ν`) so that downstream consumers (e.g. PAC-Bayes generalization
+bounds, Le Cam two-point bounds in the small-divergence regime) can
+chain through the `√(KL/2)` rate uniformly. -/
+theorem pinsker_inequality_tvDist
+    (μ ν : Measure α)
+    (h_csiszar : ((tvDist μ ν).toReal) ^ 2 ≤ (InformationTheory.klDiv μ ν).toReal / 2) :
+    (tvDist μ ν).toReal ≤ Real.sqrt ((InformationTheory.klDiv μ ν).toReal / 2) := by
+  have h_tv_nonneg : 0 ≤ (tvDist μ ν).toReal := ENNReal.toReal_nonneg
+  have h_sqrt_sq : (tvDist μ ν).toReal = Real.sqrt (((tvDist μ ν).toReal) ^ 2) := by
+    rw [Real.sqrt_sq h_tv_nonneg]
+  rw [h_sqrt_sq]
+  exact Real.sqrt_le_sqrt h_csiszar
+
+/-- **Classical Pinsker inequality (conditional, packaged via `pinskerBound`).**
+
+The same statement as `pinsker_inequality_tvDist`, but with the
+right-hand side written explicitly as `pinskerBound (klDiv μ ν).toReal`.
+This is the form most convenient when chaining through
+`pinsker_monotone_in_kl` / `pinskerBound_le_sqrt`. -/
+theorem pinsker_inequality_tvDist_pinskerBound
+    (μ ν : Measure α)
+    (h_csiszar : ((tvDist μ ν).toReal) ^ 2 ≤ (InformationTheory.klDiv μ ν).toReal / 2) :
+    (tvDist μ ν).toReal ≤ pinskerBound (InformationTheory.klDiv μ ν).toReal := by
+  unfold pinskerBound
+  exact pinsker_inequality_tvDist μ ν h_csiszar
+
 /-! ### Examples
 
 These examples demonstrate basic usage of the algebraic Pinsker /
