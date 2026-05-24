@@ -434,7 +434,7 @@ theorem CStarAlgebra.amHm_aux
 The function `f(x) = 1 - (1+x)⁻¹` decomposes as `1 - (·⁻¹) ∘ (1 + ·)`. Its
 value via the real CFC is computed using `cfc_sub` / `cfc_const_one` /
 `cfc_comp' (·⁻¹) (1 + ·)`. -/
-private lemma cfc_one_sub_one_add_inv_eq {a : A} (ha : 0 ≤ a) :
+lemma cfc_one_sub_one_add_inv_eq {a : A} (ha : 0 ≤ a) :
     cfc (fun x : ℝ => 1 - (1 + x)⁻¹) a =
       1 - ((IsStrictlyPositive.add_nonneg isStrictlyPositive_one ha
             ).isUnit.unit⁻¹ : Aˣ) := by
