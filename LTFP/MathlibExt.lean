@@ -35,6 +35,7 @@ import LTFP.MathlibExt.Probability.Distributions.JointPriorObservationSndIsMulti
 import LTFP.MathlibExt.Probability.Distributions.JointPriorObservationSndMean
 import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussian
 import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussianNoiseCovariance
+import LTFP.MathlibExt.Probability.Distributions.PosteriorGainRidge
 import LTFP.MathlibExt.Probability.Distributions.RegressionCLMCovariance
 import LTFP.MathlibExt.Probability.DonskerVaradhan
 import LTFP.MathlibExt.Probability.FunctionClassConcentration
