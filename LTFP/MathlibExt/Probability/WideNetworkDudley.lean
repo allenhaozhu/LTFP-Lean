@@ -3506,6 +3506,210 @@ theorem wide_network_dirac_concrete_polynomial_paramBall_with_abs
   rw [h_integral_eq] at h_abstract
   exact h_abstract
 
+/-! ### Pullback corollary: end-to-end polynomial bound via a feature map
+
+The polynomial-rate bound
+`wide_network_expected_uniform_deviation_le_explicit_polynomial_paramBall_iid`
+is stated for an i.i.d. product measure on the ambient data type
+`EuclideanSpace ℝ (Fin d) × ℝ`. The B8 N6 random-feature carrier
+(`LTFP/MathlibExt/Probability/RandomFeatureCarrier.lean`) and other
+downstream consumers parametrize their data through a feature map
+`φ : Ω → EuclideanSpace ℝ (Fin d) × ℝ`, with `Ω` a possibly different
+source data type. The following corollary lifts the polynomial bound
+to that pullback formulation by composing the existing theorem with
+`MeasureTheory.integral_map` (inner integral) and
+`MeasureTheory.Measure.pi_map_pi` (outer product change of variable).
+
+Encoding choice: hypotheses are stated against the *pushforward measure*
+`μ' := μ.map φ`. This matches the natural input of the existing
+polynomial theorem and keeps the pullback corollary's discharge a
+mechanical composition. Downstream callers (e.g.
+`RandomFeatureCarrier.lean`) instantiate `μ'` as the law of `(rfFeature
+σ ω x, y)` under the joint draw, which is what the random-feature
+analysis naturally exposes anyway. -/
+
+/-- **B8 N6 polynomial bound — pullback through a feature map `φ`.**
+
+Generalizes
+`wide_network_expected_uniform_deviation_le_explicit_polynomial_paramBall_iid`
+to an arbitrary source data type `Ω` via a measurable feature map
+`φ : Ω → EuclideanSpace ℝ (Fin d) × ℝ`. The conclusion bounds the
+expected uniform deviation of the linearized-risk family *pulled back
+through `φ`* under the i.i.d. product measure on `Ω`.
+
+The bounded-support and integrability hypotheses are stated against
+`μ' := μ.map φ` and the associated product `Measure.pi (fun _ => μ')`,
+matching the natural input form of the underlying polynomial theorem
+on the ambient data type. -/
+theorem wide_network_expected_uniform_deviation_le_explicit_polynomial_paramBall_iid_pullback
+    {d m : ℕ} {Ω : Type*} [MeasurableSpace Ω]
+    (μ : MeasureTheory.Measure Ω) [MeasureTheory.IsProbabilityMeasure μ]
+    (φ : Ω → EuclideanSpace ℝ (Fin d) × ℝ) (hφ : Measurable φ)
+    (B_param R B c ε : ℝ)
+    (hd : 1 ≤ d)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
+    (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
+    (hbnd_ae :
+      ∀ᵐ p : EuclideanSpace ℝ (Fin d) × ℝ ∂(MeasureTheory.Measure.map φ μ),
+        ∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+        |linearizedRiskFamily (d := d) B_param θ p| ≤ B ^ 2)
+    (hae :
+      ∀ᵐ (S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ)
+        ∂(MeasureTheory.Measure.pi (fun _ ↦ MeasureTheory.Measure.map φ μ)),
+        (∀ i, ‖(S i).1‖ ≤ R) ∧
+        (∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+          ∀ i, |@inner ℝ _ _ θ (S i).1 - (S i).2| ≤ B) ∧
+        (∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+          empiricalNorm (linearizedRiskSample (fun i => (S i).1) (fun i => (S i).2))
+            (linearizedRiskFamily (d := d) B_param θ) ≤ c))
+    (hint : MeasureTheory.Integrable
+      (fun S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+        empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) S)
+      (MeasureTheory.Measure.pi (fun _ ↦ MeasureTheory.Measure.map φ μ))) :
+    ∫ ω : Fin m → Ω,
+        uniformDeviation m
+          (fun a p => linearizedRiskFamily (d := d) B_param a (φ p))
+          μ id (id ∘ ω)
+        ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)) ≤
+      2 * (4 * ε + (12 / Real.sqrt m) *
+        ((c / 2 - ε) *
+          √(Real.log
+            (2 * ((⌈(1 + 16 * B * R * B_param / ε) ^ d⌉₊ : ℕ) : ℝ))))) := by
+  classical
+  -- Abbreviations.
+  set μ' : MeasureTheory.Measure (EuclideanSpace ℝ (Fin d) × ℝ) :=
+    MeasureTheory.Measure.map φ μ with hμ'_def
+  -- `μ'` is a probability measure since `μ` is.
+  haveI : MeasureTheory.IsProbabilityMeasure μ' := by
+    rw [hμ'_def]
+    exact MeasureTheory.Measure.isProbabilityMeasure_map hφ.aemeasurable
+  -- The pi-product pushforward identity:
+  -- `(Measure.pi (fun _ => μ)).map (fun ω i => φ (ω i)) = Measure.pi (fun _ => μ')`.
+  set Φ : (Fin m → Ω) → (Fin m → EuclideanSpace ℝ (Fin d) × ℝ) :=
+    fun ω i => φ (ω i) with hΦ_def
+  have hΦ_meas : Measurable Φ := by
+    apply measurable_pi_lambda
+    intro i
+    exact hφ.comp (measurable_pi_apply i)
+  have hpi_map :
+      (MeasureTheory.Measure.pi (fun _ : Fin m => μ)).map Φ
+        = MeasureTheory.Measure.pi (fun _ : Fin m => μ') := by
+    rw [hΦ_def, hμ'_def]
+    exact MeasureTheory.Measure.pi_map_pi (fun _ => hφ.aemeasurable)
+  -- Pullback family `F' θ ω := linearizedRiskFamily B_param θ (φ ω)`.
+  set F' : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} → Ω → ℝ :=
+    fun θ ω => linearizedRiskFamily (d := d) B_param θ (φ ω) with hF'_def
+  -- Measurability of each family element on Ω.
+  have hF'_meas : ∀ θ, Measurable (F' θ) := fun θ =>
+    (linearizedRiskFamily_measurable_in_data (d := d) B_param θ).comp hφ
+  -- Continuity in parameter, pointwise in data.
+  have hF'_cont : ∀ ω : Ω, Continuous fun θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} =>
+      F' θ ω := fun ω =>
+    linearizedRiskFamily_continuous_in_param (d := d) B_param (φ ω)
+  -- Convert the μ'-a.e. squared-loss bound to a μ-a.e. bound on F'.
+  -- This uses `MeasureTheory.ae_of_ae_map`: μ.map φ-a.e. ⇒ μ-a.e. (via pullback).
+  have hbnd_ae_μ :
+      ∀ᵐ ω : Ω ∂μ,
+        ∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+        |F' θ ω| ≤ B ^ 2 := by
+    have := MeasureTheory.ae_of_ae_map (μ := μ) (f := φ) hφ.aemeasurable
+      (p := fun p => ∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+        |linearizedRiskFamily (d := d) B_param θ p| ≤ B ^ 2) hbnd_ae
+    simpa [hF'_def] using this
+  -- Nonemptiness of the parameter-ball subtype (needed for symmetrization).
+  haveI hNE : Nonempty {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} :=
+    ⟨⟨0, by simpa using hB_param_nn⟩⟩
+  have hB_sq_nn : (0 : ℝ) ≤ B ^ 2 := sq_nonneg B
+  -- Step 1: separable symmetrization on `μ` with family `F'`.
+  have hsym :=
+    uniform_deviation_expectation_le_two_smul_rademacher_complexity_separable_ae
+      (μ := μ) (n := m) (f := F')
+      hm_pos hF'_meas hF'_cont hB_sq_nn hbnd_ae_μ
+  -- Step 2: identify `rademacherComplexity m F' μ id` with the
+  -- corresponding integral against `μ'ⁿ`.
+  -- For each `ω : Fin m → Ω`, `empRad m F' (id ∘ ω) = empRad m F (Φ ω)`,
+  -- where `F := linearizedRiskFamily B_param`, since `F' a (ω k) = F a (φ (ω k))`.
+  have h_empRad_eq : ∀ ω : Fin m → Ω,
+      empiricalRademacherComplexity m F' (id ∘ ω)
+        = empiricalRademacherComplexity m (linearizedRiskFamily (d := d) B_param) (Φ ω) := by
+    intro ω
+    simp only [empiricalRademacherComplexity, Function.comp_apply, id_eq, hΦ_def, hF'_def]
+  -- The Rademacher complexity equals the corresponding integral.
+  have hRC_eq :
+      rademacherComplexity m F' μ id
+        = ∫ ω : Fin m → Ω,
+            empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) (Φ ω)
+            ∂(MeasureTheory.Measure.pi (fun _ : Fin m => μ)) := by
+    simp only [rademacherComplexity]
+    apply MeasureTheory.integral_congr_ae
+    filter_upwards with ω
+    exact h_empRad_eq ω
+  -- Change of variable from `μⁿ` to `μ'ⁿ` on the outer integral.
+  have hΦ_integral :
+      ∫ ω : Fin m → Ω,
+            empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) (Φ ω)
+            ∂(MeasureTheory.Measure.pi (fun _ : Fin m => μ))
+        = ∫ S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+            empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) S
+            ∂(MeasureTheory.Measure.pi (fun _ : Fin m => μ')) := by
+    -- `(Measure.pi (fun _ => μ)).map Φ = Measure.pi (fun _ => μ')`; hence
+    -- `∫ S, f S ∂μ'ⁿ = ∫ ω, f (Φ ω) ∂μⁿ` by `integral_map`.
+    have h_aesm :
+        MeasureTheory.AEStronglyMeasurable
+          (fun S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+            empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) S)
+          ((MeasureTheory.Measure.pi (fun _ : Fin m => μ)).map Φ) := by
+      rw [hpi_map]
+      exact hint.aestronglyMeasurable
+    have h_eq := MeasureTheory.integral_map (μ := MeasureTheory.Measure.pi (fun _ : Fin m => μ))
+      (φ := Φ) hΦ_meas.aemeasurable h_aesm
+    -- `h_eq : ∫ S, empRad S ∂(μⁿ.map Φ) = ∫ ω, empRad (Φ ω) ∂μⁿ`.
+    -- We want the symmetric form with μ'ⁿ on the RHS.
+    rw [hpi_map] at h_eq
+    exact h_eq.symm
+  -- Step 3: apply the `_tight` polynomial bound on `μ'ⁿ`.
+  have htight :=
+    wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall_tight
+      (d := d) (m := m) (MeasureTheory.Measure.pi (fun _ : Fin m => μ'))
+      B_param R B c ε
+      hd hR_nn hB_nn hB_param_nn hBR_pos hε_pos hm_pos hεc hae hint
+  -- Identify `2 • RC` as `2 * RC`.
+  have h_smul_eq :
+      (2 : ℕ) • rademacherComplexity m F' μ id =
+        2 * ∫ S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+              empiricalRademacherComplexity m
+                  (linearizedRiskFamily (d := d) B_param) S
+                ∂(MeasureTheory.Measure.pi (fun _ : Fin m => μ')) := by
+    rw [hRC_eq, hΦ_integral, nsmul_eq_mul]
+    push_cast
+    ring
+  -- Step 4: chain.
+  calc ∫ ω : Fin m → Ω,
+            uniformDeviation m
+              (fun a p => linearizedRiskFamily (d := d) B_param a (φ p))
+              μ id (id ∘ ω)
+            ∂(MeasureTheory.Measure.pi (fun _ ↦ μ))
+      = ∫ ω : Fin m → Ω,
+            uniformDeviation m F' μ id (id ∘ ω)
+            ∂(MeasureTheory.Measure.pi (fun _ : Fin m => μ)) := by rfl
+    _ ≤ (2 : ℕ) • rademacherComplexity m F' μ id := hsym
+    _ = 2 * ∫ S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+            empiricalRademacherComplexity m
+                (linearizedRiskFamily (d := d) B_param) S
+              ∂(MeasureTheory.Measure.pi (fun _ : Fin m => μ')) := h_smul_eq
+    _ ≤ 2 * (4 * ε + (12 / Real.sqrt m) *
+            ((c / 2 - ε) *
+              √(Real.log
+                (2 * ((⌈(1 + 16 * B * R * B_param / ε) ^ d⌉₊ : ℕ) : ℝ))))) := by
+        have h2_nn : (0 : ℝ) ≤ 2 := by norm_num
+        exact mul_le_mul_of_nonneg_left htight h2_nn
+
 end ClosureViaDudley
 
 end LTFP
