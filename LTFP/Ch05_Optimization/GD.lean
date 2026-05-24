@@ -952,4 +952,244 @@ theorem pgdIterate_closedConvex_constrained_minimizer_gap_le
   pgdIterate_closedConvex_averaged_gap_le
     f L hL hDiff hLip hConv C hne hclosed hCconv hxstar x0 T hT
 
+/-! ### §5.3 — Strong-convexity geometric decay for projected gradient descent.
+
+For `μ`-strongly-convex `L`-smooth `f` with `0 < μ ≤ L`, the canonical
+PGD step `η = 1/L` contracts the squared distance to any constrained
+minimizer `x* ∈ C` by a factor `(1 - μ/L) ∈ [0, 1)`.  Iterating, the
+squared distance decays geometrically as `(1 - μ/L)^t · ‖x₀ - x*‖²`
+(Bach 2024 §5.2.4 / 5.3.1, the discrete-time constrained analogue of
+the gradient-flow PL exponential decay).
+
+The proof refines milestone #4's comparator by retaining the
+`(μ/2)‖x - x*‖²` term (dropped under `μ = 0`), yielding
+`f p - f x* ≤ ((L - μ)/2)‖x - x*‖² - (L/2)‖p - x*‖²` at the per-step
+level.  Combined with `0 ≤ f p - f x*` (since `x*` minimizes `f` on
+`C` and `p ∈ C`), this rearranges to the per-step contraction. -/
+
+/-- §5.3 — **Per-step squared-distance contraction for PGD under μ-strong
+convexity.**  For `L`-smooth `μ`-strongly-convex `f` with `0 < L` and
+`0 ≤ μ`, the canonical PGD step `η = 1/L` from `x` contracts the squared
+distance to any constrained minimizer `x* ∈ C` by `(1 - μ/L)`:
+
+`‖p − x*‖² ≤ (1 − μ/L) · ‖x − x*‖²`,
+
+where `p = pgdStep_closedConvex (1/L) f C x`.
+
+This is the discrete-time constrained analogue of the gradient-flow PL
+contraction `(d/dt)‖x_t - x*‖² ≤ -2μ ‖x_t - x*‖²`. -/
+theorem pgdStep_closedConvex_stronglyConvex_dist_sq_le
+    (f : E → ℝ) (L : NNReal) (μ : ℝ)
+    (hL : 0 < (L : ℝ)) (_hμ : 0 ≤ μ)
+    (hDiff : ∀ z : E, HasGradientAt f (gradient f z) z)
+    (hLip : LipschitzWith L (gradient f))
+    (hStrong : IsMuStronglyConvex μ f)
+    (C : Set E) (hne : C.Nonempty) (hclosed : IsClosed C)
+    (hCconv : Convex ℝ C) {xstar : E} (hxstar : xstar ∈ C)
+    (hmin : ∀ y ∈ C, f xstar ≤ f y) (x : E) :
+    ‖pgdStep_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x - xstar‖ ^ 2
+      ≤ (1 - μ / (L : ℝ)) * ‖x - xstar‖ ^ 2 := by
+  -- Local abbreviation for the projected GD iterate.
+  set p : E := pgdStep_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x
+    with hp_def
+  -- The iterate `p` lies in `C`, so the minimizer property gives `f xstar ≤ f p`.
+  have hpC : p ∈ C := by
+    simpa [p, hp_def] using
+      pgdStep_closedConvex_mem (1 / (L : ℝ)) f C hne hclosed hCconv x
+  have hgap : 0 ≤ f p - f xstar := sub_nonneg.mpr (hmin p hpC)
+  -- (1) L-smooth quadratic upper bound at the pair `(x, p)`.
+  have hQ : f p ≤ f x + inner ℝ (gradient f x) (p - x)
+      + ((L : ℝ) / 2) * ‖p - x‖ ^ 2 :=
+    lSmooth_quadratic_upper_bound f L x p hDiff hLip
+  -- (2) μ-strong convexity at `(x, xstar)`:
+  --     f x + ⟨∇f x, xstar - x⟩ + (μ/2) ‖xstar - x‖² ≤ f xstar.
+  have hStrong_xs :
+      f x + inner ℝ (gradient f x) (xstar - x) + (μ / 2) * ‖xstar - x‖ ^ 2
+        ≤ f xstar := hStrong x xstar
+  -- Rewrite `‖xstar - x‖² = ‖x - xstar‖²` using `norm_sub_rev`.
+  have hnorm_sym : ‖xstar - x‖ = ‖x - xstar‖ := norm_sub_rev xstar x
+  have hStrong_xs' :
+      f x + inner ℝ (gradient f x) (xstar - x) ≤
+        f xstar - (μ / 2) * ‖x - xstar‖ ^ 2 := by
+    have h := hStrong_xs
+    rw [hnorm_sym] at h
+    linarith
+  -- (3a) Raw projection variational inequality at `xstar ∈ C`.
+  have hproj :
+      inner ℝ
+          ((x - (1 / (L : ℝ)) • gradient f x)
+            - LTFP.MathlibExt.Analysis.closedConvexProj C hne hclosed hCconv
+                (x - (1 / (L : ℝ)) • gradient f x))
+          (xstar
+            - LTFP.MathlibExt.Analysis.closedConvexProj C hne hclosed hCconv
+                (x - (1 / (L : ℝ)) • gradient f x)) ≤ 0 :=
+    LTFP.MathlibExt.Analysis.closedConvexProj_variational
+      C hne hclosed hCconv
+      (x - (1 / (L : ℝ)) • gradient f x) xstar hxstar
+  -- Identify `p` with the projection symbol used in `hproj`.
+  have hp_eq_proj :
+      p = LTFP.MathlibExt.Analysis.closedConvexProj C hne hclosed hCconv
+            (x - (1 / (L : ℝ)) • gradient f x) := by
+    show pgdStep_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x = _
+    unfold pgdStep_closedConvex pgdStep gdStep
+    rfl
+  rw [← hp_eq_proj] at hproj
+  -- (3b) Expand and rescale exactly as in `pgdStep_closedConvex_gap_le_distance_drop`.
+  have hLne : (L : ℝ) ≠ 0 := ne_of_gt hL
+  have hproj_expand :
+      inner ℝ (x - p) (xstar - p) - (1 / (L : ℝ))
+            * inner ℝ (gradient f x) (xstar - p) ≤ 0 := by
+    have hrearr :
+        (x - (1 / (L : ℝ)) • gradient f x) - p
+          = (x - p) - (1 / (L : ℝ)) • gradient f x := by abel
+    have h := hproj
+    rw [hrearr, inner_sub_left, inner_smul_left] at h
+    simpa [RCLike.conj_to_real] using h
+  have hproj_mul :
+      (L : ℝ) * inner ℝ (x - p) (xstar - p)
+        ≤ inner ℝ (gradient f x) (xstar - p) := by
+    have hscale :
+        (L : ℝ) * (inner ℝ (x - p) (xstar - p)
+              - (1 / (L : ℝ)) * inner ℝ (gradient f x) (xstar - p))
+          ≤ (L : ℝ) * 0 :=
+      mul_le_mul_of_nonneg_left hproj_expand hL.le
+    have hLcancel :
+        (L : ℝ) * ((1 / (L : ℝ)) * inner ℝ (gradient f x) (xstar - p))
+          = inner ℝ (gradient f x) (xstar - p) := by
+      field_simp
+    nlinarith [hscale, hLcancel]
+  have hxstar_sub : xstar - p = -(p - xstar) := by abel
+  have hproj' :
+      inner ℝ (gradient f x) (p - xstar)
+        ≤ (L : ℝ) * inner ℝ (x - p) (p - xstar) := by
+    have h := hproj_mul
+    rw [hxstar_sub, inner_neg_right, inner_neg_right] at h
+    linarith
+  -- (4) Polar identity (unchanged from the μ=0 proof).
+  have hpolar :
+      2 * inner ℝ (x - p) (p - xstar) + ‖p - x‖ ^ 2
+        = ‖x - xstar‖ ^ 2 - ‖p - xstar‖ ^ 2 := by
+    have hxx : ‖x - xstar‖ ^ 2 = inner ℝ (x - xstar) (x - xstar) := by
+      rw [real_inner_self_eq_norm_sq]
+    have hpp : ‖p - xstar‖ ^ 2 = inner ℝ (p - xstar) (p - xstar) := by
+      rw [real_inner_self_eq_norm_sq]
+    have hpx : ‖p - x‖ ^ 2 = inner ℝ (p - x) (p - x) := by
+      rw [real_inner_self_eq_norm_sq]
+    have hsplit : x - xstar = (x - p) + (p - xstar) := by abel
+    have hpxneg : p - x = -(x - p) := by abel
+    rw [hxx, hpp, hpx, hsplit, hpxneg]
+    simp only [inner_add_left, inner_add_right, inner_neg_left,
+      inner_neg_right, neg_neg]
+    have hsymm : inner ℝ (p - xstar) (x - p) = inner ℝ (x - p) (p - xstar) := by
+      rw [real_inner_comm]
+    linarith [hsymm]
+  -- (5) Refined comparator combining (1), (2)-with-μ, (3'), (4).
+  --     f p ≤ f xstar - (μ/2)‖x - xstar‖² + ⟨∇f x, p - xstar⟩ + (L/2)‖p - x‖².
+  have hcombo12 :
+      f p ≤ f xstar - (μ / 2) * ‖x - xstar‖ ^ 2
+              + inner ℝ (gradient f x) (p - xstar)
+              + ((L : ℝ) / 2) * ‖p - x‖ ^ 2 := by
+    have h_pxstar :
+        inner ℝ (gradient f x) (p - x)
+          = inner ℝ (gradient f x) (p - xstar)
+            + inner ℝ (gradient f x) (xstar - x) := by
+      have hsub : p - x = (p - xstar) + (xstar - x) := by abel
+      rw [hsub, inner_add_right]
+    linarith [hQ, hStrong_xs', h_pxstar]
+  -- Plug (3') into (5'):
+  have hcombo123 :
+      f p ≤ f xstar - (μ / 2) * ‖x - xstar‖ ^ 2
+              + (L : ℝ) * inner ℝ (x - p) (p - xstar)
+              + ((L : ℝ) / 2) * ‖p - x‖ ^ 2 := by
+    linarith [hcombo12, hproj']
+  -- (6) Refined comparator in closed form:
+  --     f p - f xstar ≤ ((L - μ)/2)‖x - xstar‖² - (L/2)‖p - xstar‖².
+  have hrefined :
+      f p - f xstar ≤
+        (((L : ℝ) - μ) / 2) * ‖x - xstar‖ ^ 2
+          - ((L : ℝ) / 2) * ‖p - xstar‖ ^ 2 := by
+    nlinarith [hcombo123, hpolar, sq_nonneg ((L : ℝ))]
+  -- (7) Drop `f p - f xstar ≥ 0` to get the L-scaled contraction:
+  --     L · ‖p - xstar‖² ≤ (L - μ) · ‖x - xstar‖².
+  have hscaled :
+      (L : ℝ) * ‖p - xstar‖ ^ 2
+        ≤ ((L : ℝ) - μ) * ‖x - xstar‖ ^ 2 := by
+    nlinarith [hgap, hrefined]
+  -- (8) Factor out `L` on the RHS and cancel via `le_of_mul_le_mul_left`.
+  have hfactor : (L : ℝ) - μ = (L : ℝ) * (1 - μ / (L : ℝ)) := by
+    field_simp
+  rw [hfactor, mul_assoc] at hscaled
+  exact le_of_mul_le_mul_left hscaled hL
+
+/-- §5.3 — **Geometric squared-distance decay for PGD under μ-strong
+convexity.**  For `L`-smooth `μ`-strongly-convex `f` with `0 < L` and
+`0 ≤ μ ≤ L`, iterating the canonical PGD step `η = 1/L` from `x₀` gives
+
+`‖x_t − x*‖² ≤ (1 − μ/L)^t · ‖x₀ − x*‖²`
+
+for any constrained minimizer `x* ∈ C`.  This is the discrete-time
+constrained analogue of the gradient-flow PL exponential decay
+(b33fb55a) and matches the textbook rate in Bach 2024 §5.2.4. -/
+theorem pgdIterate_closedConvex_stronglyConvex_dist_sq_le_geometric
+    (f : E → ℝ) (L : NNReal) (μ : ℝ)
+    (hL : 0 < (L : ℝ)) (hμ : 0 ≤ μ) (hμL : μ ≤ (L : ℝ))
+    (hDiff : ∀ z : E, HasGradientAt f (gradient f z) z)
+    (hLip : LipschitzWith L (gradient f))
+    (hStrong : IsMuStronglyConvex μ f)
+    (C : Set E) (hne : C.Nonempty) (hclosed : IsClosed C)
+    (hCconv : Convex ℝ C) {xstar : E} (hxstar : xstar ∈ C)
+    (hmin : ∀ y ∈ C, f xstar ≤ f y) (x0 : E) (t : ℕ) :
+    ‖pgdIterate_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x0 t
+        - xstar‖ ^ 2
+      ≤ (1 - μ / (L : ℝ)) ^ t * ‖x0 - xstar‖ ^ 2 := by
+  -- The contraction factor `1 - μ/L` is in `[0, 1]` under `hμ` and `hμL`.
+  have hfactor_nonneg : 0 ≤ 1 - μ / (L : ℝ) := by
+    have hμL' : μ / (L : ℝ) ≤ 1 := by
+      rw [div_le_one hL]; exact hμL
+    linarith
+  -- Induction on `t`.
+  induction t with
+  | zero =>
+      -- `pgdIterate ... 0 = x0` by definition; `(·)^0 = 1`.
+      simp [pgdIterate_closedConvex]
+  | succ k ih =>
+      -- Let `xk := pgdIterate ... k`.  Per-step contraction at `xk`:
+      --   ‖x_{k+1} - xstar‖² ≤ (1 - μ/L) · ‖xk - xstar‖².
+      set xk : E :=
+        pgdIterate_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x0 k
+        with hxk_def
+      have hstep :
+          ‖pgdStep_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv xk
+              - xstar‖ ^ 2
+            ≤ (1 - μ / (L : ℝ)) * ‖xk - xstar‖ ^ 2 :=
+        pgdStep_closedConvex_stronglyConvex_dist_sq_le
+          f L μ hL hμ hDiff hLip hStrong C hne hclosed hCconv hxstar hmin xk
+      -- Chain through IH: multiply by `(1 - μ/L) ≥ 0`.
+      have hchain :
+          (1 - μ / (L : ℝ)) * ‖xk - xstar‖ ^ 2
+            ≤ (1 - μ / (L : ℝ)) * ((1 - μ / (L : ℝ)) ^ k
+                * ‖x0 - xstar‖ ^ 2) :=
+        mul_le_mul_of_nonneg_left ih hfactor_nonneg
+      -- Rewrite the `succ`-step iterate and the geometric factor.
+      have hsucc :
+          pgdIterate_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x0
+              (k + 1)
+            = pgdStep_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv xk :=
+        pgdIterate_closedConvex_succ
+          (1 / (L : ℝ)) f C hne hclosed hCconv x0 k
+      have hpow :
+          (1 - μ / (L : ℝ)) ^ (k + 1)
+            = (1 - μ / (L : ℝ)) * (1 - μ / (L : ℝ)) ^ k := by
+        rw [pow_succ]; ring
+      calc
+        ‖pgdIterate_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x0
+              (k + 1) - xstar‖ ^ 2
+            = ‖pgdStep_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv xk
+                  - xstar‖ ^ 2 := by rw [hsucc]
+        _ ≤ (1 - μ / (L : ℝ)) * ‖xk - xstar‖ ^ 2 := hstep
+        _ ≤ (1 - μ / (L : ℝ)) * ((1 - μ / (L : ℝ)) ^ k
+                * ‖x0 - xstar‖ ^ 2) := hchain
+        _ = (1 - μ / (L : ℝ)) ^ (k + 1) * ‖x0 - xstar‖ ^ 2 := by
+              rw [hpow]; ring
+
 end LTFP
