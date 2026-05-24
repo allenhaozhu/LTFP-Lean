@@ -141,4 +141,35 @@ theorem gradientFlow_const_of_zero_gradient
   rw [← sub_eq_zero, ← norm_eq_zero]
   exact le_antisymm (by simpa using h) (norm_nonneg _)
 
+/-- **Good-event gradient-flow movement bound.**
+For a parameter family `θ : Ω → ℝ → E` of gradient flows indexed by `ω : Ω`,
+each with its own gradient field `gradL ω : E → E`, if on a "good event"
+`Good ω` the gradient field is globally bounded by `K`, then on that event
+the trajectory enjoys the per-ω movement bound
+
+`‖θ ω t - θ ω t₀‖ ≤ K · |t - t₀|`.
+
+This is a tiny quantifier-discharge adapter over
+`gradientFlow_movement_of_bounded_gradient`: fix `ω`, then apply the
+per-ω lemma. The wrapper is the natural shape consumed in B8 N5
+(lazy-training / wide-network analysis), where the gradient bound holds
+only on a high-probability "good event" determined by the random
+initialization. Keeping `Good : Ω → Prop` plain — rather than coupling
+to a measurable structure on `Ω` — keeps the adapter usable from any
+probabilistic setting (Probability Mass, AE-event, finite ensemble)
+without forcing measure-theoretic machinery into the analytic step. -/
+theorem gradientFlow_movement_on_good_event
+    {Ω : Type*} {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (Good : Ω → Prop)
+    (θ : Ω → ℝ → E) (gradL : Ω → E → E)
+    (K : NNReal)
+    (hθ : ∀ ω, Differentiable ℝ (θ ω))
+    (hODE : ∀ ω t, deriv (θ ω) t = -(gradL ω (θ ω t)))
+    (hbound : ∀ ω, Good ω → ∀ z, ‖gradL ω z‖₊ ≤ K)
+    (t t₀ : ℝ) :
+    ∀ ω, Good ω → ‖θ ω t - θ ω t₀‖ ≤ (K : ℝ) * |t - t₀| := by
+  intro ω hGood
+  exact gradientFlow_movement_of_bounded_gradient
+    (θ ω) (gradL ω) K (hθ ω) (hODE ω) (hbound ω hGood) t t₀
+
 end LTFP.MathlibExt.Calculus
