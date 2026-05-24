@@ -609,4 +609,172 @@ theorem pgdStep_closedConvex_mem (γ : ℝ) (f : E → ℝ)
   unfold pgdStep_closedConvex pgdStep
   exact LTFP.MathlibExt.Analysis.closedConvexProj_mem C hne hclosed hconv _
 
+/-- §5.2 — **PGD distance-drop comparator** at the canonical step
+`η = 1/L`.  For convex (`IsMuStronglyConvex 0`) and `L`-smooth `f`
+with `L > 0`, the projected gradient-descent step
+`p = P_C(x - (1/L) · ∇f(x))` onto a nonempty closed convex set `C`
+satisfies the canonical comparator inequality against any reference
+point `xstar ∈ C`:
+`f(p) − f(x*) ≤ (L/2) · (‖x − x*‖² − ‖p − x*‖²)`.
+
+This is the workhorse one-step inequality for the projected GD
+convergence analysis (Bach 2024 §5.2.3); telescoping it over
+iterations yields the canonical `O(1/T)` rate on the averaged
+iterate.
+
+**Proof structure.**
+
+1. The L-smooth quadratic upper bound (`lSmooth_quadratic_upper_bound`)
+   gives `f(p) ≤ f(x) + ⟨∇f(x), p − x⟩ + (L/2)‖p − x‖²`.
+2. `IsMuStronglyConvex 0` (i.e., gradient-form convexity) at `(x, xstar)`
+   gives `f(x) ≤ f(xstar) + ⟨∇f(x), x − xstar⟩`.
+3. The projection variational inequality
+   (`closedConvexProj_variational`) applied at `xstar ∈ C` gives
+   `⟨x − (1/L)·∇f(x) − p, xstar − p⟩ ≤ 0`, which after multiplying by
+   `L > 0` rearranges to
+   `⟨∇f(x), p − xstar⟩ ≤ L · ⟨x − p, p − xstar⟩`.
+4. The polar identity for real inner products gives
+   `2·⟨x − p, p − xstar⟩ + ‖p − x‖² = ‖x − xstar‖² − ‖p − xstar‖²`.
+
+Combining (1)–(4) and rearranging yields the headline inequality. -/
+theorem pgdStep_closedConvex_gap_le_distance_drop
+    (f : E → ℝ) (L : NNReal) (hL : 0 < (L : ℝ))
+    (hDiff : ∀ z : E, HasGradientAt f (gradient f z) z)
+    (hLip : LipschitzWith L (gradient f))
+    (hConv : IsMuStronglyConvex 0 f)
+    (C : Set E) (hne : C.Nonempty) (hclosed : IsClosed C)
+    (hCconv : Convex ℝ C) {xstar : E} (hxstar : xstar ∈ C) (x : E) :
+    f (pgdStep_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x) - f xstar
+      ≤ ((L : ℝ) / 2)
+          * (‖x - xstar‖ ^ 2
+              - ‖pgdStep_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x
+                  - xstar‖ ^ 2) := by
+  -- Local abbreviation for the projected GD iterate.
+  set p : E := pgdStep_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x
+    with hp_def
+  -- (1) L-smooth quadratic upper bound at the pair `(x, p)`.
+  have hQ : f p ≤ f x + inner ℝ (gradient f x) (p - x)
+      + ((L : ℝ) / 2) * ‖p - x‖ ^ 2 :=
+    lSmooth_quadratic_upper_bound f L x p hDiff hLip
+  -- (2) Gradient-form convexity (μ = 0) at `(x, xstar)`.
+  have hfirst :
+      f x + inner ℝ (gradient f x) (xstar - x) + (0 / 2) * ‖xstar - x‖ ^ 2
+        ≤ f xstar := hConv x xstar
+  have hfirst' :
+      f x + inner ℝ (gradient f x) (xstar - x) ≤ f xstar := by
+    have := hfirst
+    simpa using this
+  -- (3a) Raw projection variational inequality at `xstar ∈ C`.
+  have hproj :
+      inner ℝ
+          ((x - (1 / (L : ℝ)) • gradient f x)
+            - LTFP.MathlibExt.Analysis.closedConvexProj C hne hclosed hCconv
+                (x - (1 / (L : ℝ)) • gradient f x))
+          (xstar
+            - LTFP.MathlibExt.Analysis.closedConvexProj C hne hclosed hCconv
+                (x - (1 / (L : ℝ)) • gradient f x)) ≤ 0 :=
+    LTFP.MathlibExt.Analysis.closedConvexProj_variational
+      C hne hclosed hCconv
+      (x - (1 / (L : ℝ)) • gradient f x) xstar hxstar
+  -- Identify `p` with the projection symbol used in `hproj`.
+  have hp_eq_proj :
+      p = LTFP.MathlibExt.Analysis.closedConvexProj C hne hclosed hCconv
+            (x - (1 / (L : ℝ)) • gradient f x) := by
+    show pgdStep_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x = _
+    unfold pgdStep_closedConvex pgdStep gdStep
+    rfl
+  rw [← hp_eq_proj] at hproj
+  -- (3b) Multiply by `L > 0` and expand the inner product.  The raw
+  -- inequality is `⟨(x - (1/L) ∇f x) - p, xstar - p⟩ ≤ 0`.  Expanding
+  -- with `inner_sub_left` and `inner_smul_left` yields
+  -- `⟨x - p, xstar - p⟩ ≤ (1/L) ⟨∇f x, xstar - p⟩`.  Multiply by `L`
+  -- and rewrite `xstar - p = -(p - xstar)`.
+  have hLne : (L : ℝ) ≠ 0 := ne_of_gt hL
+  have hproj_expand :
+      inner ℝ (x - p) (xstar - p) - (1 / (L : ℝ))
+            * inner ℝ (gradient f x) (xstar - p) ≤ 0 := by
+    -- Rewrite `(x - (1/L) • ∇f x) - p = (x - p) - (1/L) • ∇f x`.
+    have hrearr :
+        (x - (1 / (L : ℝ)) • gradient f x) - p
+          = (x - p) - (1 / (L : ℝ)) • gradient f x := by abel
+    have h := hproj
+    rw [hrearr, inner_sub_left, inner_smul_left] at h
+    -- `inner_smul_left` over ℝ leaves a `(starRingEnd ℝ) (1/L)` which
+    -- is just `1/L`; simp normalizes it.
+    simpa [RCLike.conj_to_real] using h
+  -- Multiply by `L > 0`: `L · ⟨x - p, xstar - p⟩ ≤ ⟨∇f x, xstar - p⟩`.
+  have hproj_mul :
+      (L : ℝ) * inner ℝ (x - p) (xstar - p)
+        ≤ inner ℝ (gradient f x) (xstar - p) := by
+    have hscale :
+        (L : ℝ) * (inner ℝ (x - p) (xstar - p)
+              - (1 / (L : ℝ)) * inner ℝ (gradient f x) (xstar - p))
+          ≤ (L : ℝ) * 0 :=
+      mul_le_mul_of_nonneg_left hproj_expand hL.le
+    have hLcancel :
+        (L : ℝ) * ((1 / (L : ℝ)) * inner ℝ (gradient f x) (xstar - p))
+          = inner ℝ (gradient f x) (xstar - p) := by
+      field_simp
+    nlinarith [hscale, hLcancel]
+  -- Rewrite `xstar - p = -(p - xstar)`.
+  have hxstar_sub : xstar - p = -(p - xstar) := by abel
+  have hproj' :
+      inner ℝ (gradient f x) (p - xstar)
+        ≤ (L : ℝ) * inner ℝ (x - p) (p - xstar) := by
+    have h := hproj_mul
+    rw [hxstar_sub, inner_neg_right, inner_neg_right] at h
+    linarith
+  -- (4) Polar identity: `2 ⟨x - p, p - xstar⟩ + ‖p - x‖² = ‖x - xstar‖² − ‖p - xstar‖²`.
+  have hpolar :
+      2 * inner ℝ (x - p) (p - xstar) + ‖p - x‖ ^ 2
+        = ‖x - xstar‖ ^ 2 - ‖p - xstar‖ ^ 2 := by
+    -- Expand both sides using `‖·‖² = ⟨·, ·⟩_ℝ`.
+    have hxx : ‖x - xstar‖ ^ 2 = inner ℝ (x - xstar) (x - xstar) := by
+      rw [real_inner_self_eq_norm_sq]
+    have hpp : ‖p - xstar‖ ^ 2 = inner ℝ (p - xstar) (p - xstar) := by
+      rw [real_inner_self_eq_norm_sq]
+    have hpx : ‖p - x‖ ^ 2 = inner ℝ (p - x) (p - x) := by
+      rw [real_inner_self_eq_norm_sq]
+    -- Use the algebraic identity `(x - xstar) = (x - p) + (p - xstar)`
+    -- and expand bilinearly.  The remaining cleanup is `ring`-shaped
+    -- after collapsing `⟨p - x, ·⟩ = -⟨x - p, ·⟩` and using symmetry.
+    have hsplit : x - xstar = (x - p) + (p - xstar) := by abel
+    have hpxneg : p - x = -(x - p) := by abel
+    rw [hxx, hpp, hpx, hsplit, hpxneg]
+    simp only [inner_add_left, inner_add_right, inner_neg_left,
+      inner_neg_right, neg_neg]
+    -- Use symmetry of real inner product to fold `⟨p - xstar, x - p⟩`
+    -- back into `⟨x - p, p - xstar⟩`.
+    have hsymm : inner ℝ (p - xstar) (x - p) = inner ℝ (x - p) (p - xstar) := by
+      rw [real_inner_comm]
+    linarith [hsymm]
+  -- (5) Combine.  From (1) + (2):
+  --   f p ≤ f xstar + ⟨∇f x, p - xstar⟩ + (L/2) ‖p - x‖².
+  have hcombo12 :
+      f p ≤ f xstar + inner ℝ (gradient f x) (p - xstar)
+              + ((L : ℝ) / 2) * ‖p - x‖ ^ 2 := by
+    have h_pxstar :
+        inner ℝ (gradient f x) (p - x)
+          = inner ℝ (gradient f x) (p - xstar)
+            + inner ℝ (gradient f x) (xstar - x) := by
+      have hsub : p - x = (p - xstar) + (xstar - x) := by abel
+      rw [hsub, inner_add_right]
+    -- f p ≤ f x + ⟨∇f x, p-x⟩ + (L/2)‖p-x‖² (from hQ)
+    --      ≤ f x + ⟨∇f x, p-xstar⟩ - ⟨∇f x, xstar-x⟩ + (L/2)‖p-x‖²
+    -- and f x - ⟨∇f x, xstar-x⟩ ≤ f xstar (from hfirst'), so add.
+    linarith [hQ, hfirst', h_pxstar]
+  -- Plug (3') into (5):
+  --   f p ≤ f xstar + L · ⟨x - p, p - xstar⟩ + (L/2) ‖p - x‖².
+  have hcombo123 :
+      f p ≤ f xstar + (L : ℝ) * inner ℝ (x - p) (p - xstar)
+              + ((L : ℝ) / 2) * ‖p - x‖ ^ 2 := by
+    linarith [hcombo12, hproj']
+  -- Rearrange RHS using `hpolar`:
+  --   L · ⟨x - p, p - xstar⟩ + (L/2) ‖p - x‖²
+  -- = (L/2) · (2 ⟨x - p, p - xstar⟩ + ‖p - x‖²)
+  -- = (L/2) · (‖x - xstar‖² - ‖p - xstar‖²).
+  -- Combine directly via nlinarith using `hpolar` as a linear constraint
+  -- relating the inner-product term and the norm-square terms.
+  nlinarith [hcombo123, hpolar, sq_nonneg ((L : ℝ))]
+
 end LTFP
