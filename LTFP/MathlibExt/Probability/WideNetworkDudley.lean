@@ -2384,6 +2384,128 @@ private theorem uniform_deviation_expectation_le_two_smul_rademacher_complexity_
   exact uniform_deviation_expectation_le_two_smul_rademacher_complexity
     (μ := μ) hn X hf'_meas hb hf'_bound
 
+/-- **μ-a.e.-bound variant of the separable symmetrization helper.**
+
+For the wide-network linearised-risk family on `EuclideanSpace ℝ (Fin d) × ℝ`,
+the pointwise hypothesis `∀ θ p, |F θ p| ≤ B^2` is **vacuous** because the
+target component `p.2` ranges over all of `ℝ`. The honest formulation
+imposes the bound only μ-almost everywhere — under sub-Gaussian / bounded-
+support data this is exactly the natural assumption.
+
+The proof reduces to the pointwise `_separable` helper above via a
+clipping trick: replace `f i x` by `clip b (f i x) = max (-b) (min b (f i x))`.
+The clipped family is pointwise bounded by `b`, agrees with `f` on
+`{x : ∀ i, |f i x| ≤ b}` which is μ-full-measure, and inherits continuity
+and measurability. Then `uniformDeviation` and `rademacherComplexity` for
+`f` and the clipped family agree μⁿ-a.e. (since `Measure.pi` projects to
+`μ` on each coordinate via `tendsto_eval_ae_ae`), so the LHS integral and
+RHS are unchanged. -/
+private theorem uniform_deviation_expectation_le_two_smul_rademacher_complexity_separable_ae
+    {Ω : Type*} [MeasurableSpace Ω]
+    {ι : Type*}
+    [Nonempty ι] [TopologicalSpace ι] [TopologicalSpace.SeparableSpace ι]
+    [FirstCountableTopology ι]
+    {μ : MeasureTheory.Measure Ω} [MeasureTheory.IsProbabilityMeasure μ]
+    {f : ι → Ω → ℝ}
+    {n : ℕ} (hn : 0 < n)
+    (hf : ∀ i, Measurable (f i))
+    (hfc : ∀ x : Ω, Continuous fun i ↦ f i x)
+    {b : ℝ} (hb : 0 ≤ b)
+    (hf_ae : ∀ᵐ x ∂μ, ∀ i, |f i x| ≤ b) :
+    ∫ ω : Fin n → Ω, uniformDeviation n f μ id (id ∘ ω)
+        ∂(MeasureTheory.Measure.pi (fun _ ↦ μ))
+      ≤ 2 • rademacherComplexity n f μ id := by
+  classical
+  -- Define the clipped family `g i x = max (-b) (min b (f i x))`.
+  let g : ι → Ω → ℝ := fun i x => max (-b) (min b (f i x))
+  -- Pointwise absolute bound for `g`.
+  have hg_bound : ∀ i x, |g i x| ≤ b := by
+    intro i x
+    have hb_neg : -b ≤ b := by linarith
+    have : -b ≤ g i x := le_max_left _ _
+    have h2 : g i x ≤ b := by
+      simp only [g]
+      exact max_le hb_neg (min_le_left _ _)
+    exact abs_le.mpr ⟨this, h2⟩
+  -- Measurability of `g i`.
+  have hg_meas : ∀ i, Measurable (g i) := fun i =>
+    (measurable_const.max (measurable_const.min (hf i)))
+  -- Continuity of `g · x` in `i`.
+  have hgc : ∀ x : Ω, Continuous fun i ↦ g i x := by
+    intro x
+    exact continuous_const.max (continuous_const.min (hfc x))
+  -- The μ-a.e. set on which `g i x = f i x` for all `i`.
+  -- (`hf_ae` provides such a set with a single quantifier over `i`.)
+  have hfg_ae : ∀ᵐ x ∂μ, ∀ i, g i x = f i x := by
+    filter_upwards [hf_ae] with x hx i
+    have hi := hx i
+    have hi' : -b ≤ f i x ∧ f i x ≤ b := abs_le.mp hi
+    simp only [g]
+    rw [min_eq_right hi'.2, max_eq_right hi'.1]
+  -- μⁿ-a.e. version of the equality `g i (ω k) = f i (ω k)`.
+  -- For each coordinate k, the pushforward `Measure.pi → μ` via `eval k`
+  -- sends μ-a.e. to μⁿ-a.e.
+  have hfg_pi_ae : ∀ᵐ ω : Fin n → Ω ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)),
+      ∀ k : Fin n, ∀ i, g i (ω k) = f i (ω k) := by
+    rw [Filter.eventually_all]
+    intro k
+    exact MeasureTheory.Measure.tendsto_eval_ae_ae (μ := fun _ : Fin n => μ) (i := k) hfg_ae
+  -- Equality of `μ`-integrals: for each `i`, μ[f i ·] = μ[g i ·].
+  have hint_eq : ∀ i, ∫ ω', f i ω' ∂μ = ∫ ω', g i ω' ∂μ := by
+    intro i
+    apply MeasureTheory.integral_congr_ae
+    filter_upwards [hfg_ae] with x hx
+    exact (hx i).symm
+  -- μⁿ-a.e. equality of `uniformDeviation` for `f` and `g`.
+  have hUD_ae :
+      (fun ω : Fin n → Ω => uniformDeviation n f μ id (id ∘ ω))
+        =ᵐ[MeasureTheory.Measure.pi (fun _ ↦ μ)]
+        (fun ω : Fin n → Ω => uniformDeviation n g μ id (id ∘ ω)) := by
+    filter_upwards [hfg_pi_ae] with ω hω
+    simp only [uniformDeviation, Function.comp_apply, id_eq]
+    apply congr_arg (iSup ·)
+    funext i
+    have hcoord : ∀ k, f i (ω k) = g i (ω k) := fun k => (hω k i).symm
+    have hsum : ∑ k : Fin n, f i (ω k) = ∑ k : Fin n, g i (ω k) :=
+      Finset.sum_congr rfl (fun k _ => hcoord k)
+    rw [hsum, hint_eq i]
+  -- Equality of LHS integrals.
+  have hLHS_eq :
+      ∫ ω : Fin n → Ω, uniformDeviation n f μ id (id ∘ ω)
+          ∂(MeasureTheory.Measure.pi (fun _ ↦ μ))
+        = ∫ ω : Fin n → Ω, uniformDeviation n g μ id (id ∘ ω)
+            ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)) :=
+    MeasureTheory.integral_congr_ae hUD_ae
+  -- μⁿ-a.e. equality of `empiricalRademacherComplexity` for `f` and `g`.
+  have hERC_ae :
+      (fun ω : Fin n → Ω => empiricalRademacherComplexity n f (id ∘ ω))
+        =ᵐ[MeasureTheory.Measure.pi (fun _ ↦ μ)]
+        (fun ω : Fin n → Ω => empiricalRademacherComplexity n g (id ∘ ω)) := by
+    filter_upwards [hfg_pi_ae] with ω hω
+    simp only [empiricalRademacherComplexity, Function.comp_apply, id_eq]
+    congr 1
+    apply Finset.sum_congr rfl
+    intro σ _
+    apply congr_arg (iSup ·)
+    funext i
+    have hcoord : ∀ k, f i (ω k) = g i (ω k) := fun k => (hω k i).symm
+    apply congr_arg abs
+    apply congr_arg ((n : ℝ)⁻¹ * ·)
+    exact Finset.sum_congr rfl (fun k _ => by rw [hcoord k])
+  -- Equality of `rademacherComplexity` (which is the μⁿ-integral of empRad).
+  have hRC_eq :
+      rademacherComplexity n f μ id = rademacherComplexity n g μ id := by
+    simp only [rademacherComplexity]
+    exact MeasureTheory.integral_congr_ae hERC_ae
+  -- Apply the pointwise `_separable` helper to `g`.
+  have hsym :=
+    uniform_deviation_expectation_le_two_smul_rademacher_complexity_separable
+      (μ := μ) (n := n)
+      (f := g) hn id measurable_id hg_meas hgc hb hg_bound
+  -- Rewrite the LHS via `hLHS_eq` and the RHS via `hRC_eq`.
+  rw [hLHS_eq, hRC_eq]
+  exact hsym
+
 /-- Continuity of `θ ↦ (⟨θ, p.1⟩ - p.2)^2` for each fixed data point `p`.
 Used to invoke the separable expectation bound on the
 parameter-ball-indexed linearised-risk family. -/
@@ -2435,22 +2557,19 @@ symmetrization factor placed outside, matching the convention of
 
 This theorem requires three hypothesis bundles:
 
-* `hbnd_global` — the squared-loss bound `|F θ p| ≤ B²` POINTWISE for
-  every `p : EuclideanSpace ℝ (Fin d) × ℝ` and every parameter `θ` in
-  the ball. The wide-network bounded-support hypothesis in
-  `wide_network_rademacher_complexity_with_abs_via_dudley_paramBall`
-  is *per-sample* (only on the `xs i`/`ys i`), but
-  `uniform_deviation_expectation_le_two_smul_rademacher_complexity`
-  needs the bound POINTWISE on the full data space. To deploy this
-  theorem the user supplies a global bound, typically by truncating
-  the data support (e.g. restricting `μ` to be supported on
-  `{p : EuclideanSpace × ℝ // ‖p.1‖ ≤ R ∧ |p.2| ≤ B_Y}` and feeding the
-  resulting bounded inner product back into the squared-residual
-  bound). The bridge `_of_ae` immediately above can take the weaker
-  μⁿ-a.e. form because it bounds the Rademacher complexity directly
-  (which only sees the sample), but the symmetrization bridge
-  cannot — it needs the bound on the full state space to apply
-  uniformly to all empirical/expectation comparisons.
+* `hbnd_ae` — μ-a.e. squared-loss bound `|F θ p| ≤ B²`, **uniformly in
+  the parameter ball** (the `∀ θ` quantifier lives *inside* the a.e.
+  filter). This is the honest formulation: the earlier pointwise
+  `hbnd_global` was vacuous on the ambient product type
+  `EuclideanSpace ℝ (Fin d) × ℝ` because choosing `p = (0, B + 1)` gives
+  `|F θ p| = (B + 1)^2 > B^2` for every θ, so the pointwise hypothesis
+  could never be satisfied for unbounded data. The μ-a.e. variant is
+  inhabitable under sub-Gaussian / bounded-support data: e.g. for a
+  truncated Gaussian `μ = (μ_x ⊗ μ_y) | {‖x‖ ≤ R, |y| ≤ B_Y}` with
+  matching bound `B^2 = (B_param R + B_Y)^2`. The symmetrization bridge
+  consumes the a.e. version via the `_separable_ae` clipping argument
+  (`uniform_deviation_expectation_le_two_smul_rademacher_complexity_separable_ae`,
+  above).
 
 * `hae` — μⁿ-a.e. bundle for the per-sample wide-network hypotheses,
   same as the underlying `_with_abs_le_dudley_paramBall_of_ae` requires.
@@ -2459,10 +2578,10 @@ This theorem requires three hypothesis bundles:
   underlying `_with_abs_le_dudley_paramBall_of_ae`.
 
 The first hypothesis is the cost of the symmetrization bridge —
-`uniform_deviation_expectation_le_two_smul_rademacher_complexity`
+`uniform_deviation_expectation_le_two_smul_rademacher_complexity_separable_ae`
 discharges the standard symmetrization argument from
-`LTFP/Foundations/Symmetrization.lean`, which is stated for families
-with a global pointwise bound. -/
+`LTFP/Foundations/Main.lean` via a clipping reduction to the pointwise
+version. -/
 theorem wide_network_expected_uniform_deviation_le_two_dudley_paramBall_iid
     {d m : ℕ}
     (μ : MeasureTheory.Measure (EuclideanSpace ℝ (Fin d) × ℝ))
@@ -2471,9 +2590,9 @@ theorem wide_network_expected_uniform_deviation_le_two_dudley_paramBall_iid
     (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
     (hBR_pos : 0 < 2 * B * R)
     (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
-    (hbnd_global :
-      ∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
-        ∀ p : EuclideanSpace ℝ (Fin d) × ℝ,
+    (hbnd_ae :
+      ∀ᵐ p : EuclideanSpace ℝ (Fin d) × ℝ ∂μ,
+        ∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
         |linearizedRiskFamily (d := d) B_param θ p| ≤ B ^ 2)
     (hae :
       ∀ᵐ (S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ)
@@ -2503,15 +2622,17 @@ theorem wide_network_expected_uniform_deviation_le_two_dudley_paramBall_iid
     ⟨⟨0, by simpa using hB_param_nn⟩⟩
   -- Global bound nonnegativity.
   have hB_sq_nn : (0 : ℝ) ≤ B ^ 2 := sq_nonneg B
-  -- Step 1 (symmetrization): E[uniformDeviation] ≤ 2 • rademacherComplexity.
+  -- Step 1 (symmetrization, μ-a.e. form): E[uniformDeviation] ≤ 2 • rademacherComplexity.
+  -- We use the `_separable_ae` clipping variant since the pointwise bound is
+  -- vacuous on the unbounded ambient `EuclideanSpace ℝ (Fin d) × ℝ`.
   have hsym :=
-    uniform_deviation_expectation_le_two_smul_rademacher_complexity_separable
+    uniform_deviation_expectation_le_two_smul_rademacher_complexity_separable_ae
       (μ := μ) (n := m)
       (f := linearizedRiskFamily (d := d) B_param)
-      hm_pos id measurable_id
+      hm_pos
       (linearizedRiskFamily_measurable_in_data (d := d) B_param)
       (linearizedRiskFamily_continuous_in_param (d := d) B_param)
-      hB_sq_nn hbnd_global
+      hB_sq_nn hbnd_ae
   -- Step 2 (Dudley measure-lift): 2 • rademacherComplexity = 2 * ∫ S, empRad S ∂μⁿ ≤ 2 * (Dudley).
   have hdud :=
     wide_network_expected_rademacher_with_abs_le_dudley_paramBall_of_ae
