@@ -318,6 +318,7 @@ The function `f(x) = 1 - (1+x)⁻¹` vanishes at `0`, so the non-unital
 section ShiftedResolventJensenNonUnital
 
 open scoped CStarAlgebra
+open MeasureTheory Set Real
 
 variable {A : Type*} [NonUnitalCStarAlgebra A] [PartialOrder A] [StarOrderedRing A]
 
@@ -442,6 +443,78 @@ lemma CFC.star_mul_cfcₙ_rpowIntegrand₀₁_mul_le
   rw [h_smul_conj_cfc]
   -- Now both sides are t^(p-1) • (...); apply scalar monotonicity.
   exact smul_le_smul_of_nonneg_left h_helper htp_pos.le
+
+/-- **Integral Jensen for `nnrpow` on `p ∈ (0, 1)` (B6 L3 Sub-Part 5.3).**
+
+For `p : ℝ≥0` with `(p : ℝ) ∈ (0, 1)`, `0 ≤ a` in a non-unital C⋆-algebra
+`A` (with completeness), and `star (↑v : A⁺¹) * ↑v ≤ 1` in the
+unitization, the Hansen-Pedersen Jensen inequality
+
+```
+star v * (a ^ p) * v ≤ (star v * a * v) ^ p
+```
+
+holds in the operator order.
+
+The proof integrates the per-`t` integrand Jensen inequality (Sub-Part
+5.2) against the measure `μ` provided by Mathlib's integral
+representation `CFC.exists_measure_nnrpow_eq_integral_cfcₙ_rpowIntegrand₀₁`:
+the integral representation rewrites both `a ^ p` and `(star v * a * v) ^ p`
+as integrals of the per-`t` integrand, and the AE per-`t` inequality
+is preserved under left- and right-multiplication by `star v` and `v`. -/
+lemma CFC.star_mul_nnrpow_mul_le_nnrpow_star_mul_Ioo
+    [CompleteSpace A] {p : ℝ≥0} (hp : (p : ℝ) ∈ Set.Ioo (0 : ℝ) 1)
+    {a v : A} (ha : 0 ≤ a)
+    (hv : star (v : Unitization ℂ A) * (v : Unitization ℂ A) ≤ 1) :
+    star v * (a ^ p) * v ≤ (star v * a * v) ^ p := by
+  -- The ℝ≥0-membership counterpart, for invoking the integral representation.
+  have hp_nn : p ∈ Set.Ioo (0 : ℝ≥0) 1 := by exact_mod_cast hp
+  -- Star left conjugation preserves nonnegativity.
+  have hvav : 0 ≤ star v * a * v := star_left_conjugate_nonneg ha v
+  -- Obtain the shared measure and per-element representations.
+  obtain ⟨μ, hμ⟩ :=
+    CFC.exists_measure_nnrpow_eq_integral_cfcₙ_rpowIntegrand₀₁ A hp_nn
+  -- The integrand `t ↦ cfcₙ (rpowIntegrand₀₁ p t) ·` evaluated at each base.
+  set F : ℝ → A := fun t => cfcₙ (Real.rpowIntegrand₀₁ p t) a
+  set G : ℝ → A := fun t => cfcₙ (Real.rpowIntegrand₀₁ p t) (star v * a * v)
+  -- Integrability of each integrand on `Ioi 0`.
+  have hF_int : Integrable F (μ.restrict (Set.Ioi 0)) := (hμ a ha).1
+  have hG_int : Integrable G (μ.restrict (Set.Ioi 0)) := (hμ (star v * a * v) hvav).1
+  -- Integral representation of both endpoints.
+  have hF_eq : a ^ p = ∫ t in Set.Ioi 0, F t ∂μ := (hμ a ha).2
+  have hG_eq : (star v * a * v) ^ p = ∫ t in Set.Ioi 0, G t ∂μ :=
+    (hμ (star v * a * v) hvav).2
+  -- Multiplication-as-CLM operators for moving constants through the integral.
+  let Lmul : A →L[ℝ] A := ContinuousLinearMap.mul ℝ A (star v)
+  let Rmul : A →L[ℝ] A := (ContinuousLinearMap.mul ℝ A).flip v
+  -- The composite `t ↦ star v * F t * v` agrees with `t ↦ Rmul (Lmul (F t))`.
+  -- Integrability of the composite via two `integrable_comp` steps.
+  have hLF_int : Integrable (fun t => star v * F t) (μ.restrict (Set.Ioi 0)) :=
+    Lmul.integrable_comp hF_int
+  have hLFR_int :
+      Integrable (fun t => star v * F t * v) (μ.restrict (Set.Ioi 0)) :=
+    Rmul.integrable_comp hLF_int
+  -- Rewrite `a ^ p` and pull `star v * · * v` through the set-integral.
+  rw [hF_eq, hG_eq]
+  -- We transform the LHS step by step.
+  have h_lhs_const_mul :
+      ∫ t in Set.Ioi 0, star v * F t ∂μ
+        = star v * ∫ t in Set.Ioi 0, F t ∂μ :=
+    integral_const_mul_of_integrable hF_int (c := star v)
+  have h_lhs_mul_const :
+      ∫ t in Set.Ioi 0, star v * F t * v ∂μ
+        = (∫ t in Set.Ioi 0, star v * F t ∂μ) * v :=
+    integral_mul_const_of_integrable hLF_int (c := v)
+  have h_lhs :
+      star v * (∫ t in Set.Ioi 0, F t ∂μ) * v
+        = ∫ t in Set.Ioi 0, star v * F t * v ∂μ := by
+    rw [h_lhs_mul_const, h_lhs_const_mul]
+  rw [h_lhs]
+  -- Apply integral monotonicity: AE per-`t`, Sub-Part 5.2 dominates.
+  refine integral_mono_ae hLFR_int hG_int ?_
+  filter_upwards [ae_restrict_mem measurableSet_Ioi] with t ht
+  -- `ht : t ∈ Ioi 0`, i.e., `0 < t`. Apply Sub-Part 5.2.
+  exact CFC.star_mul_cfcₙ_rpowIntegrand₀₁_mul_le hp ht ha hv
 
 end ShiftedResolventJensenNonUnital
 
