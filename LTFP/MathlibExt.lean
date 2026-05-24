@@ -46,6 +46,7 @@ import LTFP.MathlibExt.Probability.Distributions.RegressionCLMCovariance
 import LTFP.MathlibExt.Probability.DonskerVaradhan
 import LTFP.MathlibExt.Probability.DudleyEntropy
 import LTFP.MathlibExt.Probability.FunctionClassConcentration
+import LTFP.MathlibExt.Probability.KernelCoercivity
 import LTFP.MathlibExt.Probability.KullbackLeibler
 import LTFP.MathlibExt.Probability.Moments.CovarianceBilinProdPi
 import LTFP.MathlibExt.Probability.Moments.SubExponential
