@@ -79,6 +79,7 @@ section RingIdentity
 
 variable {R : Type*} [Ring R] [Module ℝ R] [SMulCommClass ℝ R R] [IsScalarTower ℝ R R]
 
+omit [SMulCommClass ℝ R R] [IsScalarTower ℝ R R] in
 /-- **Substitution identity, step 1.**
 `y' = (v • y' + u • y'') + u • (y' - y'')`, provided `u + v = 1`. -/
 private lemma sub_id_left {y' y'' : R} {u v : ℝ} (huv : u + v = 1) :
@@ -89,6 +90,7 @@ private lemma sub_id_left {y' y'' : R} {u v : ℝ} (huv : u + v = 1) :
     abel
   rw [h1, huv, one_smul]
 
+omit [SMulCommClass ℝ R R] [IsScalarTower ℝ R R] in
 /-- **Substitution identity, step 2.**
 `y'' = (v • y' + u • y'') - v • (y' - y'')`, provided `u + v = 1`. -/
 private lemma sub_id_right {y' y'' : R} {u v : ℝ} (huv : u + v = 1) :
@@ -101,9 +103,9 @@ private lemma sub_id_right {y' y'' : R} {u v : ℝ} (huv : u + v = 1) :
 /-- **Non-commutative AM-HM algebraic identity.**
 
 Given `x y : R` with explicit two-sided inverses `y' y'' : R` (so `y' x = 1`,
-`x y' = 1`, `y'' y = 1`, `y y'' = 1`), and scalars `u v : ℝ` with `u + v = 1`,
-suppose furthermore the element `S := v • y' + u • y''` has a two-sided
-inverse `S_inv`. Then
+`x y' = 1`, `y'' y = 1`, `y y'' = 1`), and scalars `u v : ℝ`, suppose
+furthermore the element `S := v • y' + u • y''` has a two-sided inverse
+`S_inv`. Then
 
 ```
 y'' * S_inv * y' = (u • x + v • y)_inv
@@ -118,15 +120,16 @@ in the sense that
 ```
 
 (We prove both directly.) Note: existence of such a candidate inverse on
-the LHS implies invertibility of `P := u • x + v • y` in `R`.
--/
+the LHS implies invertibility of `P := u • x + v • y` in `R`. The
+constraint `u + v = 1` is not needed for this formula (the underlying
+identity `y' * (u•x + v•y) * y'' = v•y' + u•y''` holds for arbitrary
+scalars). -/
 private lemma p_inv_formula
     {x y y' y'' S_inv : R} {u v : ℝ}
     (hxy' : x * y' = 1) (hy'x : y' * x = 1)
     (hyy'' : y * y'' = 1) (hy''y : y'' * y = 1)
     (hSinv_l : (v • y' + u • y'') * S_inv = 1)
-    (hSinv_r : S_inv * (v • y' + u • y'') = 1)
-    (huv : u + v = 1) :
+    (hSinv_r : S_inv * (v • y' + u • y'') = 1) :
     (u • x + v • y) * (y'' * S_inv * y') = 1 ∧
       (y'' * S_inv * y') * (u • x + v • y) = 1 := by
   -- Key intermediate: y' * (u•x + v•y) * y'' = v•y' + u•y'' = S.
@@ -186,9 +189,8 @@ private lemma p_inv_formula
 
 /-- **The Anderson–Trapp algebraic identity.**
 
-In any unital `ℝ`-algebra `R`, given two-sided inverses `y' y'' S_inv : R`
-of `x y` and `v • y' + u • y''` respectively, with `u + v = 1`, and assuming
-that `y'' * S_inv * y'` is the (two-sided) inverse of `u • x + v • y`, we have
+In any unital `ℝ`-algebra `R`, given a two-sided inverse `S_inv : R` of
+`S := v • y' + u • y''`, with `u + v = 1`, we have
 
 ```
 u • y' + v • y'' - y'' * S_inv * y' =
@@ -201,11 +203,15 @@ The proof: substitute `y' = S + u • D`, `y'' = S - v • D` (where `D = y' - y
                   = S + u•D - v•D - uv • (D * S_inv * D)`,
 using `S * S_inv = S_inv * S = 1`. The linear-in-`D` terms recombine into
 `(u-v) • D = u•y' + v•y'' - S`, which cancels with the `S + u•D - v•D` and
-the `u•y' + v•y''` on the LHS up to the `uv • (D * S_inv * D)` term. -/
+the `u•y' + v•y''` on the LHS up to the `uv • (D * S_inv * D)` term.
+
+Note: the two-sided inverse hypotheses on `x` and `y` themselves are not
+required for this algebraic identity (only the `S_inv` inverse hypotheses
+on `S` and the constraint `u + v = 1` are used). They are needed at the
+call site to package `y'' * S_inv * y'` as the inverse of `u • x + v • y`
+via `p_inv_formula`, but the identity here is purely on `y', y'', S_inv`. -/
 lemma amHm_identity
-    {x y y' y'' S_inv : R} {u v : ℝ}
-    (hxy' : x * y' = 1) (hy'x : y' * x = 1)
-    (hyy'' : y * y'' = 1) (hy''y : y'' * y = 1)
+    {y' y'' S_inv : R} {u v : ℝ}
     (hSinv_l : (v • y' + u • y'') * S_inv = 1)
     (hSinv_r : S_inv * (v • y' + u • y'') = 1)
     (huv : u + v = 1) :
@@ -383,7 +389,7 @@ theorem CStarAlgebra.amHm_aux
   obtain ⟨h_left, h_right⟩ :=
     p_inv_formula (x := (X : A)) (y := (Y : A)) (y' := xi) (y'' := yi)
       (S_inv := Si) (u := u) (v := v)
-      hX_right hX_left hY_right hY_left hSinv_l hSinv_r huv
+      hX_right hX_left hY_right hY_left hSinv_l hSinv_r
   have hPinv_eq : ((P⁻¹ : Aˣ) : A) = yi * Si * xi := by
     -- (yi * Si * xi) * P = 1, so it equals P⁻¹.
     have hPmul : (yi * Si * xi) * (P : A) = 1 := by
@@ -398,10 +404,10 @@ theorem CStarAlgebra.amHm_aux
     exact hcalc.symm
   -- Apply the algebraic identity:
   --   u • xi + v • yi - yi*Si*xi = (u*v) • (xi-yi) Si (xi-yi)
-  have h_id := amHm_identity (x := (X : A)) (y := (Y : A))
+  have h_id := amHm_identity
     (y' := xi) (y'' := yi) (S_inv := Si)
     (u := u) (v := v)
-    hX_right hX_left hY_right hY_left hSinv_l hSinv_r huv
+    hSinv_l hSinv_r huv
   -- Goal: ((P⁻¹ : Aˣ) : A) ≤ u • xi + v • yi
   rw [hPinv_eq]
   -- Now goal: yi * Si * xi ≤ u • xi + v • yi
