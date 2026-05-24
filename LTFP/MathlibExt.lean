@@ -27,6 +27,7 @@ import LTFP.MathlibExt.Probability.Distance.Bhattacharyya
 import LTFP.MathlibExt.Probability.Distance.Pinsker
 import LTFP.MathlibExt.Probability.Distributions.GaussianConjugatePosteriorSchur
 import LTFP.MathlibExt.Probability.Distributions.GaussianObservationKernelMean
+import LTFP.MathlibExt.Probability.Distributions.GaussianPosteriorCompProdIsGaussian
 import LTFP.MathlibExt.Probability.Distributions.GaussianPosteriorCovariancesPositive
 import LTFP.MathlibExt.Probability.Distributions.GaussianPosteriorKernel
 import LTFP.MathlibExt.Probability.Distributions.JointPriorObservationCrossCovariance
