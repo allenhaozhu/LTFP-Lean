@@ -66,6 +66,7 @@ import LTFP.MathlibExt.Probability.UniformDeviationRademacher
 import LTFP.MathlibExt.Probability.WideNetworkDudley
 import LTFP.MathlibExt.MatrixAnalysis.CStarMatrixInvAntiOnPos
 import LTFP.MathlibExt.MatrixAnalysis.CStarOperatorMonotone
+import LTFP.MathlibExt.MatrixAnalysis.CStarRpowConcave
 import LTFP.MathlibExt.MatrixAnalysis.CStarRpowIntegrandConcave
 import LTFP.MathlibExt.MatrixAnalysis.CStarShiftedResolventConcave
 import LTFP.MathlibExt.MatrixAnalysis.InvAntiOnPos
