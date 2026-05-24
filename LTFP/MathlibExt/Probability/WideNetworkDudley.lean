@@ -3144,6 +3144,113 @@ theorem wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBa
     rw [hM_def]
   linarith [h_iid'.trans (h_add.trans h_final.le)]
 
+/-- **End-to-end abstract i.i.d. uniform-deviation × explicit polynomial-rate bound.**
+
+Composes the symmetrization × Dudley i.i.d. lift
+`wide_network_expected_uniform_deviation_le_two_dudley_paramBall_iid`
+(symmetrization + with-abs Dudley measure-lift to `2 · ∫ S, empRad`) with
+the explicit polynomial-rate bound on the with-abs Rademacher complexity
+`wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall_tight`
+to give a closed-form measure-theoretic bound on the expected uniform
+deviation of the wide-network linearised-risk class:
+
+  `E[uniformDeviation] ≤ 2 · (4 ε + (12 / √m) · (c/2 − ε) ·
+                              √(log (2 · ⌈(1 + 16 B R B_param / ε)^d⌉₊)))`
+
+This is the B8 N6 Intermediate 1 target: it lands the entire chain
+"expected uniform deviation → 2 · empirical Rademacher → explicit
+polynomial cover" in a single composed statement.
+
+The hypothesis list is the union of the two cited theorems: theorem 1's
+`hbnd_ae` (squared-loss uniform bound for the symmetrization step) and
+theorem 2's `hd : 1 ≤ d` (dimension positivity for the tight Euclidean
+covering bound). -/
+theorem wide_network_expected_uniform_deviation_le_explicit_polynomial_paramBall_iid
+    {d m : ℕ}
+    (μ : MeasureTheory.Measure (EuclideanSpace ℝ (Fin d) × ℝ))
+    [MeasureTheory.IsProbabilityMeasure μ]
+    (B_param R B c ε : ℝ)
+    (hd : 1 ≤ d)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
+    (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
+    (hbnd_ae :
+      ∀ᵐ p : EuclideanSpace ℝ (Fin d) × ℝ ∂μ,
+        ∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+        |linearizedRiskFamily (d := d) B_param θ p| ≤ B ^ 2)
+    (hae :
+      ∀ᵐ (S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ)
+        ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)),
+        (∀ i, ‖(S i).1‖ ≤ R) ∧
+        (∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+          ∀ i, |@inner ℝ _ _ θ (S i).1 - (S i).2| ≤ B) ∧
+        (∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+          empiricalNorm (linearizedRiskSample (fun i => (S i).1) (fun i => (S i).2))
+            (linearizedRiskFamily (d := d) B_param θ) ≤ c))
+    (hint : MeasureTheory.Integrable
+      (fun S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+        empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) S)
+      (MeasureTheory.Measure.pi (fun _ ↦ μ))) :
+    ∫ ω : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+        uniformDeviation m (linearizedRiskFamily (d := d) B_param) μ id (id ∘ ω)
+        ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)) ≤
+      2 * (4 * ε + (12 / Real.sqrt m) *
+        ((c / 2 - ε) *
+          √(Real.log
+            (2 * ((⌈(1 + 16 * B * R * B_param / ε) ^ d⌉₊ : ℕ) : ℝ))))) := by
+  classical
+  -- Nonemptiness of the parameter-ball subtype (needed for the symmetrization step).
+  haveI hNE : Nonempty {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} :=
+    ⟨⟨0, by simpa using hB_param_nn⟩⟩
+  have hB_sq_nn : (0 : ℝ) ≤ B ^ 2 := sq_nonneg B
+  -- Step 1: symmetrization (μ-a.e. clipped form): E[uniformDeviation] ≤ 2 • RC.
+  have hsym :=
+    uniform_deviation_expectation_le_two_smul_rademacher_complexity_separable_ae
+      (μ := μ) (n := m)
+      (f := linearizedRiskFamily (d := d) B_param)
+      hm_pos
+      (linearizedRiskFamily_measurable_in_data (d := d) B_param)
+      (linearizedRiskFamily_continuous_in_param (d := d) B_param)
+      hB_sq_nn hbnd_ae
+  -- Step 2: tight explicit polynomial bound on ∫ S, empRad ≤ polynomial.
+  have htight :=
+    wide_network_expected_rademacher_with_abs_le_explicit_polynomial_paramBall_tight
+      (d := d) (m := m) (MeasureTheory.Measure.pi (fun _ ↦ μ))
+      B_param R B c ε
+      hd hR_nn hB_nn hB_param_nn hBR_pos hε_pos hm_pos hεc hae hint
+  -- Identify `2 • RC = 2 * ∫ S, empRad`.
+  have hRC_eq :
+      rademacherComplexity m (linearizedRiskFamily (d := d) B_param) μ id =
+        ∫ S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+          empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) S
+            ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)) := rfl
+  have h_smul_eq :
+      (2 : ℕ) • rademacherComplexity m (linearizedRiskFamily (d := d) B_param) μ id =
+        2 * ∫ S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+              empiricalRademacherComplexity m
+                  (linearizedRiskFamily (d := d) B_param) S
+                ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)) := by
+    rw [hRC_eq, nsmul_eq_mul]
+    push_cast
+    rfl
+  -- Chain.
+  calc ∫ ω : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+            uniformDeviation m (linearizedRiskFamily (d := d) B_param) μ id (id ∘ ω)
+            ∂(MeasureTheory.Measure.pi (fun _ ↦ μ))
+      ≤ 2 • rademacherComplexity m (linearizedRiskFamily (d := d) B_param) μ id := hsym
+    _ = 2 * ∫ S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+            empiricalRademacherComplexity m
+                (linearizedRiskFamily (d := d) B_param) S
+              ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)) := h_smul_eq
+    _ ≤ 2 * (4 * ε + (12 / Real.sqrt m) *
+            ((c / 2 - ε) *
+              √(Real.log
+                (2 * ((⌈(1 + 16 * B * R * B_param / ε) ^ d⌉₊ : ℕ) : ℝ))))) := by
+        have h2_nn : (0 : ℝ) ≤ 2 := by norm_num
+        exact mul_le_mul_of_nonneg_left htight h2_nn
+
 /-! ### Concrete Dirac-measure instantiation of the B8 N6 abstract bounds
 
 The abstract measure-lift theorems
