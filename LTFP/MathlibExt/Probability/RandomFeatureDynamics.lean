@@ -330,6 +330,69 @@ theorem lazyNet_jacobian_gram_eq_empiricalNTK
       _ = 1 / (m : ℝ) * (B * A) := by rw [h_inv_sq]
   exact key _ _
 
+/-! ### Shared dynamics (B8 N5 / N6, I4): frozen-kernel dynamics interface
+
+The output-layer-only random-feature network has a **frozen training
+kernel**: the matrix of gradient inner products
+
+  `(K_a)_{r,s} = ⟨∇_a f(a, xs r), ∇_a f(a, xs s)⟩`
+
+is independent of `a` (since the gradient `∇_a f(a, x) = rfFeature σ ω x`
+doesn't depend on `a`), and coincides exactly with the empirical NTK
+matrix. This is the rigorous "lazy training" statement: the kernel
+governing the dynamics is frozen at any reference point and equals the
+canonical empirical NTK. -/
+
+/-- **Training kernel.** The Gram matrix of gradients of the lazy network
+with respect to the parameter `a`, evaluated at a tuple `xs` of inputs:
+
+  `trainingKernel σ ω a xs (r, s) = ⟨∇_a (lazyNet σ ω · (xs r)) a,
+                                     ∇_a (lazyNet σ ω · (xs s)) a⟩`.
+
+This is the parameter-space kernel that governs first-order training
+dynamics of the random-feature network. -/
+noncomputable def trainingKernel
+    {n : ℕ} (a : EuclideanSpace ℝ (Fin m))
+    (xs : Fin n → EuclideanSpace ℝ (Fin d)) :
+    Matrix (Fin n) (Fin n) ℝ :=
+  fun r s =>
+    inner ℝ
+      (gradient (fun b : EuclideanSpace ℝ (Fin m) => lazyNet σ ω b (xs r)) a)
+      (gradient (fun b : EuclideanSpace ℝ (Fin m) => lazyNet σ ω b (xs s)) a)
+
+/-- **Training kernel equals empirical NTK.** For any reference point
+`a` and any positive width `m`, the gradient Gram matrix coincides
+exactly with the empirical NTK matrix. This identifies the canonical
+kernel governing random-feature training dynamics with the standard
+empirical NTK object. -/
+theorem trainingKernel_eq_empiricalNTK
+    {n : ℕ} (a : EuclideanSpace ℝ (Fin m))
+    (xs : Fin n → EuclideanSpace ℝ (Fin d)) (hm : 0 < m) :
+    trainingKernel σ ω a xs = empiricalNTK σ xs ω := by
+  apply Matrix.ext
+  intro r s
+  unfold trainingKernel
+  rw [gradient_lazyNet_param, gradient_lazyNet_param]
+  exact lazyNet_jacobian_gram_eq_empiricalNTK σ ω xs hm r s
+
+/-- **Frozen kernel: stability across reference points.** The training
+kernel is independent of the reference parameter `a`. In particular,
+for any two reference points `a₀, aₜ` (e.g., initial and time-`t`
+parameters), the kernel evaluated at `aₜ` equals the kernel evaluated
+at `a₀`. This is the algebraic essence of "lazy training": the kernel
+driving the dynamics never updates. No positivity hypothesis on `m` is
+required — the result holds for `m = 0` as well, since the gradient
+itself is independent of `a`. -/
+theorem trainingKernel_stable
+    {n : ℕ} (a₀ aₜ : EuclideanSpace ℝ (Fin m))
+    (xs : Fin n → EuclideanSpace ℝ (Fin d)) :
+    trainingKernel σ ω aₜ xs = trainingKernel σ ω a₀ xs := by
+  apply Matrix.ext
+  intro r s
+  unfold trainingKernel
+  rw [gradient_lazyNet_param, gradient_lazyNet_param,
+      gradient_lazyNet_param, gradient_lazyNet_param]
+
 end SharedDynamics
 
 end ProbabilityTheory
