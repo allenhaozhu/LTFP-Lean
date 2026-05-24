@@ -12,6 +12,7 @@ function leaves `xₜ = x₀` for all `t`.
 -/
 import LTFP.Foundations.GradientDescent
 import LTFP.Foundations.Convex
+import LTFP.MathlibExt.Analysis.ClosedConvexProjection
 import Mathlib.Analysis.Calculus.Deriv.MeanValue
 import Mathlib.Analysis.Calculus.Deriv.Pow
 import Mathlib.Analysis.Calculus.Deriv.Comp
@@ -578,5 +579,34 @@ theorem pgdStep_id (γ : ℝ) (f : E → ℝ) (x : E) :
     pgdStep γ (fun y => y) f x = gdStep γ f x := by
   unfold pgdStep
   rfl
+
+/-! ### §5.2 — Concrete projected gradient descent.
+
+The abstract `pgdStep` above is parametrized by an arbitrary
+projection function `proj : E → E`.  In practice the projection of
+interest is the metric projection onto a nonempty closed convex
+constraint set `C ⊆ E`, packaged as `closedConvexProj` in
+`LTFP/MathlibExt/Analysis/ClosedConvexProjection.lean`.  Specializing
+`pgdStep` to that projection gives a concrete projected GD step
+together with a feasibility guarantee (the iterate lies in `C`). -/
+
+/-- §5.2 — **Concrete projected gradient-descent step** using the
+Hilbert-space metric projection `closedConvexProj` onto a nonempty
+closed convex constraint set `C ⊆ E`.  Equivalent to instantiating
+`pgdStep` at `proj := closedConvexProj C hne hclosed hconv`. -/
+noncomputable def pgdStep_closedConvex (γ : ℝ) (f : E → ℝ)
+    (C : Set E) (hne : C.Nonempty) (hclosed : IsClosed C)
+    (hconv : Convex ℝ C) (x : E) : E :=
+  pgdStep γ (LTFP.MathlibExt.Analysis.closedConvexProj C hne hclosed hconv) f x
+
+/-- §5.2 — **Feasibility of the projected GD step.**  The output of
+`pgdStep_closedConvex` always lies in the constraint set `C`, since
+it is the image of the metric projection onto `C`. -/
+theorem pgdStep_closedConvex_mem (γ : ℝ) (f : E → ℝ)
+    (C : Set E) (hne : C.Nonempty) (hclosed : IsClosed C)
+    (hconv : Convex ℝ C) (x : E) :
+    pgdStep_closedConvex γ f C hne hclosed hconv x ∈ C := by
+  unfold pgdStep_closedConvex pgdStep
+  exact LTFP.MathlibExt.Analysis.closedConvexProj_mem C hne hclosed hconv _
 
 end LTFP

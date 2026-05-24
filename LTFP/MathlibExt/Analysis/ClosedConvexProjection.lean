@@ -29,6 +29,10 @@ arbitrary nonempty closed convex subset of a real Hilbert space:
 * `closedConvexProj_variational` — the first-order variational
   inequality `⟨x - p, y - p⟩_ℝ ≤ 0` for all `y ∈ C`, which is the
   defining property of the metric projection on a convex set.
+* `closedConvexProj_nonexpansive` — the projection is
+  `LipschitzWith 1`, i.e. `‖P_C(x) - P_C(y)‖ ≤ ‖x - y‖`.  This is
+  proved by summing the two variational inequalities at `x` and `y`
+  and applying Cauchy-Schwarz.
 
 The hypotheses are deliberately kept **explicit** (a `Set E` plus
 `Nonempty`, `IsClosed`, `Convex ℝ` proofs) rather than bundled into a
@@ -36,9 +40,10 @@ structure carrying the constraint set.  This matches the style of
 Mathlib's bare existence theorems and keeps elaboration costs low for
 downstream call sites.
 
-This is sub-step 1 of strategic milestone 2 (constrained / projected
-gradient descent).  Sub-step 2 will use this projection map to refine
-`pgdStep` in `LTFP/Ch05_Optimization/GD.lean`.
+Sub-step 1 of strategic milestone 2 landed the def + `_mem` /
+`_minimal` / `_variational`.  Sub-step 2 (this file) closes the
+milestone by adding nonexpansivity here and the matching concrete
+`pgdStep_closedConvex` wrapper in `LTFP/Ch05_Optimization/GD.lean`.
 -/
 
 namespace LTFP.MathlibExt.Analysis
@@ -100,5 +105,82 @@ theorem closedConvexProj_variational
   have hmem := closedConvexProj_mem C hne hclosed hconv x
   have hmin := closedConvexProj_minimal C hne hclosed hconv x
   exact (norm_eq_iInf_iff_real_inner_le_zero hconv hmem).mp hmin
+
+/-- **Nonexpansivity of the metric projection.**  The projection map
+`closedConvexProj C hne hclosed hconv` onto a nonempty closed convex
+subset `C` of a real Hilbert space is 1-Lipschitz:
+`‖P_C(x) - P_C(y)‖ ≤ ‖x - y‖` for all `x, y`.
+
+The proof applies `closedConvexProj_variational` twice (once at each
+projected point) to get
+  `⟨x - P_C x, P_C y - P_C x⟩_ℝ ≤ 0`,
+  `⟨y - P_C y, P_C x - P_C y⟩_ℝ ≤ 0`.
+Summing yields `‖P_C x - P_C y‖² ≤ ⟪x - y, P_C x - P_C y⟫_ℝ`, which
+combined with Cauchy-Schwarz (`real_inner_le_norm`) gives the bound.
+-/
+theorem closedConvexProj_nonexpansive
+    (C : Set E) (hne : C.Nonempty) (hclosed : IsClosed C)
+    (hconv : Convex ℝ C) :
+    LipschitzWith 1 (closedConvexProj C hne hclosed hconv) := by
+  -- Reduce `LipschitzWith 1 f` to `∀ x y, dist (f x) (f y) ≤ dist x y`.
+  refine LipschitzWith.mk_one ?_
+  intro x y
+  -- Switch from `dist` to `‖·‖` on both sides.
+  simp only [dist_eq_norm]
+  -- Notation for the two projections and their difference `d := p_x - p_y`.
+  set p_x : E := closedConvexProj C hne hclosed hconv x with hpx_def
+  set p_y : E := closedConvexProj C hne hclosed hconv y with hpy_def
+  have hpx_mem : p_x ∈ C := closedConvexProj_mem C hne hclosed hconv x
+  have hpy_mem : p_y ∈ C := closedConvexProj_mem C hne hclosed hconv y
+  -- Variational inequality at `x`, tested against `p_y ∈ C`:
+  --   ⟨x - p_x, p_y - p_x⟩_ℝ ≤ 0.
+  have h₁ : inner ℝ (x - p_x) (p_y - p_x) ≤ 0 :=
+    closedConvexProj_variational C hne hclosed hconv x p_y hpy_mem
+  -- Variational inequality at `y`, tested against `p_x ∈ C`:
+  --   ⟨y - p_y, p_x - p_y⟩_ℝ ≤ 0.
+  have h₂ : inner ℝ (y - p_y) (p_x - p_y) ≤ 0 :=
+    closedConvexProj_variational C hne hclosed hconv y p_x hpx_mem
+  -- Algebraic manipulation: ⟨x - p_x, p_y - p_x⟩ + ⟨y - p_y, p_x - p_y⟩
+  -- ≤ 0 expands to ‖p_x - p_y‖² ≤ ⟨x - y, p_x - p_y⟩_ℝ.
+  have hsum : inner ℝ (x - p_x) (p_y - p_x) +
+              inner ℝ (y - p_y) (p_x - p_y) ≤ 0 := by linarith
+  -- Rewrite the LHS of `hsum` as `⟨p_x - p_y, p_x - p_y⟩ - ⟨x - y, p_x - p_y⟩`
+  -- using bilinearity of the inner product, then `hsum ≤ 0` gives
+  -- `‖p_x - p_y‖² ≤ ⟨x - y, p_x - p_y⟩`.
+  have hkey : ‖p_x - p_y‖ ^ 2 ≤ inner ℝ (x - y) (p_x - p_y) := by
+    have hinner_self : inner ℝ (p_x - p_y) (p_x - p_y) = ‖p_x - p_y‖ ^ 2 :=
+      real_inner_self_eq_norm_sq (p_x - p_y)
+    -- Flip the first inner product: `p_y - p_x = -(p_x - p_y)`.
+    have hflip : inner ℝ (x - p_x) (p_y - p_x) =
+        -inner ℝ (x - p_x) (p_x - p_y) := by
+      have hneg : p_y - p_x = -(p_x - p_y) := by rw [neg_sub]
+      rw [hneg, inner_neg_right]
+    -- After the flip,
+    -- ⟨x-p_x, p_y-p_x⟩ + ⟨y-p_y, p_x-p_y⟩
+    --   = -⟨x-p_x, p_x-p_y⟩ + ⟨y-p_y, p_x-p_y⟩
+    --   = -⟨(x-p_x) - (y-p_y), p_x-p_y⟩
+    --   = ⟨p_x - p_y, p_x - p_y⟩ - ⟨x - y, p_x - p_y⟩.
+    have hexpand :
+        inner ℝ (x - p_x) (p_y - p_x) + inner ℝ (y - p_y) (p_x - p_y) =
+          inner ℝ (p_x - p_y) (p_x - p_y) - inner ℝ (x - y) (p_x - p_y) := by
+      rw [hflip]
+      simp only [inner_sub_left]
+      ring
+    linarith [hexpand ▸ hsum, hinner_self]
+  -- Cauchy-Schwarz: ⟨x - y, p_x - p_y⟩_ℝ ≤ ‖x - y‖ · ‖p_x - p_y‖.
+  have hCS : inner ℝ (x - y) (p_x - p_y) ≤ ‖x - y‖ * ‖p_x - p_y‖ :=
+    real_inner_le_norm (x - y) (p_x - p_y)
+  -- Combine: ‖p_x - p_y‖² ≤ ‖x - y‖ · ‖p_x - p_y‖.
+  have hsq : ‖p_x - p_y‖ ^ 2 ≤ ‖x - y‖ * ‖p_x - p_y‖ := le_trans hkey hCS
+  -- Case split on whether `p_x - p_y` is zero.
+  by_cases hd : ‖p_x - p_y‖ = 0
+  · -- `‖p_x - p_y‖ = 0 ≤ ‖x - y‖`.
+    rw [hd]; exact norm_nonneg _
+  · -- `‖p_x - p_y‖ > 0`, so divide both sides of `hsq`.
+    have hpos : 0 < ‖p_x - p_y‖ := lt_of_le_of_ne (norm_nonneg _) (Ne.symm hd)
+    have hsq' : ‖p_x - p_y‖ * ‖p_x - p_y‖ ≤ ‖x - y‖ * ‖p_x - p_y‖ := by
+      have : ‖p_x - p_y‖ ^ 2 = ‖p_x - p_y‖ * ‖p_x - p_y‖ := sq (‖p_x - p_y‖)
+      linarith [hsq, this]
+    exact le_of_mul_le_mul_right hsq' hpos
 
 end LTFP.MathlibExt.Analysis
