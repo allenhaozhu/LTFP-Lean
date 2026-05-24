@@ -554,14 +554,22 @@ example (μ ν : ProbabilityMeasure α) :
 end Examples
 
 /-!
-## TODO
+## Status and TODO
 
-* `PseudoEMetricSpace (ProbabilityMeasure α)` and `EMetricSpace`
-  packaging via a type synonym `TotalVariation (ProbabilityMeasure α)`,
-  following the `LevyProkhorov` pattern in
-  `Mathlib.MeasureTheory.Measure.LevyProkhorovMetric`. A direct instance
-  on `ProbabilityMeasure α` would collide with the existing weak-topology
-  `TopologicalSpace` instance, hence the synonym detour.
+### Landed
+
+* **EMetric packaging.** `TotalVariation (ProbabilityMeasure α)` carries
+  `PseudoEMetricSpace` (`instPseudoEMetricSpaceProbabilityMeasure`) and
+  `EMetricSpace` (`instEMetricSpaceProbabilityMeasure`) instances — see
+  the type-synonym block above (the `TotalVariation` structure together
+  with the two `noncomputable instance` declarations). The synonym
+  detour follows the `LevyProkhorov` pattern in
+  `Mathlib.MeasureTheory.Measure.LevyProkhorovMetric` and avoids a clash
+  with the existing weak-convergence `TopologicalSpace` instance on
+  `ProbabilityMeasure α`.
+
+### TODO
+
 * Equivalence with the supremum formulation
   `tvDist μ ν = ⨆ A, |μ A - ν A| / 2` for finite signed measures,
   via the Jordan/Hahn decomposition.
