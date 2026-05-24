@@ -5,6 +5,7 @@ Authors: LTFP-Lean contributors
 -/
 import Mathlib.MeasureTheory.Measure.Sub
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+import Mathlib.MeasureTheory.Measure.Decomposition.Hahn
 import Mathlib.MeasureTheory.VectorMeasure.Decomposition.JordanSub
 
 /-!
@@ -42,6 +43,9 @@ decomposition.
 * `tvDist_nonneg` : `0 ≤ tvDist μ ν` (automatic in `ℝ≥0∞`, exposed as a
   named lemma for use in `gcongr`/rewriting chains).
 * `tvDist_le_one` : for two probability measures the distance is at most `1`.
+* `tvDist_eq_zero_iff` : for finite measures, `tvDist μ ν = 0 ↔ μ = ν`.
+* `tvDist_triangle` : for finite measures, the triangle inequality
+  `tvDist μ κ ≤ tvDist μ ν + tvDist ν κ`.
 
 ## Implementation notes
 
@@ -273,6 +277,260 @@ theorem tvDist_eq_zero_of_eq
     (h : μ = ν) : tvDist μ ν = 0 := by
   subst h; simp
 
+/-! ### Triangle inequality
+
+The triangle inequality `tvDist μ κ ≤ tvDist μ ν + tvDist ν κ` is the
+second metric axiom for the `tvDist` API. The proof rests on a single
+pointwise inequality for the truncated subtraction of finite measures,
+`Measure.le_sub_add : μ ≤ μ - ν + ν`, which is the unsigned analogue of
+the obvious identity `a = (a - b) + b` for real `a, b`. Once that
+helper is in hand, the triangle inequality reduces to a one-line
+`sub_le_of_le_add` plus the symmetric version `(κ - μ) ≤ (κ - ν) + (ν - μ)`,
+followed by adding both inequalities, evaluating on `Set.univ`, and
+dividing by two.
+
+The helper `le_sub_add` is established via the unsigned Hahn
+decomposition: on the Hahn set where `μ ≤ ν` (so `μ - ν` vanishes
+there), the inequality is `μ ≤ ν`; on the complement where `ν ≤ μ`,
+it is `μ = (μ - ν) + ν` by `sub_add_cancel_of_le`. -/
+
+namespace Measure
+
+/-- For finite measures `μ` and `ν` on a measurable space, `μ ≤ μ - ν + ν`.
+This is the unsigned analogue of the trivial identity `a = (a - b) + b` for
+real numbers, with the truncated subtraction `μ - ν` on the left. The proof
+uses the unsigned Hahn decomposition to split `Set.univ` into a region where
+`μ ≤ ν` (so `μ - ν` vanishes and the inequality reduces to `μ ≤ ν`) and a
+region where `ν ≤ μ` (so the inequality becomes the equality
+`sub_add_cancel_of_le`). -/
+theorem le_sub_add {μ ν : Measure α} [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
+    μ ≤ μ - ν + ν := by
+  obtain ⟨s, hHahn⟩ := MeasureTheory.exists_isHahnDecomposition μ ν
+  have hms : MeasurableSet s := hHahn.measurableSet
+  have hmsc : MeasurableSet sᶜ := hms.compl
+  -- On the complement of the Hahn set we have `ν ≤ μ`.
+  have hge : ν.restrict sᶜ ≤ μ.restrict sᶜ := hHahn.ge_on_compl
+  -- Key fact on the complement: `(μ - ν).restrict sᶜ + ν.restrict sᶜ = μ.restrict sᶜ`.
+  have h_compl_eq :
+      (μ - ν).restrict sᶜ + ν.restrict sᶜ = μ.restrict sᶜ := by
+    have hrs :
+        (μ - ν).restrict sᶜ = μ.restrict sᶜ - ν.restrict sᶜ :=
+      MeasureTheory.Measure.restrict_sub_eq_restrict_sub_restrict hmsc
+    rw [hrs]
+    exact MeasureTheory.Measure.sub_add_cancel_of_le hge
+  -- Now prove the bound pointwise.
+  rw [MeasureTheory.Measure.le_iff]
+  intro t ht
+  -- Decompose μ t along s.
+  have hμ_split :
+      μ t = μ.restrict s t + μ.restrict sᶜ t := by
+    have hpart :
+        μ.restrict s + μ.restrict sᶜ = μ :=
+      MeasureTheory.Measure.restrict_add_restrict_compl hms
+    have := congrArg (fun ρ : Measure α => ρ t) hpart
+    simp [MeasureTheory.Measure.add_apply] at this
+    exact this.symm
+  -- Decompose ((μ - ν) + ν) t along s using the complement equality.
+  have h_target_split :
+      ((μ - ν) + ν) t =
+        ((μ - ν).restrict s + ν.restrict s) t + μ.restrict sᶜ t := by
+    have h_part_sub : (μ - ν).restrict s + (μ - ν).restrict sᶜ = μ - ν :=
+      MeasureTheory.Measure.restrict_add_restrict_compl hms
+    have h_part_ν : ν.restrict s + ν.restrict sᶜ = ν :=
+      MeasureTheory.Measure.restrict_add_restrict_compl hms
+    -- Rebuild (μ - ν) + ν from its four restrict pieces and rearrange.
+    have h_sum_split :
+        (μ - ν) + ν =
+          ((μ - ν).restrict s + ν.restrict s) +
+            ((μ - ν).restrict sᶜ + ν.restrict sᶜ) := by
+      calc
+        (μ - ν) + ν
+            = ((μ - ν).restrict s + (μ - ν).restrict sᶜ) +
+                (ν.restrict s + ν.restrict sᶜ) := by
+              rw [h_part_sub, h_part_ν]
+        _ = ((μ - ν).restrict s + ν.restrict s) +
+              ((μ - ν).restrict sᶜ + ν.restrict sᶜ) := by abel
+    rw [h_sum_split, h_compl_eq, MeasureTheory.Measure.add_apply]
+  -- On s: ν.restrict s ≤ (μ - ν).restrict s + ν.restrict s (trivially).
+  -- We need μ.restrict s t ≤ ((μ - ν).restrict s + ν.restrict s) t.
+  -- Since μ.restrict s ≤ ν.restrict s by Hahn, and ν.restrict s ≤ sum, done.
+  have h_on_s :
+      μ.restrict s t ≤ ((μ - ν).restrict s + ν.restrict s) t := by
+    calc
+      μ.restrict s t ≤ ν.restrict s t := hHahn.le_on t
+      _ ≤ ((μ - ν).restrict s + ν.restrict s) t := by
+            rw [MeasureTheory.Measure.add_apply]; exact le_add_self
+  -- Combine.
+  rw [hμ_split, h_target_split]
+  exact add_le_add h_on_s le_rfl
+
+/-- Symmetric form of `le_sub_add`: `μ ≤ ν + (μ - ν)`. Useful when the
+sum needs to be in the other order for downstream `rw` / `calc` chains. -/
+theorem le_add_sub {μ ν : Measure α} [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
+    μ ≤ ν + (μ - ν) := by
+  rw [add_comm]; exact le_sub_add
+
+/-- Triangle inequality for the truncated subtraction of finite measures:
+`μ - κ ≤ (μ - ν) + (ν - κ)`. This is the analogue of the obvious
+inequality `(a - c)⁺ ≤ (a - b)⁺ + (b - c)⁺` for real numbers,
+and is the load-bearing ingredient for the triangle inequality on
+`tvDist`. -/
+theorem sub_le_sub_add_sub
+    (μ ν κ : Measure α) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    [IsFiniteMeasure κ] :
+    μ - κ ≤ (μ - ν) + (ν - κ) := by
+  -- μ ≤ (μ - ν) + ν ≤ (μ - ν) + ((ν - κ) + κ)
+  --   = ((μ - ν) + (ν - κ)) + κ
+  -- hence by sub_le_of_le_add: μ - κ ≤ (μ - ν) + (ν - κ).
+  refine MeasureTheory.Measure.sub_le_of_le_add ?_
+  calc
+    μ ≤ μ - ν + ν := le_sub_add
+    _ ≤ μ - ν + (ν - κ + κ) := add_le_add le_rfl le_sub_add
+    _ = μ - ν + (ν - κ) + κ := by rw [add_assoc]
+
+end Measure
+
+/-- **Triangle inequality for the total variation distance.** For three
+finite measures `μ`, `ν`, `κ` on a measurable space `α`,
+`tvDist μ κ ≤ tvDist μ ν + tvDist ν κ`. Combined with `tvDist_self` and
+`tvDist_comm`, this completes the (pseudo)-metric axioms for `tvDist`
+on finite measures, and gives a `PseudoEMetricSpace`-style structure on
+`ProbabilityMeasure α` (modulo type-class packaging discussed below).
+
+The proof reduces to the pointwise truncated-subtraction triangle
+`Measure.sub_le_sub_add_sub : μ - κ ≤ (μ - ν) + (ν - κ)` together with
+its symmetric counterpart `κ - μ ≤ (κ - ν) + (ν - μ)`, applied at
+`Set.univ` and divided by two. -/
+theorem tvDist_triangle (μ ν κ : Measure α)
+    [IsFiniteMeasure μ] [IsFiniteMeasure ν] [IsFiniteMeasure κ] :
+    tvDist μ κ ≤ tvDist μ ν + tvDist ν κ := by
+  -- Pointwise triangle for the truncated subtraction in both directions.
+  have h₁ : μ - κ ≤ (μ - ν) + (ν - κ) := Measure.sub_le_sub_add_sub μ ν κ
+  have h₂ : κ - μ ≤ (κ - ν) + (ν - μ) := Measure.sub_le_sub_add_sub κ ν μ
+  have hsum :
+      ((μ - κ) + (κ - μ)) Set.univ ≤
+        (((μ - ν) + (ν - μ)) + ((ν - κ) + (κ - ν))) Set.univ := by
+    have hrhs_eq :
+        ((μ - ν) + (ν - κ)) + ((κ - ν) + (ν - μ)) =
+          ((μ - ν) + (ν - μ)) + ((ν - κ) + (κ - ν)) := by
+      simp only [add_comm, add_assoc, add_left_comm]
+    have hsum_le :
+        (μ - κ) + (κ - μ) ≤
+          ((μ - ν) + (ν - μ)) + ((ν - κ) + (κ - ν)) := by
+      calc
+        (μ - κ) + (κ - μ)
+            ≤ ((μ - ν) + (ν - κ)) + ((κ - ν) + (ν - μ)) := add_le_add h₁ h₂
+        _ = ((μ - ν) + (ν - μ)) + ((ν - κ) + (κ - ν)) := hrhs_eq
+    exact hsum_le _
+  -- Now divide both sides by 2. Work in ℝ≥0∞.
+  have hadd_eq :
+      (((μ - ν) + (ν - μ)) + ((ν - κ) + (κ - ν))) Set.univ =
+        ((μ - ν) + (ν - μ)) Set.univ + ((ν - κ) + (κ - ν)) Set.univ := by
+    rw [MeasureTheory.Measure.add_apply]
+  have hsum' :
+      ((μ - κ) + (κ - μ)) Set.univ ≤
+        ((μ - ν) + (ν - μ)) Set.univ + ((ν - κ) + (κ - ν)) Set.univ := by
+    rw [← hadd_eq]; exact hsum
+  -- Divide by 2 and rewrite back to tvDist.
+  have h2ne : (2 : ℝ≥0∞) ≠ 0 := by norm_num
+  unfold tvDist
+  calc
+    ((μ - κ) + (κ - μ)) Set.univ / 2
+        ≤ (((μ - ν) + (ν - μ)) Set.univ + ((ν - κ) + (κ - ν)) Set.univ) / 2 :=
+          ENNReal.div_le_div_right hsum' 2
+    _ = ((μ - ν) + (ν - μ)) Set.univ / 2 +
+          ((ν - κ) + (κ - ν)) Set.univ / 2 :=
+          ENNReal.add_div
+
+/-! ### `(Pseudo)EMetricSpace` packaging via the `TotalVariation` type synonym
+
+The `tvDist` axioms `tvDist_self`, `tvDist_comm`, `tvDist_triangle` and
+`tvDist_eq_zero_iff` together give a `PseudoEMetricSpace` (in fact an
+`EMetricSpace`) structure on probability measures. We cannot register
+that structure directly on `ProbabilityMeasure α`, since `ProbabilityMeasure α`
+already carries the weak-convergence `TopologicalSpace` instance (see
+`Mathlib.MeasureTheory.Measure.ProbabilityMeasure`) and adding a
+`PseudoEMetricSpace` instance would collide with it.
+
+Following the pattern of `LevyProkhorov` in
+`Mathlib.MeasureTheory.Measure.LevyProkhorovMetric`, we introduce a
+type synonym `TotalVariation α := α` whose semantic role is "this carrier
+should be equipped with the TV (pseudo)emetric topology". The
+`PseudoEMetricSpace` / `EMetricSpace` instances are then registered on
+`TotalVariation (ProbabilityMeasure α)` rather than on
+`ProbabilityMeasure α` itself. -/
+
+/-- Type synonym, to be applied to `ProbabilityMeasure α` (or `FiniteMeasure α`,
+or `Measure α`) when we want to equip it with the total variation distance.
+Mirrors the `LevyProkhorov` pattern from
+`Mathlib.MeasureTheory.Measure.LevyProkhorovMetric`. -/
+structure TotalVariation (α : Type*) where
+  /-- Turn a measure-like value into the corresponding element of the space
+  equipped with the total variation distance. -/
+  ofMeasure ::
+  /-- Turn an element of the space equipped with the total variation
+  distance back into the corresponding measure-like value. -/
+  toMeasure : α
+
+namespace TotalVariation
+
+@[simp]
+lemma ofMeasure_toMeasure {α : Type*} (μ : TotalVariation α) :
+    ofMeasure μ.toMeasure = μ := rfl
+
+@[simp]
+lemma toMeasure_ofMeasure {α : Type*} (μ : α) :
+    (ofMeasure μ : TotalVariation α).toMeasure = μ := rfl
+
+lemma toMeasure_injective {α : Type*} :
+    (toMeasure : TotalVariation α → α).Injective :=
+  fun ⟨μ⟩ ⟨ν⟩ => by congr!
+
+/-- `TotalVariation.toMeasure` as an equiv. -/
+@[simps]
+def toMeasureEquiv {α : Type*} : TotalVariation α ≃ α where
+  toFun := toMeasure
+  invFun := ofMeasure
+
+end TotalVariation
+
+/-- The total variation distance makes `ProbabilityMeasure α` a
+pseudo-extended-metric space. The instance is recorded on the type synonym
+`TotalVariation (ProbabilityMeasure α)` to avoid colliding with the
+existing weak-convergence `TopologicalSpace` instance on
+`ProbabilityMeasure α`. -/
+noncomputable instance instPseudoEMetricSpaceProbabilityMeasure :
+    PseudoEMetricSpace (TotalVariation (ProbabilityMeasure α)) where
+  edist μ ν :=
+    tvDist (μ.toMeasure : Measure α) (ν.toMeasure : Measure α)
+  edist_self μ := by
+    simp [tvDist_self]
+  edist_comm μ ν := by
+    simp [tvDist_comm]
+  edist_triangle μ ν κ := by
+    exact tvDist_triangle _ _ _
+
+/-- The total variation distance makes `ProbabilityMeasure α` an
+extended-metric space, since it separates points (see `tvDist_eq_zero_iff`
+on finite measures, specialised through the `ProbabilityMeasure α →
+Measure α` coercion). The instance is recorded on the type synonym
+`TotalVariation (ProbabilityMeasure α)` for the same reason as
+`instPseudoEMetricSpaceProbabilityMeasure`. -/
+noncomputable instance instEMetricSpaceProbabilityMeasure :
+    EMetricSpace (TotalVariation (ProbabilityMeasure α)) where
+  eq_of_edist_eq_zero {μ ν} h := by
+    -- `edist μ ν` here is exactly `tvDist (μ.toMeasure : Measure α) (ν.toMeasure : Measure α)`.
+    have h_tv :
+        tvDist (μ.toMeasure : Measure α) (ν.toMeasure : Measure α) = 0 := h
+    have h_meas_eq :
+        (μ.toMeasure : Measure α) = (ν.toMeasure : Measure α) :=
+      (tvDist_eq_zero_iff _ _).mp h_tv
+    -- Lift back via injectivity of the ProbabilityMeasure coercion to Measure.
+    have h_prob_eq : μ.toMeasure = ν.toMeasure := by
+      apply MeasureTheory.ProbabilityMeasure.toMeasure_injective
+      exact h_meas_eq
+    exact TotalVariation.toMeasure_injective h_prob_eq
+
 /-! ### Examples
 
 These examples demonstrate basic usage of the `tvDist` API and double as
@@ -298,9 +556,12 @@ end Examples
 /-!
 ## TODO
 
-* `tvDist_triangle` : the triangle inequality. Expected from
-  `Measure.sub` subadditivity once a `Measure.sub_add_sub_le` lemma is
-  available. This is sub-step 2 of the TV-metric API milestone.
+* `PseudoEMetricSpace (ProbabilityMeasure α)` and `EMetricSpace`
+  packaging via a type synonym `TotalVariation (ProbabilityMeasure α)`,
+  following the `LevyProkhorov` pattern in
+  `Mathlib.MeasureTheory.Measure.LevyProkhorovMetric`. A direct instance
+  on `ProbabilityMeasure α` would collide with the existing weak-topology
+  `TopologicalSpace` instance, hence the synonym detour.
 * Equivalence with the supremum formulation
   `tvDist μ ν = ⨆ A, |μ A - ν A| / 2` for finite signed measures,
   via the Jordan/Hahn decomposition.
