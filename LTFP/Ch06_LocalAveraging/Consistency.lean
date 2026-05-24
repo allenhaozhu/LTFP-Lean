@@ -46,4 +46,48 @@ theorem localAvgBiasTerm_zero_fstar
   unfold localAvgBiasTerm
   simp
 
+/-- §6.3 — Lipschitz-locality bias bound (Bach §6.3 consistency first step).
+
+If the weights at `x` are nonnegative, sum to `1`, and the support is
+contained in the ball of radius `r` around `x` (i.e. `w x i ≠ 0` forces
+`dist (xs i) x ≤ r`), then for any `L`-Lipschitz regression function
+`fstar` the bias term is bounded in absolute value by `L · r`. This is
+the deterministic locality estimate that drives the consistency proof:
+as the weight-support radius shrinks, the bias vanishes. -/
+theorem localAvgBiasTerm_abs_le_of_lipschitz_local
+    [PseudoMetricSpace 𝒳] (fstar : 𝒳 → ℝ) (xs : Fin n → 𝒳)
+    (w : LocalWeights 𝒳 n) (x : 𝒳) (L : NNReal) (r : ℝ) (_hr : 0 ≤ r)
+    (hLip : LipschitzWith L fstar)
+    (hw : ∀ i, 0 ≤ w x i) (hsum : ∑ i, w x i = 1)
+    (hlocal : ∀ i, w x i ≠ 0 → dist (xs i) x ≤ r) :
+    |localAvgBiasTerm fstar xs w x| ≤ (L : ℝ) * r := by
+  have hbias :
+      localAvgBiasTerm fstar xs w x =
+        ∑ i, w x i * (fstar (xs i) - fstar x) := by
+    unfold localAvgBiasTerm
+    simp_rw [mul_sub]
+    rw [Finset.sum_sub_distrib, ← Finset.sum_mul, hsum, one_mul]
+  rw [hbias]
+  calc
+    |∑ i, w x i * (fstar (xs i) - fstar x)|
+        ≤ ∑ i, |w x i * (fstar (xs i) - fstar x)| :=
+          Finset.abs_sum_le_sum_abs _ _
+    _ = ∑ i, w x i * |fstar (xs i) - fstar x| := by
+          apply Finset.sum_congr rfl
+          intro i _
+          rw [abs_mul, abs_of_nonneg (hw i)]
+    _ ≤ ∑ i, w x i * ((L : ℝ) * r) := by
+          apply Finset.sum_le_sum
+          intro i _
+          by_cases hi : w x i = 0
+          · simp [hi]
+          · apply mul_le_mul_of_nonneg_left _ (hw i)
+            calc
+              |fstar (xs i) - fstar x|
+                  = dist (fstar (xs i)) (fstar x) := by rw [Real.dist_eq]
+              _ ≤ (L : ℝ) * dist (xs i) x := hLip.dist_le_mul _ _
+              _ ≤ (L : ℝ) * r :=
+                  mul_le_mul_of_nonneg_left (hlocal i hi) L.coe_nonneg
+    _ = (L : ℝ) * r := by rw [← Finset.sum_mul, hsum, one_mul]
+
 end LTFP
