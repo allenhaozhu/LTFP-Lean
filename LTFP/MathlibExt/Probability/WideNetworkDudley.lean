@@ -387,7 +387,7 @@ ball. The "data point" type is `EuclideanSpace ℝ (Fin d) × ℝ`, packaging
 inputs `x` and targets `y` together so that `F θ (x, y) = (⟨θ, x⟩ - y)²`
 is a single-argument function suitable for the
 `EmpiricalFunctionSpace` machinery. -/
-private noncomputable def linearizedRiskFamily
+noncomputable def linearizedRiskFamily
     {d : ℕ} (B_param : ℝ) :
     {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} →
       EuclideanSpace ℝ (Fin d) × ℝ → ℝ :=
