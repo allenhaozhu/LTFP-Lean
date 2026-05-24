@@ -142,4 +142,43 @@ lemma R_posSemidef_of_posSemidef
   exact hB.transpose.kronecker
     (Matrix.PosSemidef.one : (1 : Matrix n n ℂ).PosSemidef)
 
+/-! ### Algebra laws
+
+The following five lemmas establish that `L` is a unital `*`-algebra
+homomorphism (preserves `0`, `1`, multiplication, and the star
+operation) and that `R` is an anti-multiplicative map.  These are the
+basic structural facts about the left/right multiplication
+superoperators and form the algebraic backbone for downstream Lieb /
+Hansen–Pedersen / Effros calculations.
+-/
+
+omit [Fintype n] in
+@[simp]
+lemma L_zero : L (0 : Matrix n n ℂ) = 0 := by
+  unfold L
+  exact Matrix.kronecker_zero _
+
+omit [Fintype n] in
+@[simp]
+lemma L_one : L (1 : Matrix n n ℂ) = 1 := by
+  unfold L
+  exact Matrix.one_kronecker_one
+
+lemma L_mul (A B : Matrix n n ℂ) : L (A * B) = L A * L B := by
+  unfold L
+  rw [← Matrix.mul_kronecker_mul]
+  simp
+
+omit [Fintype n] in
+lemma L_star (A : Matrix n n ℂ) : L (star A) = star (L A) := by
+  unfold L
+  rw [Matrix.star_eq_conjTranspose, Matrix.star_eq_conjTranspose,
+      Matrix.conjTranspose_kronecker]
+  simp
+
+lemma R_mul_rev (B₁ B₂ : Matrix n n ℂ) : R (B₁ * B₂) = R B₂ * R B₁ := by
+  unfold R
+  rw [Matrix.transpose_mul, ← Matrix.mul_kronecker_mul]
+  simp
+
 end LiebSuperop
