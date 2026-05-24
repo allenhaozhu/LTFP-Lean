@@ -58,6 +58,7 @@ import LTFP.MathlibExt.Probability.LinearClassSampleCoverCard
 import LTFP.MathlibExt.Probability.LinearizedRiskLipschitz
 import LTFP.MathlibExt.Probability.LinearizedRiskSampleCover
 import LTFP.MathlibExt.Probability.RandomFeatureDynamics
+import LTFP.MathlibExt.Probability.RandomFeatureCarrier
 import LTFP.MathlibExt.Probability.CoveringNumberEuclidean
 import LTFP.MathlibExt.Probability.CoveringNumberReal
 import LTFP.MathlibExt.Probability.Symmetrization
