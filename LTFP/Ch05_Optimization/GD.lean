@@ -777,4 +777,179 @@ theorem pgdStep_closedConvex_gap_le_distance_drop
   -- relating the inner-product term and the norm-square terms.
   nlinarith [hcombo123, hpolar, sq_nonneg ((L : ℝ))]
 
+/-! ### §5.2 — Multi-step projected gradient descent and the averaged O(1/T) rate.
+
+The one-step comparator `pgdStep_closedConvex_gap_le_distance_drop` telescopes
+to a Cesàro-style `O(1/T)` rate on the averaged suboptimality of projected
+gradient descent (Bach 2024 §5.2.3).  We package the `T`-step iterate and
+the averaged-gap inequality, and a constrained-minimizer corollary. -/
+
+/-- §5.2 — **`T`-step iterate of projected gradient descent** at the canonical
+step `η = 1/L` (the parameter `η` is left general).  Starting from `x₀`, the
+iteration applies `pgdStep_closedConvex η f C ...` repeatedly.  This is the
+PGD analogue of `gdIterate`. -/
+noncomputable def pgdIterate_closedConvex
+    (η : ℝ) (f : E → ℝ)
+    (C : Set E) (hne : C.Nonempty) (hclosed : IsClosed C)
+    (hconv : Convex ℝ C) (x0 : E) : ℕ → E
+  | 0 => x0
+  | t + 1 =>
+      pgdStep_closedConvex η f C hne hclosed hconv
+        (pgdIterate_closedConvex η f C hne hclosed hconv x0 t)
+
+/-- §5.2 — One-step closed form for `pgdIterate_closedConvex`. -/
+theorem pgdIterate_closedConvex_succ
+    (η : ℝ) (f : E → ℝ)
+    (C : Set E) (hne : C.Nonempty) (hclosed : IsClosed C)
+    (hconv : Convex ℝ C) (x0 : E) (t : ℕ) :
+    pgdIterate_closedConvex η f C hne hclosed hconv x0 (t + 1)
+      = pgdStep_closedConvex η f C hne hclosed hconv
+          (pgdIterate_closedConvex η f C hne hclosed hconv x0 t) := rfl
+
+/-- §5.2 — **Averaged `O(1/T)` rate for projected gradient descent.**  At the
+canonical step `η = 1/L`, the averaged suboptimality of the PGD iterates
+against any reference point `x* ∈ C` is bounded by `L · ‖x₀ − x*‖² / (2T)`:
+
+`(∑ k ∈ range T, (f(x_{k+1}) − f(x*))) / T  ≤  L · ‖x₀ − x*‖² / (2T)`.
+
+The proof telescopes the per-step distance-drop comparator
+`pgdStep_closedConvex_gap_le_distance_drop` over `k ∈ {0,…,T-1}` and drops
+the (nonnegative) `‖x_T − x*‖²` term.  When `x*` minimizes `f` on `C`, each
+summand `f(x_{k+1}) − f(x*)` is nonnegative, so this directly bounds the
+average gap (Bach 2024 §5.2.3). -/
+theorem pgdIterate_closedConvex_averaged_gap_le
+    (f : E → ℝ) (L : NNReal) (hL : 0 < (L : ℝ))
+    (hDiff : ∀ z : E, HasGradientAt f (gradient f z) z)
+    (hLip : LipschitzWith L (gradient f))
+    (hConv : IsMuStronglyConvex 0 f)
+    (C : Set E) (hne : C.Nonempty) (hclosed : IsClosed C)
+    (hCconv : Convex ℝ C) {xstar : E} (hxstar : xstar ∈ C) (x0 : E) (T : ℕ)
+    (hT : 0 < T) :
+    (∑ k ∈ Finset.range T,
+        (f (pgdIterate_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x0
+              (k + 1)) - f xstar))
+        / (T : ℝ)
+      ≤ (L : ℝ) * ‖x0 - xstar‖ ^ 2 / (2 * (T : ℝ)) := by
+  -- Abbreviate the iterate trajectory.
+  set xs : ℕ → E :=
+    fun k => pgdIterate_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x0 k
+    with hxs_def
+  -- Step 1: per-step comparator.  For every `k`, the canonical distance-drop
+  -- inequality at `(xs k, xs (k+1))` gives
+  --   f (xs (k+1)) - f xstar ≤ (L/2) · (‖xs k - xstar‖² - ‖xs (k+1) - xstar‖²).
+  have hstep : ∀ k : ℕ,
+      f (xs (k + 1)) - f xstar
+        ≤ ((L : ℝ) / 2)
+            * (‖xs k - xstar‖ ^ 2 - ‖xs (k + 1) - xstar‖ ^ 2) := by
+    intro k
+    -- `xs (k+1) = pgdStep_closedConvex (1/L) f C ... (xs k)` by definition.
+    have hxs_succ :
+        xs (k + 1) = pgdStep_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv
+            (xs k) := pgdIterate_closedConvex_succ _ _ _ _ _ _ _ _
+    rw [hxs_succ]
+    exact pgdStep_closedConvex_gap_le_distance_drop
+      f L hL hDiff hLip hConv C hne hclosed hCconv hxstar (xs k)
+  -- Step 2: sum the per-step inequalities over `k ∈ range T`.
+  have hsum_step :
+      (∑ k ∈ Finset.range T, (f (xs (k + 1)) - f xstar))
+        ≤ ∑ k ∈ Finset.range T,
+            ((L : ℝ) / 2)
+              * (‖xs k - xstar‖ ^ 2 - ‖xs (k + 1) - xstar‖ ^ 2) :=
+    Finset.sum_le_sum (fun k _ => hstep k)
+  -- Step 3: pull the `(L/2)` factor out and telescope using
+  -- `Finset.sum_range_sub'` (additive companion of `prod_range_div'`).
+  -- Define `dsq k := ‖xs k - xstar‖^2`.
+  set dsq : ℕ → ℝ := fun k => ‖xs k - xstar‖ ^ 2 with hdsq_def
+  have htele :
+      (∑ k ∈ Finset.range T, (dsq k - dsq (k + 1))) = dsq 0 - dsq T :=
+    Finset.sum_range_sub' (fun k => dsq k) T
+  have hrhs_fact :
+      (∑ k ∈ Finset.range T,
+          ((L : ℝ) / 2)
+            * (‖xs k - xstar‖ ^ 2 - ‖xs (k + 1) - xstar‖ ^ 2))
+        = ((L : ℝ) / 2) * (dsq 0 - dsq T) := by
+    have : (∑ k ∈ Finset.range T,
+              ((L : ℝ) / 2) * (dsq k - dsq (k + 1)))
+              = ((L : ℝ) / 2) * ∑ k ∈ Finset.range T,
+                  (dsq k - dsq (k + 1)) := by
+      rw [← Finset.mul_sum]
+    rw [show (∑ k ∈ Finset.range T,
+              ((L : ℝ) / 2)
+                * (‖xs k - xstar‖ ^ 2 - ‖xs (k + 1) - xstar‖ ^ 2))
+            = ∑ k ∈ Finset.range T,
+              ((L : ℝ) / 2) * (dsq k - dsq (k + 1)) from rfl,
+        this, htele]
+  -- Step 4: drop the nonnegative `dsq T` term:
+  --   (L/2) · (dsq 0 - dsq T) ≤ (L/2) · dsq 0.
+  have hdsq_T_nn : 0 ≤ dsq T := sq_nonneg _
+  have hL2_nn : 0 ≤ (L : ℝ) / 2 := by positivity
+  have hdrop :
+      ((L : ℝ) / 2) * (dsq 0 - dsq T) ≤ ((L : ℝ) / 2) * dsq 0 := by
+    have : (L : ℝ) / 2 * (dsq 0 - dsq T) ≤ (L : ℝ) / 2 * dsq 0 := by
+      have hineq : dsq 0 - dsq T ≤ dsq 0 := by linarith
+      exact mul_le_mul_of_nonneg_left hineq hL2_nn
+    exact this
+  -- Step 5: identify `dsq 0 = ‖x0 - xstar‖²`.
+  have hdsq0 : dsq 0 = ‖x0 - xstar‖ ^ 2 := by
+    show ‖xs 0 - xstar‖ ^ 2 = ‖x0 - xstar‖ ^ 2
+    have : xs 0 = x0 := rfl
+    rw [this]
+  -- Chain: ∑_k (f(xs (k+1)) - f xstar) ≤ (L/2) · ‖x0 - xstar‖².
+  have hsum_bound :
+      (∑ k ∈ Finset.range T, (f (xs (k + 1)) - f xstar))
+        ≤ ((L : ℝ) / 2) * ‖x0 - xstar‖ ^ 2 := by
+    calc (∑ k ∈ Finset.range T, (f (xs (k + 1)) - f xstar))
+        ≤ ∑ k ∈ Finset.range T,
+            ((L : ℝ) / 2)
+              * (‖xs k - xstar‖ ^ 2 - ‖xs (k + 1) - xstar‖ ^ 2) := hsum_step
+      _ = ((L : ℝ) / 2) * (dsq 0 - dsq T) := hrhs_fact
+      _ ≤ ((L : ℝ) / 2) * dsq 0 := hdrop
+      _ = ((L : ℝ) / 2) * ‖x0 - xstar‖ ^ 2 := by rw [hdsq0]
+  -- Step 6: divide by `T > 0`.
+  have hTpos : (0 : ℝ) < (T : ℝ) := by exact_mod_cast hT
+  -- Multiply `hsum_bound` by 2 to clear the `L/2` factor:
+  --   ∑ k, (f (xs (k+1)) - f xstar) * 2 ≤ L · ‖x0 - xstar‖².
+  have hmul2 :
+      2 * (∑ k ∈ Finset.range T, (f (xs (k + 1)) - f xstar))
+        ≤ (L : ℝ) * ‖x0 - xstar‖ ^ 2 := by
+    have h2 : (0 : ℝ) ≤ 2 := by norm_num
+    have hscale :
+        2 * (∑ k ∈ Finset.range T, (f (xs (k + 1)) - f xstar))
+          ≤ 2 * (((L : ℝ) / 2) * ‖x0 - xstar‖ ^ 2) :=
+      mul_le_mul_of_nonneg_left hsum_bound h2
+    have hLrw : 2 * (((L : ℝ) / 2) * ‖x0 - xstar‖ ^ 2)
+        = (L : ℝ) * ‖x0 - xstar‖ ^ 2 := by ring
+    linarith
+  -- Now divide by `2T > 0`.
+  have h2Tpos : (0 : ℝ) < 2 * (T : ℝ) := by positivity
+  rw [div_le_div_iff₀ hTpos h2Tpos]
+  -- Goal: ∑ k, (f (pgdIterate ... (k+1)) - f xstar) * (2 * T)
+  --         ≤ L * ‖x0 - xstar‖² * T.
+  -- Use `hmul2` and the positivity of `T`.
+  have : (∑ k ∈ Finset.range T,
+            (f (pgdIterate_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x0
+                  (k + 1)) - f xstar))
+          = ∑ k ∈ Finset.range T, (f (xs (k + 1)) - f xstar) := rfl
+  rw [this]
+  nlinarith [hmul2, hTpos]
+
+/-- §5.2 — **Constrained-minimizer corollary.**  If `x*` is a minimizer of `f`
+on `C`, each summand `f(x_{k+1}) − f(x*)` is nonnegative and the averaged-gap
+bound directly controls the average suboptimality of the PGD iterates. -/
+theorem pgdIterate_closedConvex_constrained_minimizer_gap_le
+    (f : E → ℝ) (L : NNReal) (hL : 0 < (L : ℝ))
+    (hDiff : ∀ z : E, HasGradientAt f (gradient f z) z)
+    (hLip : LipschitzWith L (gradient f))
+    (hConv : IsMuStronglyConvex 0 f)
+    (C : Set E) (hne : C.Nonempty) (hclosed : IsClosed C)
+    (hCconv : Convex ℝ C) {xstar : E} (hxstar : xstar ∈ C)
+    (_hmin : ∀ y ∈ C, f xstar ≤ f y) (x0 : E) (T : ℕ) (hT : 0 < T) :
+    (∑ k ∈ Finset.range T,
+        (f (pgdIterate_closedConvex (1 / (L : ℝ)) f C hne hclosed hCconv x0
+              (k + 1)) - f xstar))
+        / (T : ℝ)
+      ≤ (L : ℝ) * ‖x0 - xstar‖ ^ 2 / (2 * (T : ℝ)) :=
+  pgdIterate_closedConvex_averaged_gap_le
+    f L hL hDiff hLip hConv C hne hclosed hCconv hxstar x0 T hT
+
 end LTFP
