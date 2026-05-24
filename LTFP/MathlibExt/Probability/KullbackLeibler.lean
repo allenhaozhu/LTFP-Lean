@@ -212,4 +212,89 @@ theorem donsker_varadhan_inequality_diff
   have h := donsker_varadhan_inequality hμν hf hfν h_int
   linarith
 
+/-! ### Tilted-attainment identity (Donsker--Varadhan, sub-step 1)
+
+The Donsker--Varadhan upper bound proved above is sharp on the
+exponential-family slice: choosing `μ = ν.tilted f` (the exponential
+tilt of `ν` by `f`) saturates the bound. Concretely, for an
+exponentially tilted probability measure `ν.tilted f` we have
+
+  `(klDiv (ν.tilted f) ν).toReal
+     = ∫ x, f x ∂(ν.tilted f) - log (∫ x, exp (f x) ∂ν)`.
+
+This is the *tilted-attainment identity*: it exhibits an explicit
+attainment witness for the variational supremum on the
+exponential-family slice, without yet formalizing the supremum over
+bounded measurable functions (that is the next sub-step of the
+Donsker--Varadhan milestone).
+
+The proof uses Mathlib's `log_rnDeriv_tilted_left_self`
+(`llr (ν.tilted f) ν =ᵐ[ν] f - log Z`) together with
+`tilted_absolutelyContinuous` (to transfer the a.e. equality from `ν`
+to `ν.tilted f`) and `toReal_klDiv_of_measure_eq` (to convert the
+`klDiv` into an integral of `llr`). The argument is short: every
+piece is already in Mathlib at the pinned commit. -/
+
+/-- **Tilted-attainment identity for the Donsker--Varadhan
+inequality.** For a probability measure `ν` and a test function `f`
+with `Real.exp ∘ f` integrable under `ν`, the Kullback--Leibler
+divergence of the exponential tilt `ν.tilted f` against `ν` equals the
+Donsker--Varadhan functional evaluated at `f`:
+
+  `(klDiv (ν.tilted f) ν).toReal
+     = ∫ x, f x ∂(ν.tilted f) - Real.log (∫ x, Real.exp (f x) ∂ν)`.
+
+In particular, the choice `μ = ν.tilted f` saturates
+`donsker_varadhan_inequality_diff`. This is sub-step 1 of the
+Donsker--Varadhan attainment milestone: it provides an explicit
+attainment witness on the exponential-family slice without invoking
+the supremum over the full class of bounded measurable functions. -/
+theorem klDiv_tilted_eq_dvFunctional
+    (ν : Measure α) [IsProbabilityMeasure ν]
+    {f : α → ℝ}
+    (hf_exp : Integrable (fun x => Real.exp (f x)) ν)
+    (hf_int_tilted : Integrable f (ν.tilted f)) :
+    (klDiv (ν.tilted f) ν).toReal
+      = ∫ x, f x ∂(ν.tilted f) - Real.log (∫ x, Real.exp (f x) ∂ν) := by
+  -- The tilted measure is a probability measure.
+  have hν' : IsProbabilityMeasure (ν.tilted f) := isProbabilityMeasure_tilted hf_exp
+  -- Absolute continuity: `ν.tilted f ≪ ν`.
+  have hac : ν.tilted f ≪ ν := tilted_absolutelyContinuous ν f
+  -- Convert `(klDiv (ν.tilted f) ν).toReal` to an integral of `llr` against
+  -- the tilted measure (both measures are probability measures, so
+  -- their universes agree and no separate integrability is needed).
+  have h_meas_eq : (ν.tilted f) Set.univ = ν Set.univ := by
+    rw [show (ν.tilted f) Set.univ = (1 : ℝ≥0∞) from measure_univ,
+        show ν Set.univ = (1 : ℝ≥0∞) from measure_univ]
+  have h_klDiv :
+      (klDiv (ν.tilted f) ν).toReal
+        = ∫ x, llr (ν.tilted f) ν x ∂(ν.tilted f) :=
+    toReal_klDiv_of_measure_eq hac h_meas_eq
+  -- Pointwise identification of `llr (ν.tilted f) ν` via Mathlib's
+  -- `log_rnDeriv_tilted_left_self`. This is a.e. ν; lift to a.e.
+  -- `ν.tilted f` via absolute continuity.
+  set Z : ℝ := ∫ x, Real.exp (f x) ∂ν with hZ
+  have h_ae_ν : llr (ν.tilted f) ν =ᵐ[ν] fun x => f x - Real.log Z := by
+    -- Unfold `llr` to match Mathlib's statement.
+    have := log_rnDeriv_tilted_left_self (μ := ν) (f := f) hf_exp
+    -- `this : (fun x => log ((ν.tilted f).rnDeriv ν x).toReal)
+    --          =ᵐ[ν] fun x => f x - log (∫ x, exp (f x) ∂ν)`
+    -- which is exactly `llr (ν.tilted f) ν =ᵐ[ν] fun x => f x - log Z`
+    -- after unfolding `llr`.
+    simpa [llr, hZ] using this
+  have h_ae_tilted : llr (ν.tilted f) ν =ᵐ[ν.tilted f] fun x => f x - Real.log Z :=
+    hac.ae_le h_ae_ν
+  -- Compute the integral of the simple expression `f x - log Z` against
+  -- the tilted probability measure.
+  have h_int_eq :
+      ∫ x, llr (ν.tilted f) ν x ∂(ν.tilted f)
+        = ∫ x, (f x - Real.log Z) ∂(ν.tilted f) :=
+    integral_congr_ae h_ae_tilted
+  have h_split :
+      ∫ x, (f x - Real.log Z) ∂(ν.tilted f)
+        = ∫ x, f x ∂(ν.tilted f) - Real.log Z := by
+    rw [integral_sub hf_int_tilted (integrable_const _)]
+    simp
+  rw [h_klDiv, h_int_eq, h_split, hZ]
+
 end LTFP.MathlibExt.Probability
