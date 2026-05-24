@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Allen Hao Zhu
 -/
 import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.Rpow.Order
+import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.Rpow.IntegralRepresentation
 import Mathlib.Algebra.Order.Star.Basic
 import Mathlib.Tactic.NoncommRing
 import LTFP.MathlibExt.MatrixAnalysis.CStarShiftedResolventConcave
+import LTFP.MathlibExt.MatrixAnalysis.CStarRpowIntegrandConcave
 
 /-!
 # Hansen-Pedersen Jensen inequality for `rpow` on positive elements
@@ -53,7 +55,7 @@ After rewriting both sides of the target inequality via
 
 namespace LTFP.MathlibExt.MatrixAnalysis
 
-open scoped NNReal
+open scoped NNReal CStarAlgebra
 
 /-- **Hansen-Pedersen Jensen inequality, endpoint `p = 0`.**
 
@@ -305,5 +307,142 @@ lemma CFC.star_mul_one_sub_one_add_inv_mul_le
   exact hD_nonneg
 
 end ShiftedResolventJensen
+
+/-! ### Non-unital lift of the shifted-resolvent Jensen inequality
+
+We lift Sub-Part 5.1 (`CFC.star_mul_one_sub_one_add_inv_mul_le`) from the
+unital setting to the non-unital setting via `Unitization.real_cfcₙ_eq_cfc_inr`.
+The function `f(x) = 1 - (1+x)⁻¹` vanishes at `0`, so the non-unital
+`cfcₙ` agrees with the unital `cfc` on the unitization `A⁺¹`. -/
+
+section ShiftedResolventJensenNonUnital
+
+open scoped CStarAlgebra
+
+variable {A : Type*} [NonUnitalCStarAlgebra A] [PartialOrder A] [StarOrderedRing A]
+
+open Unitization
+
+/-- **Non-unital shifted-resolvent Jensen helper.**
+
+For `0 ≤ a` and `star (↑v : A⁺¹) * ↑v ≤ 1` (the sub-isometric condition
+expressed in the unitization), the non-unital `cfcₙ` shifted-resolvent
+function `f(x) = 1 - (1+x)⁻¹` satisfies the Jensen-type inequality
+
+```
+star v * cfcₙ f a * v ≤ cfcₙ f (star v * a * v).
+```
+
+This lifts the unital version (`CFC.star_mul_one_sub_one_add_inv_mul_le`)
+through `Unitization.real_cfcₙ_eq_cfc_inr`: since `f 0 = 0`, both
+`cfcₙ f a` and `cfcₙ f (star v * a * v)` agree on `A⁺¹` with the unital
+`cfc f` of the inr-images, and the unital 5.1 closes the lifted goal. -/
+private lemma star_mul_cfcₙ_one_sub_one_add_inv_mul_le
+    {a v : A} (ha : 0 ≤ a)
+    (hv : star (v : Unitization ℂ A) * (v : Unitization ℂ A) ≤ 1) :
+    star v * cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹) a * v
+      ≤ cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹) (star v * a * v) := by
+  -- The function vanishes at zero, enabling the inr-transport.
+  have hf0 : (fun x : ℝ => 1 - (1 + x)⁻¹) 0 = 0 := by norm_num
+  -- Star left conjugation preserves nonnegativity.
+  have hvav : 0 ≤ star v * a * v := star_left_conjugate_nonneg ha v
+  -- Self-adjointness of both sides for lifting via `inr_le_iff`.
+  have h_lhs_sa : IsSelfAdjoint (star v * cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹) a * v) := by
+    have h_cfcₙ_sa : IsSelfAdjoint (cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹) a) :=
+      cfcₙ_predicate _ _
+    -- star v * (sa) * v is sa.
+    rw [IsSelfAdjoint, star_mul, star_mul, star_star, h_cfcₙ_sa.star_eq, mul_assoc]
+  have h_rhs_sa : IsSelfAdjoint
+      (cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹) (star v * a * v)) :=
+    cfcₙ_predicate _ _
+  -- Lift goal to A⁺¹ via inr_le_iff.
+  rw [← Unitization.inr_le_iff _ _ h_lhs_sa h_rhs_sa]
+  -- Distribute inr over * and star on LHS, and over * on RHS.
+  have h_lhs_dist :
+      ((star v * cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹) a * v : A) : Unitization ℂ A)
+        = star (v : Unitization ℂ A)
+          * ((cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹) a : A) : Unitization ℂ A)
+          * (v : Unitization ℂ A) := by
+    rw [Unitization.inr_mul ℂ, Unitization.inr_mul ℂ, Unitization.inr_star]
+  have h_rhs_inr_arg : ((star v * a * v : A) : Unitization ℂ A)
+      = star (v : Unitization ℂ A) * (a : Unitization ℂ A) * (v : Unitization ℂ A) := by
+    rw [Unitization.inr_mul ℂ, Unitization.inr_mul ℂ, Unitization.inr_star]
+  rw [h_lhs_dist]
+  rw [Unitization.real_cfcₙ_eq_cfc_inr a _ hf0]
+  rw [Unitization.real_cfcₙ_eq_cfc_inr (star v * a * v) _ hf0]
+  rw [h_rhs_inr_arg]
+  -- Now apply the unital 5.1 in Unitization ℂ A.
+  have ha' : (0 : Unitization ℂ A) ≤ (a : Unitization ℂ A) := inr_nonneg_iff.mpr ha
+  exact CFC.star_mul_one_sub_one_add_inv_mul_le (A := Unitization ℂ A) ha' hv
+
+/-- **Per-`t` integrand Hansen-Pedersen Jensen inequality (B6 L3 Sub-Part 5.2).**
+
+For `p ∈ (0, 1)`, `t > 0`, `0 ≤ a` in a non-unital C⋆-algebra, and
+`star (↑v : A⁺¹) * ↑v ≤ 1`, the per-`t` integrand
+`f_t(x) = Real.rpowIntegrand₀₁ p t x = t^p * (t⁻¹ - (t + x)⁻¹)` satisfies
+the Hansen-Pedersen Jensen inequality
+
+```
+star v * cfcₙ (rpowIntegrand₀₁ p t) a * v
+    ≤ cfcₙ (rpowIntegrand₀₁ p t) (star v * a * v).
+```
+
+This is the parametric-in-`t` upgrade of Sub-Part 5.1. The proof transports
+through Mathlib's identity
+`CFC.cfcₙ_rpowIntegrand₀₁_eq_cfcₙ_rpowIntegrand₀₁_one` which expresses
+`cfcₙ (rpowIntegrand₀₁ p t) a = t^(p-1) • cfcₙ (rpowIntegrand₀₁ p 1) (t⁻¹ • a)`
+and the identification `cfcₙ (rpowIntegrand₀₁ p 1) = cfcₙ (1 - (1+·)⁻¹)`
+(`cfcₙ_rpowIntegrand₀₁_one_eq`). The Jensen inequality then follows from
+the non-unital shifted-resolvent helper above applied at `t⁻¹ • a`, with a
+positive `t^(p-1)`-scalar multiplication preserving the inequality. -/
+lemma CFC.star_mul_cfcₙ_rpowIntegrand₀₁_mul_le
+    {p t : ℝ} (hp : p ∈ Set.Ioo (0 : ℝ) 1) (ht : 0 < t)
+    {a v : A} (ha : 0 ≤ a)
+    (hv : star (v : Unitization ℂ A) * (v : Unitization ℂ A) ≤ 1) :
+    star v * cfcₙ (Real.rpowIntegrand₀₁ p t) a * v
+      ≤ cfcₙ (Real.rpowIntegrand₀₁ p t) (star v * a * v) := by
+  -- Star left conjugation preserves nonnegativity.
+  have hvav : 0 ≤ star v * a * v := star_left_conjugate_nonneg ha v
+  -- Both endpoints rewrite via the Mathlib transport identity.
+  have htinv_nn : (0 : ℝ) ≤ t⁻¹ := inv_nonneg.mpr ht.le
+  -- 0 ≤ t⁻¹ • a in A.
+  have htinv_smul_a_nn : (0 : A) ≤ t⁻¹ • a := smul_nonneg htinv_nn ha
+  -- t^(p - 1) > 0 from t > 0 alone (no constraint on p needed).
+  have htp_pos : (0 : ℝ) < t ^ (p - 1) := Real.rpow_pos_of_pos ht (p - 1)
+  -- Transport LHS endpoint a.
+  have h_lhs_endpoint :
+      cfcₙ (Real.rpowIntegrand₀₁ p t) a
+        = t ^ (p - 1) • cfcₙ (Real.rpowIntegrand₀₁ p 1) (t⁻¹ • a) :=
+    CFC.cfcₙ_rpowIntegrand₀₁_eq_cfcₙ_rpowIntegrand₀₁_one hp ht a ha
+  -- Transport RHS endpoint star v * a * v.
+  have h_rhs_endpoint :
+      cfcₙ (Real.rpowIntegrand₀₁ p t) (star v * a * v)
+        = t ^ (p - 1) • cfcₙ (Real.rpowIntegrand₀₁ p 1) (t⁻¹ • (star v * a * v)) :=
+    CFC.cfcₙ_rpowIntegrand₀₁_eq_cfcₙ_rpowIntegrand₀₁_one hp ht (star v * a * v) hvav
+  rw [h_lhs_endpoint, h_rhs_endpoint]
+  -- Identify `cfcₙ (rpowIntegrand₀₁ p 1)` with `cfcₙ (fun x => 1 - (1+x)⁻¹)`.
+  rw [cfcₙ_rpowIntegrand₀₁_one_eq (A := A) p (t⁻¹ • a)]
+  rw [cfcₙ_rpowIntegrand₀₁_one_eq (A := A) p (t⁻¹ • (star v * a * v))]
+  -- Re-express t⁻¹ • (star v * a * v) = star v * (t⁻¹ • a) * v.
+  have h_smul_conj :
+      t⁻¹ • (star v * a * v) = star v * (t⁻¹ • a) * v := by
+    simp [smul_mul_assoc, mul_smul_comm]
+  rw [h_smul_conj]
+  -- Apply the helper at t⁻¹ • a (which is nonneg).
+  have h_helper :
+      star v * cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹) (t⁻¹ • a) * v
+        ≤ cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹) (star v * (t⁻¹ • a) * v) :=
+    star_mul_cfcₙ_one_sub_one_add_inv_mul_le htinv_smul_a_nn hv
+  -- Distribute star v * (t^(p-1) • X) * v = t^(p-1) • (star v * X * v).
+  have h_smul_conj_cfc :
+      star v * (t ^ (p - 1) • cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹) (t⁻¹ • a)) * v
+        = t ^ (p - 1) •
+            (star v * cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹) (t⁻¹ • a) * v) := by
+    rw [mul_smul_comm, smul_mul_assoc]
+  rw [h_smul_conj_cfc]
+  -- Now both sides are t^(p-1) • (...); apply scalar monotonicity.
+  exact smul_le_smul_of_nonneg_left h_helper htp_pos.le
+
+end ShiftedResolventJensenNonUnital
 
 end LTFP.MathlibExt.MatrixAnalysis
