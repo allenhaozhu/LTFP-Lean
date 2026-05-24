@@ -5,6 +5,7 @@ Authors: LTFP-Lean contributors
 -/
 import Mathlib.MeasureTheory.Measure.Sub
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+import Mathlib.MeasureTheory.VectorMeasure.Decomposition.JordanSub
 
 /-!
 # Total variation distance between two measures
@@ -177,6 +178,101 @@ theorem tvDist_toReal_le_one (μ ν : ProbabilityMeasure α) :
   have := (ENNReal.toReal_le_toReal hne ENNReal.one_ne_top).mpr hle
   simpa using this
 
+/-! ### Identification with the signed Jordan total variation
+
+The pair `(μ - ν, ν - μ)` of mutually singular finite measures is exactly the
+Jordan decomposition of `μ.toSignedMeasure - ν.toSignedMeasure` (see
+`MeasureTheory.Measure.toJordanDecomposition_toSignedMeasure_sub`). Hence
+the sum `(μ - ν) + (ν - μ)` agrees with the total variation measure of
+that signed measure, and `tvDist μ ν` equals half its total mass. This
+identification is the bridge that lets us discharge the
+`tvDist μ ν = 0 ↔ μ = ν` characterisation without re-proving anything
+about signed measures here. -/
+
+/-- The sum `(μ - ν) + (ν - μ)` is the total variation measure of the
+signed measure `μ.toSignedMeasure - ν.toSignedMeasure`. This is the
+infrastructure lemma underlying `tvDist_eq_signedMeasure_totalVariation_div_two`
+and `tvDist_eq_zero_iff`. -/
+theorem add_sub_eq_signedMeasure_totalVariation
+    (μ ν : Measure α) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
+    (μ - ν) + (ν - μ) =
+      (μ.toSignedMeasure - ν.toSignedMeasure).totalVariation := by
+  rw [MeasureTheory.SignedMeasure.totalVariation,
+    MeasureTheory.Measure.toJordanDecomposition_toSignedMeasure_sub,
+    MeasureTheory.Measure.jordanDecompositionOfToSignedMeasureSub_posPart,
+    MeasureTheory.Measure.jordanDecompositionOfToSignedMeasureSub_negPart]
+
+/-- The total variation distance of two finite measures equals half the
+total mass of the total variation measure of the signed difference
+`μ.toSignedMeasure - ν.toSignedMeasure`. This is the reusable identity
+extracted from the unconditional Le Cam / Bhattacharyya bound and is the
+bridge to the Jordan / Hahn decomposition API. -/
+theorem tvDist_eq_signedMeasure_totalVariation_div_two
+    (μ ν : Measure α) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
+    tvDist μ ν =
+      (μ.toSignedMeasure - ν.toSignedMeasure).totalVariation Set.univ / 2 := by
+  rw [tvDist, add_sub_eq_signedMeasure_totalVariation]
+
+/-- **Total variation distance separates finite measures.** For two finite
+measures `μ` and `ν`, `tvDist μ ν = 0` iff `μ = ν`. The forward direction
+uses the Jordan decomposition of `μ.toSignedMeasure - ν.toSignedMeasure`
+together with the injectivity of `Measure.toSignedMeasure` on finite
+measures (Mathlib's `toSignedMeasure_eq_toSignedMeasure_iff`); the
+backward direction is the diagonal vanishing `tvDist_self`. This is the
+first metric axiom for the `tvDist` API. -/
+theorem tvDist_eq_zero_iff
+    (μ ν : Measure α) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
+    tvDist μ ν = 0 ↔ μ = ν := by
+  refine ⟨fun h => ?_, fun h => by simp [h]⟩
+  -- Step 1: peel off the division by 2.
+  have h2top : (2 : ℝ≥0∞) ≠ ∞ := by norm_num
+  have hmass : ((μ - ν) + (ν - μ)) Set.univ = 0 := by
+    have := h
+    rw [tvDist, ENNReal.div_eq_zero_iff] at this
+    rcases this with h0 | h2 -- div_eq_zero_iff gives a = 0 ∨ b = ∞
+    · exact h0
+    · exact absurd h2 h2top
+  -- Step 2: total mass zero on a finite measure ⟹ the measure itself is zero.
+  have hzero : (μ - ν) + (ν - μ) = 0 := by
+    have hadd : ((μ - ν) + (ν - μ)) Set.univ = 0 := hmass
+    -- `μ Set.univ = 0 ↔ μ = 0` for measures (Mathlib's `measure_univ_eq_zero`).
+    exact (MeasureTheory.Measure.measure_univ_eq_zero (μ := (μ - ν) + (ν - μ))).1 hadd
+  -- Step 3: split the sum of two nonneg measures into two zero conditions.
+  have hsplit : (μ - ν) Set.univ = 0 ∧ (ν - μ) Set.univ = 0 := by
+    have hadd : ((μ - ν) + (ν - μ)) Set.univ = 0 := hmass
+    rw [MeasureTheory.Measure.add_apply, add_eq_zero] at hadd
+    exact hadd
+  obtain ⟨hμν, hνμ⟩ := hsplit
+  have hμν0 : μ - ν = 0 :=
+    (MeasureTheory.Measure.measure_univ_eq_zero (μ := μ - ν)).1 hμν
+  have hνμ0 : ν - μ = 0 :=
+    (MeasureTheory.Measure.measure_univ_eq_zero (μ := ν - μ)).1 hνμ
+  -- Step 4: feed the two zero conditions into the Jordan decomposition.
+  have hjd :
+      MeasureTheory.Measure.jordanDecompositionOfToSignedMeasureSub μ ν =
+        (0 : MeasureTheory.JordanDecomposition α) := by
+    apply MeasureTheory.JordanDecomposition.ext
+    · simp [MeasureTheory.Measure.jordanDecompositionOfToSignedMeasureSub_posPart, hμν0]
+    · simp [MeasureTheory.Measure.jordanDecompositionOfToSignedMeasureSub_negPart, hνμ0]
+  -- Step 5: zero Jordan decomposition ⟹ signed measure is zero.
+  have hsig : μ.toSignedMeasure - ν.toSignedMeasure = 0 := by
+    rw [← MeasureTheory.Measure.jordanDecompositionOfToSignedMeasureSub_toSignedMeasure,
+      hjd, MeasureTheory.JordanDecomposition.toSignedMeasure_zero]
+  -- Step 6: signed measures of finite measures coincide ⟹ measures coincide.
+  have hsig' : μ.toSignedMeasure = ν.toSignedMeasure := by
+    rwa [sub_eq_zero] at hsig
+  exact MeasureTheory.Measure.toSignedMeasure_eq_toSignedMeasure_iff.mp hsig'
+
+/-- The unconditional corollary: equal finite measures have zero total
+variation distance. Already covered by the `tvDist_self` simp lemma when
+specialised; surfaced here as the explicit `μ = ν → tvDist μ ν = 0`
+direction of `tvDist_eq_zero_iff` for callers that want a one-liner
+without `Iff.mpr`. -/
+theorem tvDist_eq_zero_of_eq
+    {μ ν : Measure α} [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (h : μ = ν) : tvDist μ ν = 0 := by
+  subst h; simp
+
 /-! ### Examples
 
 These examples demonstrate basic usage of the `tvDist` API and double as
@@ -202,14 +298,9 @@ end Examples
 /-!
 ## TODO
 
-* `tvDist_zero_iff [IsFiniteMeasure μ] [IsFiniteMeasure ν] :`
-  `tvDist μ ν = 0 ↔ μ = ν`. Blocked on the missing direction
-  `μ - ν = 0 → μ ≤ ν` for finite measures; expected to follow from the
-  Jordan decomposition of `μ - ν` as a signed measure once that lands
-  upstream.
 * `tvDist_triangle` : the triangle inequality. Expected from
   `Measure.sub` subadditivity once a `Measure.sub_add_sub_le` lemma is
-  available.
+  available. This is sub-step 2 of the TV-metric API milestone.
 * Equivalence with the supremum formulation
   `tvDist μ ν = ⨆ A, |μ A - ν A| / 2` for finite signed measures,
   via the Jordan/Hahn decomposition.
