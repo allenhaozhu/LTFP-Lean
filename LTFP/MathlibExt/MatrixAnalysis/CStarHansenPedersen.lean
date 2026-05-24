@@ -518,4 +518,104 @@ lemma CFC.star_mul_nnrpow_mul_le_nnrpow_star_mul_Ioo
 
 end ShiftedResolventJensenNonUnital
 
+/-! ### Final assembly: Hansen-Pedersen Jensen for real exponents
+
+We assemble the full Hansen-Pedersen Jensen inequality for real
+exponents `p ∈ [0, 1]` by splitting on the position of `p` in `[0, 1]`:
+
+* `p = 0` and `p = 1` are the endpoint cases (Sub-Part 5.4).
+* `p ∈ (0, 1)` reduces to the NNReal version (Sub-Part 5.3) via
+  `CFC.nnrpow_eq_rpow`.
+
+The interior reduction uses the unital→unitization lift for the
+sub-isometric hypothesis `star v * v ≤ 1`: in a unital C⋆-algebra,
+`0 ≤ star v * v ≤ 1` implies `‖star v * v‖ ≤ 1`, hence
+`(↑(star v * v) : A⁺¹) ∈ [0, 1]` via `Unitization.inr_mem_Icc_iff_norm_le`,
+which then unfolds (using `inr_mul` and `inr_star`) to
+`star (↑v) * ↑v ≤ 1` in `A⁺¹` — precisely the hypothesis Sub-Part 5.3
+requires.
+
+This closes **Part 5** of the B6 L3 carrier closure path: Hansen-Pedersen
+Jensen is now formalized for the full real interval `[0, 1]`. -/
+
+section RpowJensenFinal
+
+variable {A : Type*} [CStarAlgebra A] [PartialOrder A] [StarOrderedRing A]
+
+open scoped CStarAlgebra
+open Unitization
+
+/-- **Hansen-Pedersen Jensen inequality for real exponents (B6 L3 Sub-Part 5.5).**
+
+For `0 ≤ a` and `star v * v ≤ 1` in a unital C⋆-algebra and `p ∈ [0, 1]`
+(real), the Hansen-Pedersen Jensen inequality
+
+```
+star v * (a ^ p) * v ≤ (star v * a * v) ^ p
+```
+
+holds in the operator order.
+
+This is the final assembly of B6 L3 Part 5. The proof splits on `p`:
+
+* For `p = 0` or `p = 1`: invoke the endpoint cases
+  `CFC.star_mul_rpow_mul_le_rpow_star_mul_zero` and
+  `CFC.star_mul_rpow_mul_le_rpow_star_mul_one` (Sub-Part 5.4).
+* For `p ∈ (0, 1)`: lift `p` to `p.toNNReal : ℝ≥0`, lift the hypothesis
+  `hv : star v * v ≤ 1` to `star (↑v) * ↑v ≤ 1` in `A⁺¹` via
+  `Unitization.inr_mem_Icc_iff_norm_le` (using `0 ≤ star v * v` and
+  `‖star v * v‖ ≤ 1`), and invoke
+  `CFC.star_mul_nnrpow_mul_le_nnrpow_star_mul_Ioo` (Sub-Part 5.3).
+  Conversion between `a ^ (p.toNNReal)` and `a ^ p` uses
+  `CFC.nnrpow_eq_rpow`. -/
+theorem CFC.star_mul_rpow_mul_le_rpow_star_mul
+    {p : ℝ} (hp : p ∈ Set.Icc (0 : ℝ) 1) {a v : A}
+    (ha : 0 ≤ a) (hv : star v * v ≤ 1) :
+    star v * (a ^ p) * v ≤ (star v * a * v) ^ p := by
+  -- Star left conjugation preserves nonnegativity (used in the endpoint cases
+  -- by the endpoint lemmas themselves; recorded here for completeness).
+  -- Split on whether p is interior or boundary.
+  rcases hp.1.lt_or_eq with hp_pos | hp_eq_zero
+  · -- 0 < p
+    rcases hp.2.lt_or_eq with hp_lt_one | hp_eq_one
+    · -- 0 < p < 1: interior; reduce to Sub-Part 5.3 via NNReal lift.
+      set p_nn : ℝ≥0 := p.toNNReal with hp_nn_def
+      have hp_nn_coe : (p_nn : ℝ) = p := Real.coe_toNNReal p hp.1
+      have hp_nn_pos_nnreal : (0 : ℝ≥0) < p_nn :=
+        Real.toNNReal_pos.mpr hp_pos
+      have hp_nn_Ioo : (p_nn : ℝ) ∈ Set.Ioo (0 : ℝ) 1 := by
+        rw [hp_nn_coe]; exact ⟨hp_pos, hp_lt_one⟩
+      -- Lift hv to the unitization.
+      have hstar_nn : (0 : A) ≤ star v * v := star_left_conjugate_nonneg
+        (zero_le_one (α := A)) v |>.trans_eq (by rw [mul_one])
+      have h_norm_le : ‖star v * v‖ ≤ 1 :=
+        (CStarAlgebra.norm_le_one_iff_of_nonneg (star v * v) hstar_nn).mpr hv
+      have h_inr_Icc : ((star v * v : A) : Unitization ℂ A) ∈ Set.Icc 0 1 :=
+        CStarAlgebra.inr_mem_Icc_iff_norm_le.mpr ⟨hstar_nn, h_norm_le⟩
+      have h_inr_le : ((star v * v : A) : Unitization ℂ A) ≤ 1 := h_inr_Icc.2
+      -- Rewrite ↑(star v * v) = star ↑v * ↑v.
+      have h_inr_mul_star :
+          ((star v * v : A) : Unitization ℂ A)
+            = star (v : Unitization ℂ A) * (v : Unitization ℂ A) := by
+        rw [Unitization.inr_mul ℂ, Unitization.inr_star]
+      rw [h_inr_mul_star] at h_inr_le
+      -- Apply Sub-Part 5.3.
+      have h53 :=
+        CFC.star_mul_nnrpow_mul_le_nnrpow_star_mul_Ioo (A := A) hp_nn_Ioo ha h_inr_le
+      -- Convert NNReal exponent back to real via nnrpow_eq_rpow.
+      have h_rpow_a : a ^ (p_nn : ℝ) = a ^ p_nn := (CFC.nnrpow_eq_rpow hp_nn_pos_nnreal).symm
+      have hvav : 0 ≤ star v * a * v := star_left_conjugate_nonneg ha v
+      have h_rpow_vav : (star v * a * v) ^ (p_nn : ℝ) = (star v * a * v) ^ p_nn :=
+        (CFC.nnrpow_eq_rpow hp_nn_pos_nnreal).symm
+      rw [show p = (p_nn : ℝ) from hp_nn_coe.symm, h_rpow_a, h_rpow_vav]
+      exact h53
+    · -- p = 1
+      subst hp_eq_one
+      exact CFC.star_mul_rpow_mul_le_rpow_star_mul_one ha hv
+  · -- p = 0
+    subst hp_eq_zero
+    exact CFC.star_mul_rpow_mul_le_rpow_star_mul_zero ha hv
+
+end RpowJensenFinal
+
 end LTFP.MathlibExt.MatrixAnalysis
