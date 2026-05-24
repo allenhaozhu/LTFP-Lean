@@ -2337,6 +2337,222 @@ theorem wide_network_expected_rademacher_with_abs_le_dudley_paramBall_of_ae
     simp
   linarith [hstep1, hstep2.le, hstep2.ge]
 
+/-! ### Symmetrization × Dudley composition (B8 N6 milestone 5, sub-step 1)
+
+The headline below explicitly chains the classical symmetrization
+bridge `uniform_deviation_expectation_le_two_smul_rademacher_complexity`
+(`LTFP/Foundations/Main.lean:23`) with the with-abs measure lift
+`wide_network_expected_rademacher_with_abs_le_dudley_paramBall_of_ae`
+above to bound the expected uniform deviation of the wide-network
+linearised-risk class by twice the Dudley integrand. This is the
+"E[sup_{f ∈ F} (P̂ f − P f)] ≤ 2 · (Dudley integral)" form that the
+ledger flagged as missing from the B8 N6 closure chain. -/
+
+/-- **Separable analogue of `uniform_deviation_expectation_le_two_smul_rademacher_complexity`.**
+
+The countable-index expectation bound in `LTFP/Foundations/Main.lean:23`
+requires `[Countable ι]`. The wide-network parameter ball
+`{θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}` is uncountable but
+separable and first-countable, so the bound lifts via the `denseSeq`
+reductions `RademacherComplexity_eq` and `uniformDeviation_eq` already
+in `Foundations.Main`.
+
+This is the same lifting pattern used by `uniform_deviation_tail_bound_separable`
+to lift the *tail* bound from countable to separable, applied here to the
+*expectation* bound instead. -/
+private theorem uniform_deviation_expectation_le_two_smul_rademacher_complexity_separable
+    {Ω : Type*} [MeasurableSpace Ω]
+    {𝒳 : Type*} [MeasurableSpace 𝒳]
+    {ι : Type*}
+    [Nonempty ι] [TopologicalSpace ι] [TopologicalSpace.SeparableSpace ι]
+    [FirstCountableTopology ι]
+    {μ : MeasureTheory.Measure Ω} [MeasureTheory.IsProbabilityMeasure μ]
+    {f : ι → 𝒳 → ℝ}
+    {n : ℕ} (hn : 0 < n) (X : Ω → 𝒳) (hX : Measurable X)
+    (hf : ∀ i, Measurable (f i))
+    (hfc : ∀ x : 𝒳, Continuous fun i ↦ f i x)
+    {b : ℝ} (hb : 0 ≤ b) (hf' : ∀ i x, |f i x| ≤ b) :
+    ∫ ω : Fin n → Ω, uniformDeviation n f μ X (X ∘ ω)
+        ∂(MeasureTheory.Measure.pi (fun _ ↦ μ))
+      ≤ 2 • rademacherComplexity n f μ X := by
+  let f' := f ∘ TopologicalSpace.denseSeq ι
+  have hf'_meas : ∀ i, Measurable (f' i ∘ X) := fun i => (hf _).comp hX
+  have hf'_bound : ∀ i x, |f' i x| ≤ b := fun i x => hf' (TopologicalSpace.denseSeq ι i) x
+  have hRC := RademacherComplexity_eq n f hfc μ X
+  have hUD := uniformDeviation_eq (μ := μ) n f hf X hX hf' hfc
+  rw [hRC, hUD]
+  exact uniform_deviation_expectation_le_two_smul_rademacher_complexity
+    (μ := μ) hn X hf'_meas hb hf'_bound
+
+/-- Continuity of `θ ↦ (⟨θ, p.1⟩ - p.2)^2` for each fixed data point `p`.
+Used to invoke the separable expectation bound on the
+parameter-ball-indexed linearised-risk family. -/
+private theorem linearizedRiskFamily_continuous_in_param
+    {d : ℕ} (B_param : ℝ) (p : EuclideanSpace ℝ (Fin d) × ℝ) :
+    Continuous fun θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} =>
+      linearizedRiskFamily (d := d) B_param θ p := by
+  simp only [linearizedRiskFamily]
+  apply Continuous.pow
+  apply Continuous.sub
+  · exact Continuous.inner continuous_subtype_val continuous_const
+  · exact continuous_const
+
+/-- Measurability of `p ↦ (⟨θ, p.1⟩ - p.2)^2` for each fixed parameter `θ`.
+Used to invoke the separable expectation bound on the
+parameter-ball-indexed linearised-risk family. -/
+private theorem linearizedRiskFamily_measurable_in_data
+    {d : ℕ} (B_param : ℝ)
+    (θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param}) :
+    Measurable (fun p : EuclideanSpace ℝ (Fin d) × ℝ =>
+      linearizedRiskFamily (d := d) B_param θ p) := by
+  simp only [linearizedRiskFamily]
+  apply Measurable.pow_const
+  apply Measurable.sub
+  · exact (continuous_const.inner continuous_id).measurable.comp measurable_fst
+  · exact measurable_snd
+
+/-- **B8 N6 milestone 5 sub-step 1 — Symmetrization × Dudley composition.**
+
+Explicitly composes the symmetrization expectation bound
+`uniform_deviation_expectation_le_two_smul_rademacher_complexity`
+(`LTFP/Foundations/Main.lean:23`, lifted to the separable parameter
+ball via `_separable` above) with the with-abs Dudley measure-lift
+`wide_network_expected_rademacher_with_abs_le_dudley_paramBall_of_ae`
+(above in this file) to obtain the headline end-to-end bound
+
+  `μⁿ[sup_θ |P̂_S(θ) − P(θ)|] ≤ 2 · (Dudley integrand)`
+
+for the i.i.d. wide-network linearised-risk class. The LHS is the
+expected with-abs uniform deviation under the i.i.d. product measure
+`μⁿ = (μ)^m` on `(EuclideanSpace ℝ (Fin d) × ℝ)^m`; the RHS is twice
+the with-abs Dudley integrand from
+`wide_network_rademacher_complexity_with_abs_via_dudley_paramBall`
+(no `2 *` is absorbed into the integrand — the factor of `2` is the
+symmetrization factor placed outside, matching the convention of
+`uniform_deviation_expectation_le_two_smul_rademacher_complexity`).
+
+## Honest scope
+
+This theorem requires three hypothesis bundles:
+
+* `hbnd_global` — the squared-loss bound `|F θ p| ≤ B²` POINTWISE for
+  every `p : EuclideanSpace ℝ (Fin d) × ℝ` and every parameter `θ` in
+  the ball. The wide-network bounded-support hypothesis in
+  `wide_network_rademacher_complexity_with_abs_via_dudley_paramBall`
+  is *per-sample* (only on the `xs i`/`ys i`), but
+  `uniform_deviation_expectation_le_two_smul_rademacher_complexity`
+  needs the bound POINTWISE on the full data space. To deploy this
+  theorem the user supplies a global bound, typically by truncating
+  the data support (e.g. restricting `μ` to be supported on
+  `{p : EuclideanSpace × ℝ // ‖p.1‖ ≤ R ∧ |p.2| ≤ B_Y}` and feeding the
+  resulting bounded inner product back into the squared-residual
+  bound). The bridge `_of_ae` immediately above can take the weaker
+  μⁿ-a.e. form because it bounds the Rademacher complexity directly
+  (which only sees the sample), but the symmetrization bridge
+  cannot — it needs the bound on the full state space to apply
+  uniformly to all empirical/expectation comparisons.
+
+* `hae` — μⁿ-a.e. bundle for the per-sample wide-network hypotheses,
+  same as the underlying `_with_abs_le_dudley_paramBall_of_ae` requires.
+
+* `hint` — integrability of `empRad m F` against μⁿ, same as the
+  underlying `_with_abs_le_dudley_paramBall_of_ae`.
+
+The first hypothesis is the cost of the symmetrization bridge —
+`uniform_deviation_expectation_le_two_smul_rademacher_complexity`
+discharges the standard symmetrization argument from
+`LTFP/Foundations/Symmetrization.lean`, which is stated for families
+with a global pointwise bound. -/
+theorem wide_network_expected_uniform_deviation_le_two_dudley_paramBall_iid
+    {d m : ℕ}
+    (μ : MeasureTheory.Measure (EuclideanSpace ℝ (Fin d) × ℝ))
+    [MeasureTheory.IsProbabilityMeasure μ]
+    (B_param R B c ε : ℝ)
+    (hR_nn : 0 ≤ R) (hB_nn : 0 ≤ B) (hB_param_nn : 0 ≤ B_param)
+    (hBR_pos : 0 < 2 * B * R)
+    (hε_pos : 0 < ε) (hm_pos : 0 < m) (hεc : ε < c / 2)
+    (hbnd_global :
+      ∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+        ∀ p : EuclideanSpace ℝ (Fin d) × ℝ,
+        |linearizedRiskFamily (d := d) B_param θ p| ≤ B ^ 2)
+    (hae :
+      ∀ᵐ (S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ)
+        ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)),
+        (∀ i, ‖(S i).1‖ ≤ R) ∧
+        (∀ θ : EuclideanSpace ℝ (Fin d), ‖θ‖ ≤ B_param →
+          ∀ i, |@inner ℝ _ _ θ (S i).1 - (S i).2| ≤ B) ∧
+        (∀ θ : {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param},
+          empiricalNorm (linearizedRiskSample (fun i => (S i).1) (fun i => (S i).2))
+            (linearizedRiskFamily (d := d) B_param θ) ≤ c))
+    (hint : MeasureTheory.Integrable
+      (fun S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+        empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) S)
+      (MeasureTheory.Measure.pi (fun _ ↦ μ))) :
+    ∫ ω : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+        uniformDeviation m (linearizedRiskFamily (d := d) B_param) μ id (id ∘ ω)
+        ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)) ≤
+      2 * (4 * ε + (12 / Real.sqrt m) *
+        (∫ (x : ℝ) in ε..(c/2),
+          √(Real.log (2 * (coveringNumber
+              (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+              (x / (2 * B * R)) : ℝ))))) := by
+  classical
+  -- Nonemptiness of the parameter-ball subtype.
+  haveI hNE : Nonempty {θ : EuclideanSpace ℝ (Fin d) // ‖θ‖ ≤ B_param} :=
+    ⟨⟨0, by simpa using hB_param_nn⟩⟩
+  -- Global bound nonnegativity.
+  have hB_sq_nn : (0 : ℝ) ≤ B ^ 2 := sq_nonneg B
+  -- Step 1 (symmetrization): E[uniformDeviation] ≤ 2 • rademacherComplexity.
+  have hsym :=
+    uniform_deviation_expectation_le_two_smul_rademacher_complexity_separable
+      (μ := μ) (n := m)
+      (f := linearizedRiskFamily (d := d) B_param)
+      hm_pos id measurable_id
+      (linearizedRiskFamily_measurable_in_data (d := d) B_param)
+      (linearizedRiskFamily_continuous_in_param (d := d) B_param)
+      hB_sq_nn hbnd_global
+  -- Step 2 (Dudley measure-lift): 2 • rademacherComplexity = 2 * ∫ S, empRad S ∂μⁿ ≤ 2 * (Dudley).
+  have hdud :=
+    wide_network_expected_rademacher_with_abs_le_dudley_paramBall_of_ae
+      (d := d) (m := m) (MeasureTheory.Measure.pi (fun _ ↦ μ))
+      B_param R B c ε
+      hR_nn hB_nn hB_param_nn hBR_pos hε_pos hm_pos hεc hae hint
+  -- Translate `2 • rademacherComplexity` into `2 * ∫ S, empRad S ∂μⁿ`.
+  -- By definition, rademacherComplexity n f μ id = μⁿ[fun ω => empRad n f (id ∘ ω)],
+  -- and (id ∘ ω) = ω, so this equals ∫ S, empRad m F S ∂μⁿ.
+  have hRC_eq :
+      rademacherComplexity m (linearizedRiskFamily (d := d) B_param) μ id =
+        ∫ S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+          empiricalRademacherComplexity m
+              (linearizedRiskFamily (d := d) B_param) S
+            ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)) := rfl
+  have h_smul_eq :
+      (2 : ℕ) • rademacherComplexity m (linearizedRiskFamily (d := d) B_param) μ id =
+        2 * ∫ S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+              empiricalRademacherComplexity m
+                  (linearizedRiskFamily (d := d) B_param) S
+                ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)) := by
+    rw [hRC_eq, nsmul_eq_mul]
+    push_cast
+    rfl
+  -- Combine.
+  calc ∫ ω : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+            uniformDeviation m (linearizedRiskFamily (d := d) B_param) μ id (id ∘ ω)
+            ∂(MeasureTheory.Measure.pi (fun _ ↦ μ))
+      ≤ 2 • rademacherComplexity m (linearizedRiskFamily (d := d) B_param) μ id := hsym
+    _ = 2 * ∫ S : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+            empiricalRademacherComplexity m
+                (linearizedRiskFamily (d := d) B_param) S
+              ∂(MeasureTheory.Measure.pi (fun _ ↦ μ)) := h_smul_eq
+    _ ≤ 2 * (4 * ε + (12 / Real.sqrt m) *
+            (∫ (x : ℝ) in ε..(c/2),
+              √(Real.log (2 * (coveringNumber
+                  (param_ball_subtype_univ_totallyBounded (d := d) B_param)
+                  (x / (2 * B * R)) : ℝ))))) := by
+        have h2_nn : (0 : ℝ) ≤ 2 := by norm_num
+        exact mul_le_mul_of_nonneg_left hdud h2_nn
+
 /-- **With-abs end-to-end abstract measure-lift × explicit
 polynomial-rate bound.**
 
