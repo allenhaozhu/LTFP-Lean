@@ -394,7 +394,7 @@ noncomputable def linearizedRiskFamily
   fun θ p => (inner ℝ θ.val p.1 - p.2) ^ 2
 
 /-- The sample for the linearized-risk family: package inputs and targets. -/
-private def linearizedRiskSample
+def linearizedRiskSample
     {d m : ℕ} (xs : Fin m → EuclideanSpace ℝ (Fin d))
     (ys : Fin m → ℝ) :
     Fin m → EuclideanSpace ℝ (Fin d) × ℝ :=
