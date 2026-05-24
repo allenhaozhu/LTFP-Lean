@@ -72,6 +72,7 @@ import LTFP.MathlibExt.MatrixAnalysis.CStarHansenPedersen
 import LTFP.MathlibExt.MatrixAnalysis.CStarLogConcave
 import LTFP.MathlibExt.MatrixAnalysis.CStarRpowConcave
 import LTFP.MathlibExt.MatrixAnalysis.CStarRpowIntegrandConcave
+import LTFP.MathlibExt.MatrixAnalysis.CStarRpowPerspective
 import LTFP.MathlibExt.MatrixAnalysis.CStarShiftedResolventConcave
 import LTFP.MathlibExt.MatrixAnalysis.InvAntiOnPos
 import LTFP.MathlibExt.MatrixAnalysis.Lieb
