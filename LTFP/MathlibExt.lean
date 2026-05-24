@@ -7,6 +7,7 @@ Mathlib coding conventions (full docstrings, namespaced declarations,
 no `sorry`).
 -/
 
+import LTFP.MathlibExt.Analysis.ClosedConvexProjection
 import LTFP.MathlibExt.Analysis.Smoothness
 import LTFP.MathlibExt.Analysis.Subgradient.L1
 import LTFP.MathlibExt.Analysis.Subgradient.SumRule
