@@ -199,6 +199,85 @@ theorem gradient_lazyNet_param
     exact hf
   exact hg.gradient
 
+/-! ### Shared dynamics (B8 N5 / N6, I3): exact linearization and zero Hessian
+
+Because the output-layer-only random-feature network is **linear** in
+the parameter `a`, its first-order Taylor expansion at any base point
+is *exact* (no remainder), and all higher-order Fréchet derivatives
+vanish identically. These two facts — exact linearization and zero
+Hessian — are the algebraic backbone of the lazy-training regime: in
+the random-feature parametrization there is no nonlinearity in `a` to
+control. -/
+
+/-- **Exact linearization.** For the output-layer-only random-feature
+network, the first-order Taylor expansion at any base point `a₀` is
+*exact*:
+
+  `lazyNet σ ω a₁ x = lazyNet σ ω a₀ x + ⟨∇_a (lazyNet σ ω · x) a₀, a₁ - a₀⟩`.
+
+This holds because `a ↦ lazyNet σ ω a x` is a continuous linear
+functional in `a`, so the Taylor remainder vanishes identically. -/
+theorem lazyNet_exact_linearization
+    (a₀ a₁ : EuclideanSpace ℝ (Fin m))
+    (x : EuclideanSpace ℝ (Fin d)) :
+    lazyNet σ ω a₁ x =
+      lazyNet σ ω a₀ x +
+        inner ℝ (gradient (fun a => lazyNet σ ω a x) a₀) (a₁ - a₀) := by
+  -- Unfold both sides to inner products against `rfFeature σ ω x`.
+  rw [lazyNet_apply, lazyNet_apply, gradient_lazyNet_param]
+  -- Goal: ⟨a₁, rf⟩ = ⟨a₀, rf⟩ + ⟨rf, a₁ - a₀⟩.
+  -- Use symmetry of the real inner product on the correction term,
+  -- then distribute over subtraction.
+  -- `real_inner_comm x y : ⟨y, x⟩ = ⟨x, y⟩`.
+  have hcomm : inner ℝ (rfFeature σ ω x) (a₁ - a₀)
+      = inner ℝ (a₁ - a₀) (rfFeature σ ω x) := real_inner_comm _ _
+  rw [hcomm, inner_sub_left]
+  ring
+
+/-- **Zero Hessian.** The second Fréchet derivative of the output-layer-
+only random-feature network with respect to its parameter is
+identically zero, at every point and against every test pair. Combined
+with `lazyNet_exact_linearization` this is the rigorous statement of
+"the random-feature parametrization is exactly linear in `a`". -/
+theorem lazyNet_hessian_zero
+    (a : EuclideanSpace ℝ (Fin m))
+    (x : EuclideanSpace ℝ (Fin d)) :
+    iteratedFDeriv ℝ 2 (fun b => lazyNet σ ω b x) a = 0 := by
+  -- Rewrite the parameter map as the CLM `innerSL ℝ (rfFeature σ ω x)`.
+  rw [lazyNet_eq_innerSL_apply]
+  -- The first Fréchet derivative of a CLM is the CLM itself — hence a
+  -- constant function in `a`. Its second Fréchet derivative is therefore
+  -- the iteratedFDeriv of a constant, which vanishes at any positive order.
+  -- First, observe that `fun a => innerSL ℝ rf a` is the CLM `innerSL ℝ rf`
+  -- itself (eta-expansion), so its fderiv is the CLM (a constant function
+  -- of the base point).
+  have hfderiv : ∀ b : EuclideanSpace ℝ (Fin m),
+      fderiv ℝ (fun a : EuclideanSpace ℝ (Fin m) => innerSL ℝ (rfFeature σ ω x) a) b
+        = innerSL ℝ (rfFeature σ ω x) := fun b =>
+    (innerSL ℝ (rfFeature σ ω x)).fderiv
+  -- Expand `iteratedFDeriv 2` as `fderiv (fderiv ...)` evaluated, and use
+  -- the constancy of the inner `fderiv`.
+  ext m₂
+  rw [iteratedFDeriv_two_apply]
+  -- The outer `fderiv` is applied to a function that is constantly equal
+  -- to the CLM `innerSL ℝ rf`, so it vanishes by `fderiv_const`.
+  have hconst :
+      (fderiv ℝ (fun a : EuclideanSpace ℝ (Fin m) =>
+          fderiv ℝ (fun a' : EuclideanSpace ℝ (Fin m) =>
+              innerSL ℝ (rfFeature σ ω x) a') a) a)
+        = 0 := by
+    have hfun : (fun a : EuclideanSpace ℝ (Fin m) =>
+          fderiv ℝ (fun a' : EuclideanSpace ℝ (Fin m) =>
+              innerSL ℝ (rfFeature σ ω x) a') a)
+        = fun _ : EuclideanSpace ℝ (Fin m) =>
+            (innerSL ℝ (rfFeature σ ω x) :
+              EuclideanSpace ℝ (Fin m) →L[ℝ] ℝ) := by
+      funext b; exact hfderiv b
+    rw [hfun]
+    exact fderiv_const_apply _
+  rw [hconst]
+  simp
+
 /-- **Jacobian-to-empirical-NTK identity.** Stitching the
 parameter-space gradient against itself across a pair of inputs
 `(xs r, xs s)` reconstructs the empirical NTK matrix entry:
