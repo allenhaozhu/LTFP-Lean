@@ -121,7 +121,7 @@ lemma neuronNTK_complex_aestronglyMeasurable
 AE-strong measurability of `g`. Used as a building block for matrix-valued
 AE-strong measurability by decomposing a matrix into its single-entry
 basis. -/
-private lemma _root_.Matrix.aestronglyMeasurable_single
+lemma _root_.Matrix.aestronglyMeasurable_single
     {n : ℕ} {Ω : Type*} [TopologicalSpace Ω] [MeasurableSpace Ω]
     {μ : Measure Ω} (i j : Fin n) {g : Ω → ℂ}
     (hg : AEStronglyMeasurable g μ) :
@@ -440,7 +440,7 @@ lemma centeredNeuronNTKSummand_mul_self_integral_posSemidef
   exact (centeredNeuronNTKSummand_isHermitian σ xs ν wb).mul_self_posSemidef
 
 /-- Real-scalar smul of identity matrix is PSD when the scalar is nonneg. -/
-private lemma _root_.Matrix.posSemidef_real_smul_one
+lemma _root_.Matrix.posSemidef_real_smul_one
     {n : Type*} [Fintype n] [DecidableEq n]
     {a : ℝ} (ha : 0 ≤ a) :
     ((a : ℝ) • (1 : Matrix n n ℂ)).PosSemidef := by
@@ -471,7 +471,7 @@ private lemma _root_.Matrix.posSemidef_real_smul_one
 
 /-- Loewner monotonicity of real-scalar smul on `Matrix n n ℂ` for the
 identity matrix: `(a : ℝ) ≤ b → a • 1 ≤ b • 1`. -/
-private lemma _root_.Matrix.real_smul_one_le_smul_one
+lemma _root_.Matrix.real_smul_one_le_smul_one
     {n : Type*} [Fintype n] [DecidableEq n]
     {a b : ℝ} (hab : a ≤ b) :
     ((a : ℝ) • (1 : Matrix n n ℂ)) ≤ ((b : ℝ) • (1 : Matrix n n ℂ)) := by
