@@ -61,6 +61,7 @@ import LTFP.MathlibExt.Probability.LinearClassSampleCover
 import LTFP.MathlibExt.Probability.LinearClassSampleCoverCard
 import LTFP.MathlibExt.Probability.LinearizedRiskLipschitz
 import LTFP.MathlibExt.Probability.LinearizedRiskSampleCover
+import LTFP.MathlibExt.Probability.NTKConcentrationMatrixBernstein
 import LTFP.MathlibExt.Probability.NTKMatrixSummand
 import LTFP.MathlibExt.Probability.RandomFeatureDynamics
 import LTFP.MathlibExt.Probability.RandomFeatureCarrier
