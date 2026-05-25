@@ -96,6 +96,7 @@ import LTFP.MathlibExt.MatrixAnalysis.LiebTroppSumIter
 import LTFP.MathlibExt.MatrixAnalysis.LogTraceExpConcave
 import LTFP.MathlibExt.MatrixAnalysis.MatrixBernsteinFinal
 import LTFP.MathlibExt.MatrixAnalysis.MatrixBernsteinOneTail
+import LTFP.MathlibExt.MatrixAnalysis.MatrixBernsteinOpNorm
 import LTFP.MathlibExt.MatrixAnalysis.MatrixBernsteinSkeleton
 import LTFP.MathlibExt.MatrixAnalysis.MatrixCFCContinuity
 import LTFP.MathlibExt.MatrixAnalysis.MatrixChernoff
