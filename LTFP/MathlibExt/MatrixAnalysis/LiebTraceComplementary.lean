@@ -5,8 +5,13 @@ Authors: Allen Hao Zhu
 -/
 import Mathlib.LinearAlgebra.Matrix.Vec
 import Mathlib.Analysis.Matrix.PosDef
+import Mathlib.Analysis.CStarAlgebra.Matrix
+import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Basic
+import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Continuity
+import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.Rpow.Basic
 import LTFP.MathlibExt.MatrixAnalysis.LiebSuperopRpowPersp
 import LTFP.MathlibExt.MatrixAnalysis.CStarRpowPerspectiveConcave
+import LTFP.MathlibExt.MatrixAnalysis.CStarLogConcave
 
 /-!
 # Complementary Lieb concavity at a vector `vec K` (strictly positive case)
@@ -377,5 +382,352 @@ theorem lieb_concavity_complementary_strictPos
   change t • _ + u • _ ≤ _
   rw [smul_eq_mul, smul_eq_mul]
   exact hΦle
+
+/-! ### Extension A: relax the second argument to PosSemidef -/
+
+open scoped Topology Matrix.Norms.L2Operator
+
+/-- The unital `CStarAlgebra` instance on `Matrix n n ℂ` under the
+`Matrix.Norms.L2Operator` topology. Although `Matrix n n ℂ` carries
+`NormedRing`, `NormedAlgebra ℂ`, `CStarRing`, `CompleteSpace`,
+`StarRing`, and `StarModule ℂ` instances individually via the
+L2-operator-norm scope, the bundled `CStarAlgebra` class is not
+auto-synthesised; we provide it explicitly here so downstream
+`ContinuousFunctionalCalculus` / `IsometricContinuousFunctionalCalculus`
+instances become available. -/
+noncomputable instance Matrix.instCStarAlgebraL2Op
+    {n : Type*} [Fintype n] [DecidableEq n] : CStarAlgebra (Matrix n n ℂ) where
+
+set_option maxHeartbeats 800000
+
+/-- **Complementary Lieb concavity at a vector (`A` strict-pos, `B` PSD).**
+
+For any matrix `K` and any `p ∈ [0, 1]`, the bilinear-quadratic functional
+
+```
+(A, B) ↦ Re Tr(K* · A^p · K · B^(1-p))
+```
+
+is jointly concave on the domain of pairs where `A` is strictly positive
+and `B` is positive semidefinite.
+
+This is **Extension A** of `lieb_concavity_complementary_strictPos`
+(B6 L3 Sub-Part 7.4): the strict-positive requirement on the second
+argument is relaxed to merely `PosSemidef` via an `ε`-regularization
+argument.
+
+**Proof.**  For each `ε > 0`, the perturbed map
+
+```
+g_ε (A, B) := Re Tr(K* · A^p · K · (B + ε•1)^(1-p))
+```
+
+is concave on `{(A, B) | A strict-pos ∧ B PSD}`, because:
+
+* `B + ε•1` is strictly positive whenever `B` is PSD (sum of PSD and
+  PosDef is PosDef);
+* The convex combination `t • (A₁, B₁) + u • (A₂, B₂) ↦ (·, · + ε•1)`
+  factors through `(tA₁+uA₂, t(B₁+ε•1) + u(B₂+ε•1))` since
+  `t + u = 1` distributes `ε•1` correctly;
+* The strict-pos theorem `lieb_concavity_complementary_strictPos`
+  then applies to give the concavity inequality on the perturbed
+  inputs.
+
+As `ε → 0⁺`, `(B + ε•1)^(1-p) → B^(1-p)` by continuity of the
+continuous functional calculus (`Filter.Tendsto.cfc`), so `g_ε → g`
+pointwise. The set of concave functions is closed under pointwise
+limits (`isClosed_concaveOn` in `CStarLogConcave.lean`), so the
+limit `g` is concave. -/
+theorem lieb_concavity_complementary_strictPos_A_PSD_B
+    (K : Matrix n n ℂ) {p : ℝ} (hp : p ∈ Set.Icc (0 : ℝ) 1) :
+    ConcaveOn ℝ
+      {z : Matrix n n ℂ × Matrix n n ℂ |
+        IsStrictlyPositive z.1 ∧ z.2.PosSemidef}
+      (fun z =>
+        (Matrix.trace
+            (star K * (z.1 ^ p) * K * (z.2 ^ ((1 : ℝ) - p)))).re) := by
+  -- The target domain and the target functional, named for clarity.
+  set s : Set (Matrix n n ℂ × Matrix n n ℂ) :=
+    {z | IsStrictlyPositive z.1 ∧ z.2.PosSemidef} with hs_def
+  set g : Matrix n n ℂ × Matrix n n ℂ → ℝ := fun z =>
+    (Matrix.trace (star K * (z.1 ^ p) * K * (z.2 ^ ((1 : ℝ) - p)))).re
+    with hg_def
+  -- The perturbed family.
+  let g_eps : ℝ → Matrix n n ℂ × Matrix n n ℂ → ℝ := fun ε z =>
+    (Matrix.trace
+        (star K * (z.1 ^ p) * K *
+          ((z.2 + ε • (1 : Matrix n n ℂ)) ^ ((1 : ℝ) - p)))).re
+  -- Step 1: convexity of `s`.
+  have hs_conv : Convex ℝ s := by
+    intro z₁ hz₁ z₂ hz₂ t u ht hu htu
+    simp only [hs_def, Set.mem_setOf_eq] at hz₁ hz₂ ⊢
+    obtain ⟨hA₁, hB₁⟩ := hz₁
+    obtain ⟨hA₂, hB₂⟩ := hz₂
+    refine ⟨?_, ?_⟩
+    · -- `t • A₁ + u • A₂` strictly positive.
+      exact convex_setOf_isStrictlyPositive_matrix (n := n)
+        hA₁ hA₂ ht hu htu
+    · -- `t • B₁ + u • B₂` PSD.
+      exact (hB₁.smul ht).add (hB₂.smul hu)
+  -- Step 2: for each `ε > 0`, `g_eps ε` is concave on `s`.
+  have h_eps_concave : ∀ ε : ℝ, 0 < ε → ConcaveOn ℝ s (g_eps ε) := by
+    intro ε hε
+    refine ⟨hs_conv, ?_⟩
+    rintro ⟨A₁, B₁⟩ hz₁ ⟨A₂, B₂⟩ hz₂ t u ht hu htu
+    simp only [hs_def, Set.mem_setOf_eq] at hz₁ hz₂
+    obtain ⟨hA₁, hB₁⟩ := hz₁
+    obtain ⟨hA₂, hB₂⟩ := hz₂
+    -- Each `Bᵢ + ε • 1` is strictly positive.
+    have hε1 : (ε • (1 : Matrix n n ℂ)).PosDef := Matrix.PosDef.one.smul hε
+    have hB₁ε_pd : (B₁ + ε • (1 : Matrix n n ℂ)).PosDef :=
+      Matrix.PosDef.posSemidef_add hB₁ hε1
+    have hB₂ε_pd : (B₂ + ε • (1 : Matrix n n ℂ)).PosDef :=
+      Matrix.PosDef.posSemidef_add hB₂ hε1
+    have hB₁ε_sp : IsStrictlyPositive (B₁ + ε • (1 : Matrix n n ℂ)) :=
+      Matrix.isStrictlyPositive_iff_posDef.mpr hB₁ε_pd
+    have hB₂ε_sp : IsStrictlyPositive (B₂ + ε • (1 : Matrix n n ℂ)) :=
+      Matrix.isStrictlyPositive_iff_posDef.mpr hB₂ε_pd
+    -- Apply the strict-positive theorem to the perturbed inputs.
+    have hstrict := (lieb_concavity_complementary_strictPos
+      (n := n) K hp).2
+      (x := (A₁, B₁ + ε • (1 : Matrix n n ℂ)))
+      (y := (A₂, B₂ + ε • (1 : Matrix n n ℂ)))
+      ⟨hA₁, hB₁ε_sp⟩ ⟨hA₂, hB₂ε_sp⟩ ht hu htu
+    -- Repackage `t • B₁ + u • B₂ + ε • 1 = t • (B₁ + ε•1) + u • (B₂ + ε•1)`.
+    have hcombine : t • B₁ + u • B₂ + ε • (1 : Matrix n n ℂ)
+                  = t • (B₁ + ε • (1 : Matrix n n ℂ))
+                    + u • (B₂ + ε • (1 : Matrix n n ℂ)) := by
+      have heq : ε • (1 : Matrix n n ℂ)
+                = t • (ε • (1 : Matrix n n ℂ))
+                  + u • (ε • (1 : Matrix n n ℂ)) := by
+        have hsplit : (t + u) • (ε • (1 : Matrix n n ℂ))
+                    = t • (ε • (1 : Matrix n n ℂ))
+                      + u • (ε • (1 : Matrix n n ℂ)) := add_smul t u _
+        rw [htu, one_smul] at hsplit
+        exact hsplit
+      rw [smul_add, smul_add]
+      rw [show t • B₁ + t • (ε • (1 : Matrix n n ℂ))
+            + (u • B₂ + u • (ε • (1 : Matrix n n ℂ)))
+            = t • B₁ + u • B₂ + (t • (ε • (1 : Matrix n n ℂ))
+              + u • (ε • (1 : Matrix n n ℂ))) from by abel]
+      rw [← heq]
+    show t • g_eps ε (A₁, B₁) + u • g_eps ε (A₂, B₂) ≤ g_eps ε _
+    simp only [g_eps, Prod.smul_mk, Prod.mk_add_mk] at hstrict ⊢
+    rw [hcombine]
+    exact hstrict
+  -- Step 3: `g_eps ε z → g z` as `ε → 0⁺`, for each `z ∈ s`.
+  have h_tendsto_at : ∀ z ∈ s,
+      Filter.Tendsto (fun ε : ℝ => g_eps ε z) (𝓝[>] (0 : ℝ)) (𝓝 (g z)) := by
+    intro z hz
+    obtain ⟨hA, hB⟩ := hz
+    -- The key continuity: `(B + ε • 1)^(1-p) → B^(1-p)`.
+    have hB_nonneg : (0 : Matrix n n ℂ) ≤ z.2 :=
+      Matrix.nonneg_iff_posSemidef.mpr hB
+    -- Spectrum bound: use a compact `Set ℝ` containing the spectra of all
+    -- `B + ε • 1` for `ε ∈ (0, 1]`, and of `B` itself.
+    -- For `r ∈ spectrum (B + ε•1)`, `|r| ≤ ‖B + ε•1‖ * ‖1‖ ≤ (‖B‖ + ‖1‖) * ‖1‖`
+    -- (when `ε ≤ 1`), so we use `R := (‖B‖ + ‖1‖) * ‖1‖ + 1`.
+    let R : ℝ := (‖z.2‖ + ‖(1 : Matrix n n ℂ)‖) * ‖(1 : Matrix n n ℂ)‖ + 1
+    let s_spec : Set ℝ := Set.Icc 0 R
+    have hs_spec_compact : IsCompact s_spec := isCompact_Icc
+    have hq_cont : ContinuousOn (fun x : ℝ => x ^ ((1 : ℝ) - p)) s_spec := by
+      intro x hx
+      exact (Real.continuousAt_rpow_const x ((1 : ℝ) - p)
+        (Or.inr (sub_nonneg.mpr hp.2))).continuousWithinAt
+    -- Convergence: `B + ε • 1 → B` as `ε → 0`.
+    have h_add_tendsto : Filter.Tendsto
+        (fun ε : ℝ => z.2 + ε • (1 : Matrix n n ℂ)) (𝓝[>] (0 : ℝ)) (𝓝 z.2) := by
+      have h_smul_cont : Continuous (fun ε : ℝ => ε • (1 : Matrix n n ℂ)) := by
+        exact continuous_id.smul continuous_const
+      have h1 : Filter.Tendsto (fun ε : ℝ => ε • (1 : Matrix n n ℂ))
+          (𝓝 (0 : ℝ)) (𝓝 (0 : Matrix n n ℂ)) := by
+        have := h_smul_cont.tendsto (0 : ℝ)
+        simpa using this
+      have h2 : Filter.Tendsto (fun ε : ℝ => z.2 + ε • (1 : Matrix n n ℂ))
+          (𝓝 (0 : ℝ)) (𝓝 z.2) := by
+        have h := (tendsto_const_nhds (x := z.2) (f := 𝓝 (0 : ℝ))).add h1
+        simpa using h
+      exact h2.mono_left nhdsWithin_le_nhds
+    -- Eventually (for `ε ∈ (0, 1]`), the spectrum of `B + ε • 1` is in `s_spec`.
+    have h_eventually_spec : ∀ᶠ ε in 𝓝[>] (0 : ℝ),
+        spectrum ℝ (z.2 + ε • (1 : Matrix n n ℂ)) ⊆ s_spec := by
+      have hbasis := nhdsGT_basis (0 : ℝ) |>.mem_of_mem (zero_lt_one' ℝ)
+      filter_upwards [hbasis] with ε ⟨hε_pos, hε_lt⟩
+      intro r hr
+      -- spectrum is in `[0, ‖B + ε•1‖] ⊆ [0, ‖B‖ + ε] ⊆ [0, R]`.
+      have hBε_pd : (z.2 + ε • (1 : Matrix n n ℂ)).PosDef :=
+        Matrix.PosDef.posSemidef_add hB (Matrix.PosDef.one.smul hε_pos)
+      have hBε_psd : (z.2 + ε • (1 : Matrix n n ℂ)).PosSemidef :=
+        hBε_pd.posSemidef
+      have hBε_sp : IsStrictlyPositive (z.2 + ε • (1 : Matrix n n ℂ)) :=
+        Matrix.isStrictlyPositive_iff_posDef.mpr hBε_pd
+      have hBε_nonneg : (0 : Matrix n n ℂ) ≤ z.2 + ε • (1 : Matrix n n ℂ) :=
+        hBε_sp.nonneg
+      have hr_nonneg : (0 : ℝ) ≤ r := by
+        have := StarOrderedRing.nonneg_iff_spectrum_nonneg
+          (R := ℝ) (z.2 + ε • (1 : Matrix n n ℂ)) |>.mp hBε_nonneg
+        exact this r hr
+      have hr_norm_mul : ‖r‖ ≤ ‖z.2 + ε • (1 : Matrix n n ℂ)‖ * ‖(1 : Matrix n n ℂ)‖ :=
+        spectrum.norm_le_norm_mul_of_mem hr
+      have h_one_nn : (0 : ℝ) ≤ ‖(1 : Matrix n n ℂ)‖ := norm_nonneg _
+      have hB_nn : (0 : ℝ) ≤ ‖z.2‖ := norm_nonneg _
+      -- `‖z.2 + ε • 1‖ ≤ ‖z.2‖ + ‖1‖` (since ε ≤ 1).
+      have hadd_norm : ‖z.2 + ε • (1 : Matrix n n ℂ)‖
+                      ≤ ‖z.2‖ + ‖(1 : Matrix n n ℂ)‖ := by
+        have h1 : ‖z.2 + ε • (1 : Matrix n n ℂ)‖
+                  ≤ ‖z.2‖ + ‖ε • (1 : Matrix n n ℂ)‖ := norm_add_le _ _
+        have h2 : ‖ε • (1 : Matrix n n ℂ)‖ ≤ ‖(1 : Matrix n n ℂ)‖ := by
+          rw [norm_smul, Real.norm_eq_abs, abs_of_pos hε_pos]
+          nlinarith
+        linarith
+      have hr_abs : r ≤ ‖z.2 + ε • (1 : Matrix n n ℂ)‖ * ‖(1 : Matrix n n ℂ)‖ := by
+        have := Real.le_norm_self r
+        linarith
+      have hbound :
+          ‖z.2 + ε • (1 : Matrix n n ℂ)‖ * ‖(1 : Matrix n n ℂ)‖
+            ≤ (‖z.2‖ + ‖(1 : Matrix n n ℂ)‖) * ‖(1 : Matrix n n ℂ)‖ := by
+        exact mul_le_mul_of_nonneg_right hadd_norm h_one_nn
+      exact ⟨hr_nonneg, by show r ≤ R; linarith⟩
+    -- Eventually `(B + ε•1)` is selfadjoint / nonneg.
+    have h_eventually_nn : ∀ᶠ ε in 𝓝[>] (0 : ℝ),
+        IsSelfAdjoint (z.2 + ε • (1 : Matrix n n ℂ)) := by
+      filter_upwards [self_mem_nhdsWithin] with ε hε_pos
+      have hBε_pd : (z.2 + ε • (1 : Matrix n n ℂ)).PosDef :=
+        Matrix.PosDef.posSemidef_add hB (Matrix.PosDef.one.smul hε_pos)
+      exact (Matrix.isStrictlyPositive_iff_posDef.mpr hBε_pd).isSelfAdjoint
+    -- Spectrum of B itself is in s_spec.
+    have hB_spec : spectrum ℝ z.2 ⊆ s_spec := by
+      intro r hr
+      have hr_nonneg : (0 : ℝ) ≤ r :=
+        (StarOrderedRing.nonneg_iff_spectrum_nonneg (R := ℝ) z.2).mp
+          hB_nonneg r hr
+      have hr_norm_mul : ‖r‖ ≤ ‖z.2‖ * ‖(1 : Matrix n n ℂ)‖ :=
+        spectrum.norm_le_norm_mul_of_mem hr
+      have h_one_nn : (0 : ℝ) ≤ ‖(1 : Matrix n n ℂ)‖ := norm_nonneg _
+      have hB_nn : (0 : ℝ) ≤ ‖z.2‖ := norm_nonneg _
+      have hr_abs : r ≤ ‖z.2‖ * ‖(1 : Matrix n n ℂ)‖ := by
+        have := Real.le_norm_self r
+        linarith
+      have hbound : ‖z.2‖ * ‖(1 : Matrix n n ℂ)‖
+                  ≤ (‖z.2‖ + ‖(1 : Matrix n n ℂ)‖) * ‖(1 : Matrix n n ℂ)‖ := by
+        exact mul_le_mul_of_nonneg_right (by linarith) h_one_nn
+      exact ⟨hr_nonneg, by show r ≤ R; linarith⟩
+    -- Now apply `Filter.Tendsto.cfc`.
+    have h_cfc_tendsto :
+        Filter.Tendsto
+          (fun ε : ℝ => cfc (fun x : ℝ => x ^ ((1 : ℝ) - p))
+            (z.2 + ε • (1 : Matrix n n ℂ)))
+          (𝓝[>] (0 : ℝ))
+          (𝓝 (cfc (fun x : ℝ => x ^ ((1 : ℝ) - p)) z.2)) :=
+      Filter.Tendsto.cfc (𝕜 := ℝ) hs_spec_compact
+        (fun x : ℝ => x ^ ((1 : ℝ) - p))
+        h_add_tendsto h_eventually_spec h_eventually_nn hB_spec
+        hB_nonneg.isSelfAdjoint hq_cont
+    -- Translate `cfc` back to `(·)^(1-p)`.
+    have h_rpow_tendsto :
+        Filter.Tendsto
+          (fun ε : ℝ => (z.2 + ε • (1 : Matrix n n ℂ)) ^ ((1 : ℝ) - p))
+          (𝓝[>] (0 : ℝ))
+          (𝓝 (z.2 ^ ((1 : ℝ) - p))) := by
+      have hreq : ∀ ε ∈ Set.Ioi (0 : ℝ),
+          (z.2 + ε • (1 : Matrix n n ℂ)) ^ ((1 : ℝ) - p)
+            = cfc (fun x : ℝ => x ^ ((1 : ℝ) - p))
+              (z.2 + ε • (1 : Matrix n n ℂ)) := by
+        intro ε hε_pos
+        have hBε_pd : (z.2 + ε • (1 : Matrix n n ℂ)).PosDef :=
+          Matrix.PosDef.posSemidef_add hB (Matrix.PosDef.one.smul hε_pos)
+        have hBε_nonneg : (0 : Matrix n n ℂ) ≤ z.2 + ε • (1 : Matrix n n ℂ) :=
+          (Matrix.isStrictlyPositive_iff_posDef.mpr hBε_pd).nonneg
+        exact CFC.rpow_eq_cfc_real (a := z.2 + ε • (1 : Matrix n n ℂ))
+          (y := (1 : ℝ) - p) hBε_nonneg
+      have hreqB : z.2 ^ ((1 : ℝ) - p)
+                  = cfc (fun x : ℝ => x ^ ((1 : ℝ) - p)) z.2 :=
+        CFC.rpow_eq_cfc_real hB_nonneg
+      have := h_cfc_tendsto
+      rw [← hreqB] at this
+      -- Use `Tendsto.congr'` with frequent equality on `𝓝[>] 0`.
+      apply this.congr'
+      filter_upwards [self_mem_nhdsWithin] with ε hε_pos
+      exact (hreq ε hε_pos).symm
+    -- Now combine via trace continuity.
+    -- Define `h : Matrix n n ℂ → ℂ` continuous (multiplication + trace).
+    have hcont :
+        Continuous (fun M : Matrix n n ℂ =>
+          Matrix.trace (star K * (z.1 ^ p) * K * M)) := by
+      have h_const : Continuous (fun _ : Matrix n n ℂ =>
+        star K * (z.1 ^ p) * K) := continuous_const
+      have h_mul : Continuous (fun M : Matrix n n ℂ =>
+        star K * (z.1 ^ p) * K * M) := h_const.mul continuous_id
+      exact h_mul.matrix_trace
+    -- Conclude by composing tendsto.
+    have h_full :
+        Filter.Tendsto
+          (fun ε : ℝ =>
+            Matrix.trace (star K * (z.1 ^ p) * K *
+              ((z.2 + ε • (1 : Matrix n n ℂ)) ^ ((1 : ℝ) - p))))
+          (𝓝[>] (0 : ℝ))
+          (𝓝 (Matrix.trace (star K * (z.1 ^ p) * K * (z.2 ^ ((1 : ℝ) - p))))) :=
+      (hcont.tendsto _).comp h_rpow_tendsto
+    exact (Complex.continuous_re.tendsto _).comp h_full
+  -- Step 4: Apply `isClosed_concaveOn` via pointwise convergence.
+  -- We construct extended-to-everywhere functions:
+  --   f_eps ε z := if z ∈ s then g_eps ε z else 0
+  --   g_ext z   := if z ∈ s then g z else 0
+  classical
+  let f_eps : ℝ → Matrix n n ℂ × Matrix n n ℂ → ℝ :=
+    fun ε z => if z ∈ s then g_eps ε z else 0
+  let g_ext : Matrix n n ℂ × Matrix n n ℂ → ℝ :=
+    fun z => if z ∈ s then g z else 0
+  have hg_ext_eq : s.EqOn g_ext g := by
+    intro z hz
+    show (if z ∈ s then g z else 0) = g z
+    simp [hz]
+  refine ConcaveOn.congr ?_ hg_ext_eq
+  -- Each `f_eps ε` is concave on `s`.
+  have h_f_concave : ∀ ε : ℝ, 0 < ε → ConcaveOn ℝ s (f_eps ε) := by
+    intro ε hε
+    have h := h_eps_concave ε hε
+    refine h.congr ?_
+    intro z hz
+    show g_eps ε z = (if z ∈ s then g_eps ε z else 0)
+    simp [hz]
+  -- Pointwise convergence `f_eps ε → g_ext` as `ε → 0⁺`.
+  have h_tendsto : Filter.Tendsto f_eps (𝓝[>] (0 : ℝ)) (𝓝 g_ext) := by
+    rw [tendsto_pi_nhds]
+    intro z
+    by_cases hz : z ∈ s
+    · have h_tn := h_tendsto_at z hz
+      have h_eq : ∀ ε ∈ Set.Ioi (0 : ℝ), f_eps ε z = g_eps ε z := by
+        intro ε _
+        show (if z ∈ s then g_eps ε z else 0) = g_eps ε z
+        simp [hz]
+      have hg_z : g_ext z = g z := by
+        show (if z ∈ s then g z else 0) = g z
+        simp [hz]
+      rw [hg_z]
+      apply h_tn.congr'
+      filter_upwards [self_mem_nhdsWithin] with ε hε_pos
+      exact (h_eq ε hε_pos).symm
+    · have h_const : ∀ ε, f_eps ε z = 0 := by
+        intro ε
+        show (if z ∈ s then g_eps ε z else 0) = 0
+        simp [hz]
+      have hg_z : g_ext z = 0 := by
+        show (if z ∈ s then g z else 0) = 0
+        simp [hz]
+      rw [hg_z]
+      simp only [h_const]
+      exact tendsto_const_nhds
+  -- Closedness of concavity.
+  have h_closed :
+      IsClosed {h : Matrix n n ℂ × Matrix n n ℂ → ℝ | ConcaveOn ℝ s h} :=
+    LTFP.MathlibExt.MatrixAnalysis.isClosed_concaveOn
+      (E := Matrix n n ℂ × Matrix n n ℂ) (β := ℝ) hs_conv
+  -- Eventually, `f_eps ε` is concave (specifically for `ε > 0`).
+  have h_eventually : ∀ᶠ ε in 𝓝[>] (0 : ℝ),
+      f_eps ε ∈ {h : Matrix n n ℂ × Matrix n n ℂ → ℝ | ConcaveOn ℝ s h} := by
+    filter_upwards [self_mem_nhdsWithin] with ε hε_pos
+    exact h_f_concave ε hε_pos
+  exact h_closed.mem_of_tendsto h_tendsto h_eventually
 
 end CFC
