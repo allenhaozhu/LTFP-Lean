@@ -257,4 +257,39 @@ lemma L_rpow (A : Matrix n n ℂ) {r : ℝ} (hr : 0 ≤ r) (hA : A.PosSemidef) :
   simp only [LHom_apply] at hmap
   exact hmap.symm
 
+/-! ### `Rconj`: the conjugated right superoperator
+
+For the Hermitian setting we will also need the *conjugated* right
+superoperator, defined using the entrywise complex conjugate `B.map star`
+in place of the transpose `Bᵀ`.  For Hermitian `B`, the entrywise
+relation `Bᴴ = B` gives `Bᵀ = B.map star`, hence `R B = Rconj B`.
+
+This surrogate is the form in which the Lieb concavity calculation is
+most naturally expressed, since `Rconj B` is the Kronecker product of
+two `*`-related copies of `B`.
+-/
+
+/-- The *conjugated* right-multiplication superoperator: the Kronecker
+product of the entrywise complex conjugate of `B` with the identity.
+For Hermitian `B`, this coincides with the ordinary right
+superoperator `R B`; see `R_eq_Rconj_of_isHermitian`. -/
+noncomputable def Rconj (B : Matrix n n ℂ) : Matrix (n × n) (n × n) ℂ :=
+  B.map star ⊗ₖ (1 : Matrix n n ℂ)
+
+omit [Fintype n] in
+/-- For a Hermitian matrix `B`, the ordinary right superoperator `R B`
+(defined via the transpose) and the conjugated variant `Rconj B`
+(defined via the entrywise complex conjugate) coincide.  This is a
+direct consequence of the entrywise Hermitian identity
+`star (B j i) = B i j`, which gives `Bᵀ = B.map star`. -/
+lemma R_eq_Rconj_of_isHermitian {B : Matrix n n ℂ} (hB : B.IsHermitian) :
+    R B = Rconj B := by
+  unfold R Rconj
+  -- It suffices to show `B.transpose = B.map star` entrywise.
+  congr 1
+  ext i j
+  -- Goal: `B.transpose i j = B.map star i j`, i.e. `B j i = star (B i j)`.
+  simp only [Matrix.transpose_apply, Matrix.map_apply]
+  exact (hB.apply j i).symm
+
 end LiebSuperop
