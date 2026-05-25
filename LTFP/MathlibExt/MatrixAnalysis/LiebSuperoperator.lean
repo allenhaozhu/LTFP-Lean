@@ -441,4 +441,47 @@ lemma continuous_RconjHom :
   change Continuous (Rlin : Matrix n n ℂ → Matrix (n × n) (n × n) ℂ)
   exact Rlin.continuous_of_finiteDimensional
 
+/-! ### Compatibility of `R` with real powers via the CFC and `Rconj`
+
+For a positive semidefinite `B : Matrix n n ℂ` and a nonnegative real
+exponent `r`, the right superoperator `R` commutes with the operator
+`rpow`: `(R B) ^ r = R (B ^ r)`.  Unlike `L`, the proof routes through
+the conjugated surrogate `Rconj`, since `Rconj` is a genuine real
+`*`-algebra homomorphism (whereas `R` itself is only anti-multiplicative
+and not naturally a `StarAlgHom`).  The Hermitian rewrite
+`R_eq_Rconj_of_isHermitian` is used twice — once on each side — and the
+core transport is `StarAlgHom.map_cfc` applied to `RconjHom`.
+-/
+
+open scoped MatrixOrder in
+/-- The right superoperator `R` commutes with real powers on positive
+semidefinite matrices: `(R B) ^ r = R (B ^ r)`.  The proof routes
+through the conjugated surrogate `Rconj`, exploiting the fact that
+`R = Rconj` on Hermitian inputs and that `Rconj` is a real
+`*`-algebra homomorphism. -/
+lemma R_rpow (B : Matrix n n ℂ) {r : ℝ} (hr : 0 ≤ r) (hB : B.PosSemidef) :
+    (R B) ^ r = R (B ^ r) := by
+  -- Hermitian witnesses for the two sides.
+  have hBherm : B.IsHermitian := hB.isHermitian
+  have hBr_psd : (B ^ r).PosSemidef :=
+    Matrix.nonneg_iff_posSemidef.mp CFC.rpow_nonneg
+  have hBr_herm : (B ^ r).IsHermitian := hBr_psd.isHermitian
+  -- Nonnegativity witnesses for the CFC predicate (`R = ℝ≥0`).
+  have hB0 := hB.nonneg
+  have hRB0 := (R_posSemidef_of_posSemidef hB).nonneg
+  -- Transport the PSD of `R B` to PSD of `Rconj B` via the Hermitian rewrite.
+  have hRconj0 : 0 ≤ Rconj B := by
+    rw [R_eq_Rconj_of_isHermitian hBherm] at hRB0
+    exact hRB0
+  -- Continuity of the exponentiation function on `ℝ≥0`.
+  have hcont : Continuous (fun x : ℝ≥0 => x ^ r) := NNReal.continuous_rpow_const hr
+  -- Transport the CFC across the real `*`-algebra homomorphism `RconjHom`.
+  have hmap :=
+    (RconjHom (n := n)).map_cfc (S := ℝ) (R := ℝ≥0)
+      (fun x : ℝ≥0 => x ^ r) B hcont.continuousOn continuous_RconjHom hB0 hRconj0
+  simp only [RconjHom_apply] at hmap
+  -- Rewrite both sides of the goal into the `Rconj` form, then close via `hmap`.
+  rw [R_eq_Rconj_of_isHermitian hBherm, R_eq_Rconj_of_isHermitian hBr_herm]
+  exact hmap.symm
+
 end LiebSuperop
