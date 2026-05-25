@@ -80,6 +80,8 @@ import LTFP.MathlibExt.MatrixAnalysis.InvAntiOnPos
 import LTFP.MathlibExt.MatrixAnalysis.Lieb
 import LTFP.MathlibExt.MatrixAnalysis.LiebSuperoperator
 import LTFP.MathlibExt.MatrixAnalysis.LiebSuperopCStar
+import LTFP.MathlibExt.MatrixAnalysis.LiebSuperopRpowPersp
+import LTFP.MathlibExt.MatrixAnalysis.LiebTraceComplementary
 import LTFP.MathlibExt.MatrixAnalysis.OperatorAntitoneScalarBridge
 import LTFP.MathlibExt.MatrixAnalysis.OperatorConcaveScalarBridge
 import LTFP.MathlibExt.MatrixAnalysis.OperatorConvexScalarBridge
