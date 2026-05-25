@@ -67,6 +67,7 @@ import LTFP.MathlibExt.Probability.GradNTKConcentrationMatrixBernstein
 import LTFP.MathlibExt.Probability.NTKConcentrationMatrixBernstein
 import LTFP.MathlibExt.Probability.NTKMatrixSummand
 import LTFP.MathlibExt.Probability.FullNTKConcentration
+import LTFP.MathlibExt.Probability.FullNetwork
 import LTFP.MathlibExt.Probability.RandomFeatureDynamics
 import LTFP.MathlibExt.Probability.RandomFeatureCarrier
 import LTFP.MathlibExt.Probability.CoveringNumberEuclidean
