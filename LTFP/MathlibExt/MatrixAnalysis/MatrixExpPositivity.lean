@@ -22,9 +22,11 @@ This small bridge is used throughout the matrix Bernstein chain
 -/
 import Mathlib.Algebra.Algebra.StrictPositivity
 import Mathlib.Analysis.CStarAlgebra.Matrix
+import Mathlib.Analysis.Complex.Basic
 import Mathlib.Analysis.Matrix.Order
 import Mathlib.Analysis.Matrix.PosDef
 import Mathlib.Analysis.Normed.Algebra.MatrixExponential
+import Mathlib.Analysis.Normed.Module.FiniteDimension
 import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.ExpLog.Basic
 import Mathlib.LinearAlgebra.Matrix.Hermitian
 
@@ -51,5 +53,28 @@ theorem IsHermitian.isStrictlyPositive_exp
   have hexp_nn : (0 : Matrix n n ℂ) ≤ NormedSpace.exp H := hH_sa.exp_nonneg
   have hexp_unit : IsUnit (NormedSpace.exp H : Matrix n n ℂ) := Matrix.isUnit_exp H
   exact hexp_unit.isStrictlyPositive hexp_nn
+
+/-- The real-part trace of the matrix exponential is continuous.
+
+Composition of three continuous maps:
+
+* `NormedSpace.exp : Matrix n n ℂ → Matrix n n ℂ` is continuous
+  (`NormedSpace.exp_continuous`).
+* `Matrix.trace : Matrix n n ℂ → ℂ` is continuous as a finite-dimensional
+  ℂ-linear map (via `Matrix.traceLinearMap` and
+  `LinearMap.continuous_of_finiteDimensional`).
+* `Complex.re : ℂ → ℝ` is continuous (`Complex.continuous_re`).
+
+This continuity is used in the matrix Bernstein chain for limit
+arguments on `Re tr (exp H)` over parameter families.
+-/
+theorem continuous_re_trace_exp
+    {n : Type*} [Fintype n] [DecidableEq n] :
+    Continuous (fun H : Matrix n n ℂ => (Matrix.trace (NormedSpace.exp H)).re) := by
+  let +nondep : NormedAlgebra ℚ (Matrix n n ℂ) :=
+    NormedAlgebra.restrictScalars ℚ ℂ (Matrix n n ℂ)
+  have htrace : Continuous (Matrix.trace : Matrix n n ℂ → ℂ) :=
+    (Matrix.traceLinearMap n ℂ ℂ).continuous_of_finiteDimensional
+  exact Complex.continuous_re.comp (htrace.comp NormedSpace.exp_continuous)
 
 end Matrix
