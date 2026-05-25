@@ -1215,4 +1215,226 @@ theorem lieb_complementary_monotone
   -- Combine: transitivity.
   exact le_trans hstepB hstepA
 
+/-! ### Sub-Part 7.7: Full Lieb 1973 concavity (general `p + q ≤ 1`)
+
+This section closes the canonical Lieb 1973 joint-concavity theorem in
+its general form: for nonneg exponents `p, q ≥ 0` with `p + q ≤ 1`, the
+bilinear-quadratic functional `(A, B) ↦ Re Tr(K* · A^p · K · B^q)` is
+jointly concave on PSD × PSD pairs.
+
+The case `p + q = 1` is `CFC.lieb_concavity_complementary_PSD`. The
+general case is obtained by exponent normalization:
+
+* Set `s := p + q` and `r := p / s` (so `r ∈ [0, 1]` and `1 - r = q/s`).
+* `(A^s)^r = A^(s·r) = A^p` by `CFC.rpow_rpow_of_exponent_nonneg`, and
+  similarly `(B^s)^(1-r) = B^q`.
+* Operator concavity of `x ↦ x^s` on PSD (`CFC.concaveOn_rpow`) gives
+  `t • A₁^s + u • A₂^s ≤ (t • A₁ + u • A₂)^s` and likewise for `B`.
+* Monotonicity of the complementary Lieb functional
+  (`CFC.lieb_complementary_monotone`) then bridges from `(t • A₁^s + …,
+  …)` up to `((t • A₁ + …)^s, …)`.
+* Joint concavity at `r ∈ [0, 1]` (`CFC.lieb_concavity_complementary_PSD`)
+  closes the chain.
+
+The edge case `s = 0` (i.e. `p = q = 0`) reduces to a constant
+functional (`K* · 1 · K · 1 = K* K`), hence trivially concave. -/
+
+/-- **Sub-Part 7.7 — Full Lieb 1973 joint concavity (general `p + q ≤ 1`).**
+
+For any matrix `K` and any `p, q ≥ 0` with `p + q ≤ 1`, the bilinear-
+quadratic functional `(A, B) ↦ Re Tr(K* · A^p · K · B^q)` is jointly
+concave on the closed cone of pairs `(A, B)` of positive semidefinite
+matrices.
+
+This is the standard Lieb 1973 complementary concavity theorem (Carlen
+2010, §6; Bhatia, *Matrix Analysis*, §IX). It generalises
+`CFC.lieb_concavity_complementary_PSD` (the `p + q = 1` case) to all
+admissible exponent pairs in the closed simplex `{p, q ≥ 0, p + q ≤ 1}`. -/
+theorem lieb_concavity_general
+    {n : Type*} [Fintype n] [DecidableEq n]
+    (K : Matrix n n ℂ) {p q : ℝ}
+    (hp : 0 ≤ p) (hq : 0 ≤ q) (hpq : p + q ≤ 1) :
+    ConcaveOn ℝ
+      {z : Matrix n n ℂ × Matrix n n ℂ |
+        z.1.PosSemidef ∧ z.2.PosSemidef}
+      (fun z => (Matrix.trace (star K * (z.1 ^ p) * K * (z.2 ^ q))).re) := by
+  classical
+  set s : ℝ := p + q with hs_def
+  have hs_nonneg : 0 ≤ s := add_nonneg hp hq
+  have hs_le_one : s ≤ 1 := hpq
+  -- Convexity of the PSD × PSD domain (shared between both branches).
+  have hdom_conv : Convex ℝ
+      ({z : Matrix n n ℂ × Matrix n n ℂ | z.1.PosSemidef ∧ z.2.PosSemidef}) := by
+    intro z₁ hz₁ z₂ hz₂ t u ht hu _
+    simp only [Set.mem_setOf_eq] at hz₁ hz₂ ⊢
+    obtain ⟨hA₁, hB₁⟩ := hz₁
+    obtain ⟨hA₂, hB₂⟩ := hz₂
+    exact ⟨(hA₁.smul ht).add (hA₂.smul hu), (hB₁.smul ht).add (hB₂.smul hu)⟩
+  -- Split on `s = 0` vs `s > 0`.
+  rcases hs_nonneg.lt_or_eq' with hs_pos | hs_zero
+  · -- **Case s > 0.** Use exponent normalization via `r := p / s`.
+    have hs_ne : s ≠ 0 := ne_of_gt hs_pos
+    set r : ℝ := p / s with hr_def
+    have hr_nonneg : 0 ≤ r := div_nonneg hp hs_nonneg
+    have hr_le_one : r ≤ 1 := by
+      rw [hr_def, div_le_one hs_pos]
+      exact (le_add_of_nonneg_right hq : p ≤ p + q)
+    have hr_mem : r ∈ Set.Icc (0 : ℝ) 1 := ⟨hr_nonneg, hr_le_one⟩
+    have hone_minus_r : (1 : ℝ) - r = q / s := by
+      rw [hr_def]; field_simp; linarith
+    -- Exponent composition: `(a ^ s) ^ r = a ^ p` and `(a ^ s) ^ (1-r) = a ^ q`
+    -- on PSD operands.
+    have hsr_eq_p : s * r = p := by
+      rw [hr_def, mul_div_assoc']; field_simp
+    have hsr_eq_q : s * (1 - r) = q := by
+      rw [hone_minus_r, mul_div_assoc']; field_simp
+    -- The functional, in both forms.
+    have hpow_eq_p : ∀ (a : Matrix n n ℂ), a.PosSemidef →
+        (a ^ s) ^ r = a ^ p := by
+      intro a ha
+      have ha0 : (0 : Matrix n n ℂ) ≤ a := Matrix.nonneg_iff_posSemidef.mpr ha
+      have := CFC.rpow_rpow_of_exponent_nonneg
+        (a := a) s r hs_nonneg hr_nonneg ha0
+      rw [this, hsr_eq_p]
+    have hpow_eq_q : ∀ (a : Matrix n n ℂ), a.PosSemidef →
+        (a ^ s) ^ ((1 : ℝ) - r) = a ^ q := by
+      intro a ha
+      have ha0 : (0 : Matrix n n ℂ) ≤ a := Matrix.nonneg_iff_posSemidef.mpr ha
+      have hrr : 0 ≤ (1 : ℝ) - r := by linarith
+      have := CFC.rpow_rpow_of_exponent_nonneg
+        (a := a) s ((1 : ℝ) - r) hs_nonneg hrr ha0
+      rw [this, hsr_eq_q]
+    -- Pull in the two ingredients.
+    have h_F_concave := lieb_concavity_complementary_PSD (n := n) K hr_mem
+    have h_concave_rpow_s :
+        ConcaveOn ℝ (Set.Ici (0 : Matrix n n ℂ))
+          (fun a : Matrix n n ℂ => a ^ s) := by
+      have : s ∈ Set.Icc (0 : ℝ) 1 := ⟨hs_nonneg, hs_le_one⟩
+      exact LTFP.MathlibExt.MatrixAnalysis.CFC.concaveOn_rpow this
+    -- Now assemble the joint concavity.
+    refine ⟨hdom_conv, ?_⟩
+    rintro ⟨A₁, B₁⟩ hz₁ ⟨A₂, B₂⟩ hz₂ t u ht hu htu
+    simp only [Set.mem_setOf_eq] at hz₁ hz₂
+    obtain ⟨hA₁, hB₁⟩ := hz₁
+    obtain ⟨hA₂, hB₂⟩ := hz₂
+    -- Names for the convex combinations and their `^s` powers.
+    set M : Matrix n n ℂ := t • A₁ + u • A₂ with hM_def
+    set N : Matrix n n ℂ := t • B₁ + u • B₂ with hN_def
+    have hM_psd : M.PosSemidef := (hA₁.smul ht).add (hA₂.smul hu)
+    have hN_psd : N.PosSemidef := (hB₁.smul ht).add (hB₂.smul hu)
+    -- PSD-ness of all involved powers.
+    have hA₁s_psd : (A₁ ^ s).PosSemidef :=
+      Matrix.nonneg_iff_posSemidef.mp (CFC.rpow_nonneg (a := A₁) (y := s))
+    have hA₂s_psd : (A₂ ^ s).PosSemidef :=
+      Matrix.nonneg_iff_posSemidef.mp (CFC.rpow_nonneg (a := A₂) (y := s))
+    have hB₁s_psd : (B₁ ^ s).PosSemidef :=
+      Matrix.nonneg_iff_posSemidef.mp (CFC.rpow_nonneg (a := B₁) (y := s))
+    have hB₂s_psd : (B₂ ^ s).PosSemidef :=
+      Matrix.nonneg_iff_posSemidef.mp (CFC.rpow_nonneg (a := B₂) (y := s))
+    have hMs_psd : (M ^ s).PosSemidef :=
+      Matrix.nonneg_iff_posSemidef.mp (CFC.rpow_nonneg (a := M) (y := s))
+    have hNs_psd : (N ^ s).PosSemidef :=
+      Matrix.nonneg_iff_posSemidef.mp (CFC.rpow_nonneg (a := N) (y := s))
+    -- Convex combinations of `^s` powers are PSD.
+    have hMid_A_psd : (t • A₁ ^ s + u • A₂ ^ s).PosSemidef :=
+      (hA₁s_psd.smul ht).add (hA₂s_psd.smul hu)
+    have hMid_B_psd : (t • B₁ ^ s + u • B₂ ^ s).PosSemidef :=
+      (hB₁s_psd.smul ht).add (hB₂s_psd.smul hu)
+    -- Operator concavity of `^s` on PSD: convex-comb-of-powers ≤ power-of-comb.
+    have hop_concave_A : t • A₁ ^ s + u • A₂ ^ s ≤ M ^ s := by
+      have hA₁_mem : A₁ ∈ Set.Ici (0 : Matrix n n ℂ) :=
+        Matrix.nonneg_iff_posSemidef.mpr hA₁
+      have hA₂_mem : A₂ ∈ Set.Ici (0 : Matrix n n ℂ) :=
+        Matrix.nonneg_iff_posSemidef.mpr hA₂
+      have := h_concave_rpow_s.2 hA₁_mem hA₂_mem ht hu htu
+      simpa [hM_def] using this
+    have hop_concave_B : t • B₁ ^ s + u • B₂ ^ s ≤ N ^ s := by
+      have hB₁_mem : B₁ ∈ Set.Ici (0 : Matrix n n ℂ) :=
+        Matrix.nonneg_iff_posSemidef.mpr hB₁
+      have hB₂_mem : B₂ ∈ Set.Ici (0 : Matrix n n ℂ) :=
+        Matrix.nonneg_iff_posSemidef.mpr hB₂
+      have := h_concave_rpow_s.2 hB₁_mem hB₂_mem ht hu htu
+      simpa [hN_def] using this
+    -- The complementary Lieb functional, parameterized by `r`.
+    let F : Matrix n n ℂ → Matrix n n ℂ → ℝ := fun X Y =>
+      (Matrix.trace (star K * (X ^ r) * K * (Y ^ ((1 : ℝ) - r)))).re
+    -- Monotonicity step: F(mid_A, mid_B) ≤ F(M^s, N^s).
+    have hmono :
+        F (t • A₁ ^ s + u • A₂ ^ s) (t • B₁ ^ s + u • B₂ ^ s)
+          ≤ F (M ^ s) (N ^ s) :=
+      lieb_complementary_monotone (n := n) K hr_mem
+        hMid_A_psd hMs_psd hMid_B_psd hNs_psd hop_concave_A hop_concave_B
+    -- Concavity step: t • F(A₁^s, B₁^s) + u • F(A₂^s, B₂^s) ≤ F(mid_A, mid_B).
+    have hjoint :
+        t • F (A₁ ^ s) (B₁ ^ s) + u • F (A₂ ^ s) (B₂ ^ s)
+          ≤ F (t • A₁ ^ s + u • A₂ ^ s) (t • B₁ ^ s + u • B₂ ^ s) := by
+      have hPSD₁ : (A₁ ^ s, B₁ ^ s) ∈
+          {z : Matrix n n ℂ × Matrix n n ℂ | z.1.PosSemidef ∧ z.2.PosSemidef} :=
+        ⟨hA₁s_psd, hB₁s_psd⟩
+      have hPSD₂ : (A₂ ^ s, B₂ ^ s) ∈
+          {z : Matrix n n ℂ × Matrix n n ℂ | z.1.PosSemidef ∧ z.2.PosSemidef} :=
+        ⟨hA₂s_psd, hB₂s_psd⟩
+      have := h_F_concave.2 hPSD₁ hPSD₂ ht hu htu
+      simpa [F, Prod.smul_mk, Prod.mk_add_mk] using this
+    -- Chain: t • F(A₁^s, B₁^s) + u • F(A₂^s, B₂^s) ≤ F(M^s, N^s).
+    have hchain :
+        t • F (A₁ ^ s) (B₁ ^ s) + u • F (A₂ ^ s) (B₂ ^ s)
+          ≤ F (M ^ s) (N ^ s) := le_trans hjoint hmono
+    -- Translate F-of-^s-pair into the target functional via exponent identities.
+    have hrw_A₁ : (A₁ ^ s) ^ r = A₁ ^ p := hpow_eq_p A₁ hA₁
+    have hrw_A₂ : (A₂ ^ s) ^ r = A₂ ^ p := hpow_eq_p A₂ hA₂
+    have hrw_B₁ : (B₁ ^ s) ^ ((1 : ℝ) - r) = B₁ ^ q := hpow_eq_q B₁ hB₁
+    have hrw_B₂ : (B₂ ^ s) ^ ((1 : ℝ) - r) = B₂ ^ q := hpow_eq_q B₂ hB₂
+    have hrw_M : (M ^ s) ^ r = M ^ p := hpow_eq_p M hM_psd
+    have hrw_N : (N ^ s) ^ ((1 : ℝ) - r) = N ^ q := hpow_eq_q N hN_psd
+    -- Final repackaging.
+    show t • (Matrix.trace (star K * (A₁ ^ p) * K * (B₁ ^ q))).re
+        + u • (Matrix.trace (star K * (A₂ ^ p) * K * (B₂ ^ q))).re
+        ≤ (Matrix.trace (star K * ((t • A₁ + u • A₂) ^ p) * K *
+            ((t • B₁ + u • B₂) ^ q))).re
+    have hF_M_N :
+        F (M ^ s) (N ^ s) =
+          (Matrix.trace (star K * ((t • A₁ + u • A₂) ^ p) * K *
+            ((t • B₁ + u • B₂) ^ q))).re := by
+      show (Matrix.trace (star K * ((M ^ s) ^ r) * K *
+              ((N ^ s) ^ ((1 : ℝ) - r)))).re = _
+      rw [hrw_M, hrw_N, hM_def, hN_def]
+    have hF_A₁_B₁ :
+        F (A₁ ^ s) (B₁ ^ s) =
+          (Matrix.trace (star K * (A₁ ^ p) * K * (B₁ ^ q))).re := by
+      show (Matrix.trace (star K * ((A₁ ^ s) ^ r) * K *
+              ((B₁ ^ s) ^ ((1 : ℝ) - r)))).re = _
+      rw [hrw_A₁, hrw_B₁]
+    have hF_A₂_B₂ :
+        F (A₂ ^ s) (B₂ ^ s) =
+          (Matrix.trace (star K * (A₂ ^ p) * K * (B₂ ^ q))).re := by
+      show (Matrix.trace (star K * ((A₂ ^ s) ^ r) * K *
+              ((B₂ ^ s) ^ ((1 : ℝ) - r)))).re = _
+      rw [hrw_A₂, hrw_B₂]
+    rw [← hF_M_N, ← hF_A₁_B₁, ← hF_A₂_B₂]
+    exact hchain
+  · -- **Case s = 0.** Then p = q = 0 (both ≥ 0 with p + q = 0), so the
+    -- functional is the constant `Re tr(K* · 1 · K · 1) = Re tr(K* K)`.
+    have hpq_eq : p + q = 0 := by rw [← hs_def]; exact hs_zero
+    have hp_zero : p = 0 := by linarith
+    have hq_zero : q = 0 := by linarith
+    subst hp_zero
+    subst hq_zero
+    -- The functional reduces to a constant on the domain.
+    have h_eq_const : ∀ z : Matrix n n ℂ × Matrix n n ℂ,
+        z.1.PosSemidef ∧ z.2.PosSemidef →
+        (Matrix.trace (star K * (z.1 ^ (0 : ℝ)) * K * (z.2 ^ (0 : ℝ)))).re
+          = (Matrix.trace (star K * K)).re := by
+      rintro ⟨A, B⟩ ⟨hA, hB⟩
+      have hA0 : (0 : Matrix n n ℂ) ≤ A := Matrix.nonneg_iff_posSemidef.mpr hA
+      have hB0 : (0 : Matrix n n ℂ) ≤ B := Matrix.nonneg_iff_posSemidef.mpr hB
+      rw [CFC.rpow_zero A hA0, CFC.rpow_zero B hB0]
+      congr 2
+      rw [mul_one, mul_one]
+    -- A constant function is concave.
+    refine ConcaveOn.congr (concaveOn_const ((Matrix.trace (star K * K)).re)
+      hdom_conv) ?_
+    intro z hz
+    exact (h_eq_const z hz).symm
+
 end CFC
