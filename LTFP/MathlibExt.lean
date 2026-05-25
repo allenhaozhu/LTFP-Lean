@@ -34,7 +34,9 @@ import LTFP.MathlibExt.Probability.Distributions.GaussianPosteriorCompProdCovari
 import LTFP.MathlibExt.Probability.Distributions.GaussianPosteriorCompProdEqSwappedJoint
 import LTFP.MathlibExt.Probability.Distributions.GaussianPosteriorCompProdIsGaussian
 import LTFP.MathlibExt.Probability.Distributions.GaussianPosteriorCovariancesPositive
+import LTFP.MathlibExt.Probability.Distributions.GaussianPosteriorCovRidgeForm
 import LTFP.MathlibExt.Probability.Distributions.GaussianPosteriorKernel
+import LTFP.MathlibExt.Probability.Distributions.GaussianPosteriorKernelPosterior
 import LTFP.MathlibExt.Probability.Distributions.GaussianPosteriorMeanCovarianceForm
 import LTFP.MathlibExt.Probability.Distributions.GaussianPosteriorMeanRidgeForm
 import LTFP.MathlibExt.Probability.Distributions.JointPriorObservationCrossCovariance
@@ -59,6 +61,7 @@ import LTFP.MathlibExt.Probability.LinearClassSampleCover
 import LTFP.MathlibExt.Probability.LinearClassSampleCoverCard
 import LTFP.MathlibExt.Probability.LinearizedRiskLipschitz
 import LTFP.MathlibExt.Probability.LinearizedRiskSampleCover
+import LTFP.MathlibExt.Probability.NTKMatrixSummand
 import LTFP.MathlibExt.Probability.RandomFeatureDynamics
 import LTFP.MathlibExt.Probability.RandomFeatureCarrier
 import LTFP.MathlibExt.Probability.CoveringNumberEuclidean
