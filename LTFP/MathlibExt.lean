@@ -82,8 +82,14 @@ import LTFP.MathlibExt.MatrixAnalysis.LiebSuperoperator
 import LTFP.MathlibExt.MatrixAnalysis.LiebSuperopCStar
 import LTFP.MathlibExt.MatrixAnalysis.LiebSuperopRpowPersp
 import LTFP.MathlibExt.MatrixAnalysis.LiebTraceComplementary
+import LTFP.MathlibExt.MatrixAnalysis.MatrixBernsteinSkeleton
+import LTFP.MathlibExt.MatrixAnalysis.MatrixChernoff
+import LTFP.MathlibExt.MatrixAnalysis.MatrixEntropyLimit
+import LTFP.MathlibExt.MatrixAnalysis.MatrixExpPositivity
+import LTFP.MathlibExt.MatrixAnalysis.MatrixRelEntropy
 import LTFP.MathlibExt.MatrixAnalysis.OperatorAntitoneScalarBridge
 import LTFP.MathlibExt.MatrixAnalysis.OperatorConcaveScalarBridge
 import LTFP.MathlibExt.MatrixAnalysis.OperatorConvexScalarBridge
 import LTFP.MathlibExt.MatrixAnalysis.OperatorMonotoneScalarBridge
+import LTFP.MathlibExt.MatrixAnalysis.SpectralTraceExp
 import LTFP.MathlibExt.Topology.UAT
