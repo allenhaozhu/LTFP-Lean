@@ -335,4 +335,49 @@ theorem bernstein_scalar_one_tail
         rw [hc_def]
         ring
 
+/-! ### Carrier-facing `2d · exp(...)` wrapper -/
+
+/-- **Matrix Bernstein upper tail bound (`2d · exp(...)` carrier-facing form).**
+
+A trivial weakening of `Matrix.bernstein_scalar_one_tail` that produces the
+`2 · (card d) · exp(...)` shape matching the carrier `matrix_bernstein_via_lieb`
+(which uses the `2d` factor by convention for the two-tail union bound).
+
+The factor-of-2 weakening is sound because `(card d) * exp(...) ≥ 0`. -/
+theorem bernstein_scalar_one_tail_2d_wrapper
+    {d m : Type*} [Fintype d] [DecidableEq d] [Nonempty d]
+    [Fintype m] [DecidableEq m]
+    {Ω : m → Type*} [∀ i, MeasurableSpace (Ω i)]
+    (μ : ∀ i, MeasureTheory.Measure (Ω i))
+    [∀ i, MeasureTheory.IsProbabilityMeasure (μ i)]
+    (X : ∀ i, Ω i → Matrix d d ℂ)
+    (hX : ∀ i ω, (X i ω).IsHermitian)
+    (hmeas : ∀ i, MeasureTheory.AEStronglyMeasurable (X i) (μ i))
+    (R : ℝ) (hR : 0 ≤ R) (hbound : ∀ i ω, ‖X i ω‖ ≤ R)
+    (hcenter : ∀ i, ∫ x, X i x ∂μ i = 0)
+    (σ2 : ℝ) (hσ2 : 0 ≤ σ2)
+    (hvar : ∑ i, ∫ x, X i x * X i x ∂μ i ≤ σ2 • (1 : Matrix d d ℂ))
+    (t θ : ℝ) (hθ : 0 < θ) (hθR : θ * R < 3)
+    (hSum : ∀ ω : ∀ i, Ω i, (∑ i, X i (ω i)).IsHermitian)
+    (hLamMeas : AEMeasurable
+      (fun ω => Finset.sup' Finset.univ Finset.univ_nonempty (hSum ω).eigenvalues)
+      (MeasureTheory.Measure.pi μ))
+    (htrInt : MeasureTheory.Integrable
+      (fun ω => (Matrix.trace (NormedSpace.exp (θ • (∑ i, X i (ω i))))).re)
+      (MeasureTheory.Measure.pi μ)) :
+    (MeasureTheory.Measure.pi μ).real
+      {ω | t ≤ Finset.sup' Finset.univ Finset.univ_nonempty (hSum ω).eigenvalues}
+    ≤ 2 * (Fintype.card d : ℝ) * Real.exp
+        (-θ * t + θ^2 * σ2 / (2 * (1 - θ * R / 3))) := by
+  have h1 := Matrix.bernstein_scalar_one_tail μ X hX hmeas R hR hbound hcenter
+    σ2 hσ2 hvar t θ hθ hθR hSum hLamMeas htrInt
+  have hcard_pos : 0 < (Fintype.card d : ℝ) := by
+    exact_mod_cast Fintype.card_pos
+  have hexp_pos : 0 < Real.exp (-θ * t + θ^2 * σ2 / (2 * (1 - θ * R / 3))) :=
+    Real.exp_pos _
+  have hpos : 0 ≤ (Fintype.card d : ℝ) *
+      Real.exp (-θ * t + θ^2 * σ2 / (2 * (1 - θ * R / 3))) :=
+    le_of_lt (mul_pos hcard_pos hexp_pos)
+  linarith
+
 end Matrix
