@@ -41,6 +41,8 @@ Let `λ_k` be eigenvalues of `P`, `μ_j` of `Q`. The full proof chains:
                 `= tr (P log Q) + tr P - tr Q.`             [trace identity in `Q`-basis]
 
 -/
+import LTFP.MathlibExt.MatrixAnalysis.MatrixEntropyLimit
+import LTFP.MathlibExt.MatrixAnalysis.MatrixExpPositivity
 import Mathlib.Analysis.CStarAlgebra.Matrix
 import Mathlib.Analysis.Convex.Jensen
 import Mathlib.Analysis.Matrix.HermitianFunctionalCalculus
@@ -967,5 +969,96 @@ theorem gibbs_variational_equality
   refine ⟨P, hP_sp, hPtrace, ?_⟩
   rw [htr_PlogP_re, hPtrace, hlogZ_inv]
   ring
+
+/-! ## Separate convexity corollaries (Bernstein chain infrastructure)
+
+Two trivial consequences of `matrix_relative_entropy_joint_convex`:
+fixing one argument leaves the functional convex in the other. These
+are obtained by composing joint convexity with the inclusion of a
+single matrix into the diagonal slice `{(P, Q₀)}` (resp. `{(P₀, Q)}`).
+-/
+
+/-- **Matrix relative entropy is convex in the first argument** (with `Q` fixed).
+
+For any strictly positive `Q`, the functional
+`P ↦ Re tr (P · log P - P · log Q - P + Q)` is convex on the set of
+strictly positive matrices. Direct corollary of
+`matrix_relative_entropy_joint_convex`. -/
+theorem matrix_relative_entropy_convex_in_first
+    {n : Type*} [Fintype n] [DecidableEq n] [Nonempty n]
+    {Q : Matrix n n ℂ} (hQ : IsStrictlyPositive Q) :
+    ConvexOn ℝ
+      {P : Matrix n n ℂ | IsStrictlyPositive P}
+      (fun P => (Matrix.trace (P * CFC.log P - P * CFC.log Q - P + Q)).re) := by
+  refine ⟨CFC.convex_setOf_isStrictlyPositive_matrix, ?_⟩
+  intro P₁ hP₁ P₂ hP₂ a b ha hb hab
+  -- Apply joint convexity at `(P₁, Q)` and `(P₂, Q)`.
+  have hjoint :=
+    (matrix_relative_entropy_joint_convex (n := n)).2
+      (x := (P₁, Q)) ⟨hP₁, hQ⟩ (y := (P₂, Q)) ⟨hP₂, hQ⟩ ha hb hab
+  -- `a • (P₁, Q) + b • (P₂, Q) = (a • P₁ + b • P₂, (a + b) • Q) = (..., Q)`.
+  have hQsum : a • Q + b • Q = Q := by
+    rw [← add_smul, hab, one_smul]
+  -- Unfold the smul on pairs.
+  simp only [Prod.smul_mk, Prod.mk_add_mk, hQsum] at hjoint
+  exact hjoint
+
+/-- **Matrix relative entropy is convex in the second argument** (with `P` fixed).
+
+For any strictly positive `P`, the functional
+`Q ↦ Re tr (P · log P - P · log Q - P + Q)` is convex on the set of
+strictly positive matrices. Direct corollary of
+`matrix_relative_entropy_joint_convex`. -/
+theorem matrix_relative_entropy_convex_in_second
+    {n : Type*} [Fintype n] [DecidableEq n] [Nonempty n]
+    {P : Matrix n n ℂ} (hP : IsStrictlyPositive P) :
+    ConvexOn ℝ
+      {Q : Matrix n n ℂ | IsStrictlyPositive Q}
+      (fun Q => (Matrix.trace (P * CFC.log P - P * CFC.log Q - P + Q)).re) := by
+  refine ⟨CFC.convex_setOf_isStrictlyPositive_matrix, ?_⟩
+  intro Q₁ hQ₁ Q₂ hQ₂ a b ha hb hab
+  -- Apply joint convexity at `(P, Q₁)` and `(P, Q₂)`.
+  have hjoint :=
+    (matrix_relative_entropy_joint_convex (n := n)).2
+      (x := (P, Q₁)) ⟨hP, hQ₁⟩ (y := (P, Q₂)) ⟨hP, hQ₂⟩ ha hb hab
+  -- `a • (P, Q₁) + b • (P, Q₂) = ((a + b) • P, a • Q₁ + b • Q₂) = (P, ...)`.
+  have hPsum : a • P + b • P = P := by
+    rw [← add_smul, hab, one_smul]
+  simp only [Prod.smul_mk, Prod.mk_add_mk, hPsum] at hjoint
+  exact hjoint
+
+/-! ## Positivity of `Re tr (exp H)` for Hermitian `H`
+
+For any Hermitian `H : Matrix n n ℂ`, the matrix exponential `exp H` is
+strictly positive, hence positive definite. Each diagonal entry of
+`exp H` is then a positive real, and the trace (a finite sum over a
+nonempty index set) is itself strictly positive. This lifts the inline
+argument used in `gibbs_variational_inequality` into a standalone
+lemma. -/
+
+/-- **Re tr (exp H) > 0** for Hermitian `H`.
+
+The matrix exponential of a Hermitian matrix is positive definite
+(via `Matrix.IsHermitian.isStrictlyPositive_exp`), so each diagonal
+entry has strictly positive real part and the trace, summed over the
+nonempty index, is positive. -/
+theorem IsHermitian.re_trace_exp_pos
+    {n : Type*} [Fintype n] [DecidableEq n] [Nonempty n]
+    {H : Matrix n n ℂ} (hH : H.IsHermitian) :
+    0 < (Matrix.trace (NormedSpace.exp H : Matrix n n ℂ)).re := by
+  classical
+  -- `exp H` is strictly positive, hence positive definite.
+  set E : Matrix n n ℂ := NormedSpace.exp H with hE_def
+  have hE_sp : IsStrictlyPositive E := Matrix.IsHermitian.isStrictlyPositive_exp hH
+  have hE_pd : E.PosDef := Matrix.isStrictlyPositive_iff_posDef.mp hE_sp
+  -- Each diagonal entry has strictly positive real part.
+  have hE_diag_pos : ∀ i, 0 < (E i i).re := by
+    intro i
+    have hd : (0 : ℂ) < E i i := hE_pd.diag_pos
+    rw [Complex.lt_def] at hd
+    exact hd.1
+  -- The trace's real part is the sum of these positives over a nonempty index.
+  rw [Matrix.trace, Complex.re_sum]
+  exact Finset.sum_pos (fun i _ => hE_diag_pos i) Finset.univ_nonempty
 
 end Matrix
