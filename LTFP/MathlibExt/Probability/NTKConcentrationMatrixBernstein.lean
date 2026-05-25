@@ -6,6 +6,7 @@ Authors: Allen Hao Zhu
 import LTFP.MathlibExt.Probability.NTKMatrixSummand
 import LTFP.MathlibExt.MatrixAnalysis.MatrixBernsteinOpNorm
 import LTFP.MathlibExt.MatrixAnalysis.HermitianSqLeNormSqOne
+import LTFP.MathlibExt.MatrixAnalysis.MapOfRealNorm
 import LTFP.Ch01_Preliminaries.Concentration
 import Mathlib.Analysis.Normed.Module.FiniteDimension
 import Mathlib.Data.Matrix.Basis
@@ -659,5 +660,77 @@ theorem empiricalNTK_matrix_bernstein
   -- Cast Fintype.card (Fin n) to n.
   rw [show (Fintype.card (Fin n) : ℕ) = n from Fintype.card_fin n] at h_bound
   exact h_bound
+
+/-! ### Real-valued corollary
+
+Stripping the entrywise `ℝ ↪ ℂ` cast from the deviation matrix, via the
+bridge `Matrix.l2_opNorm_map_complex_ofReal : ‖A.map ofReal‖ = ‖A‖`. The
+events `{ω | t ≤ ‖(D ω).map ofReal‖}` and `{ω | t ≤ ‖D ω‖}` are equal as
+subsets of the sample space, so the probabilities coincide and the
+ℂ-cast theorem transfers verbatim to the real-valued statement. -/
+
+set_option maxHeartbeats 800000 in
+/-- **Sharp empirical-NTK matrix Bernstein concentration (real form).**
+
+The same statement as `empiricalNTK_matrix_bernstein`, but with the
+deviation matrix viewed natively as a real matrix:
+
+    `P(t ≤ ‖empiricalNTK σ xs ω - populationNTK σ xs ν‖)`
+      `≤ 2 · matrix_bernstein_bound n t (4 n² M⁴ / m) (2 n M² / m)`.
+
+The L2 operator norm is invariant under the entrywise `ℝ ↪ ℂ` embedding
+(`Matrix.l2_opNorm_map_complex_ofReal`), so the two formulations are
+strictly equivalent on the level of sets. -/
+theorem empiricalNTK_matrix_bernstein_real
+    {n m : ℕ} [Nonempty (Fin n)]
+    {σ : ℝ → ℝ} (hσ_meas : Measurable σ) {M : ℝ} (hM : 0 < M)
+    (hσ_bdd : ∀ z, |σ z| ≤ M)
+    (xs : Fin n → EuclideanSpace ℝ (Fin d))
+    (hm : 0 < m)
+    {ν : MeasureTheory.Measure (EuclideanSpace ℝ (Fin d) × ℝ)}
+    [MeasureTheory.IsProbabilityMeasure ν]
+    {t : ℝ} (ht : 0 < t)
+    (hSum : ∀ ω : Fin m → EuclideanSpace ℝ (Fin d) × ℝ,
+      (∑ i, centeredNeuronNTKSummand σ xs ν m (ω i)).IsHermitian)
+    (hLamMeasPos : AEMeasurable
+      (fun ω : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+        Finset.sup' Finset.univ Finset.univ_nonempty (hSum ω).eigenvalues)
+      (MeasureTheory.Measure.pi (fun _ : Fin m => ν)))
+    (hLamMeasNeg : AEMeasurable
+      (fun ω : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+        Finset.sup' Finset.univ Finset.univ_nonempty (hSum ω).neg.eigenvalues)
+      (MeasureTheory.Measure.pi (fun _ : Fin m => ν)))
+    (htrIntPos : MeasureTheory.Integrable
+      (fun ω : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+        (Matrix.trace (NormedSpace.exp
+          (LTFP.matrix_bernstein_theta t (4 * (n : ℝ) ^ 2 * M ^ 4 / (m : ℝ))
+              (2 * (n : ℝ) * M ^ 2 / (m : ℝ)) •
+            (∑ i, centeredNeuronNTKSummand σ xs ν m (ω i))))).re)
+      (MeasureTheory.Measure.pi (fun _ : Fin m => ν)))
+    (htrIntNeg : MeasureTheory.Integrable
+      (fun ω : Fin m → EuclideanSpace ℝ (Fin d) × ℝ =>
+        (Matrix.trace (NormedSpace.exp
+          (LTFP.matrix_bernstein_theta t (4 * (n : ℝ) ^ 2 * M ^ 4 / (m : ℝ))
+              (2 * (n : ℝ) * M ^ 2 / (m : ℝ)) •
+            (∑ i, -(centeredNeuronNTKSummand σ xs ν m (ω i)))))).re)
+      (MeasureTheory.Measure.pi (fun _ : Fin m => ν))) :
+    (MeasureTheory.Measure.pi (fun _ : Fin m => ν)).real
+      {ω | t ≤ ‖empiricalNTK σ xs ω - populationNTK σ xs ν‖}
+    ≤ 2 * LTFP.matrix_bernstein_bound n t
+        (4 * (n : ℝ) ^ 2 * M ^ 4 / (m : ℝ))
+        (2 * (n : ℝ) * M ^ 2 / (m : ℝ)) := by
+  -- Apply the bridge: the events are equal because the L2 operator norm
+  -- is invariant under the entrywise ℝ ↪ ℂ embedding.
+  have h_set_eq :
+      {ω : Fin m → EuclideanSpace ℝ (Fin d) × ℝ
+          | t ≤ ‖empiricalNTK σ xs ω - populationNTK σ xs ν‖}
+        = {ω | t ≤ ‖(empiricalNTK σ xs ω - populationNTK σ xs ν).map
+              (fun r : ℝ => (r : ℂ))‖} := by
+    ext ω
+    rw [Set.mem_setOf_eq, Set.mem_setOf_eq,
+      Matrix.l2_opNorm_map_complex_ofReal]
+  rw [h_set_eq]
+  exact empiricalNTK_matrix_bernstein hσ_meas hM hσ_bdd xs hm ht
+    hSum hLamMeasPos hLamMeasNeg htrIntPos htrIntNeg
 
 end ProbabilityTheory
