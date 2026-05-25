@@ -292,4 +292,153 @@ lemma R_eq_Rconj_of_isHermitian {B : Matrix n n ℂ} (hB : B.IsHermitian) :
   simp only [Matrix.transpose_apply, Matrix.map_apply]
   exact (hB.apply j i).symm
 
+/-! ### Algebra laws for `Rconj`
+
+Unlike `R`, the conjugated right superoperator `Rconj` is genuinely
+*multiplicative* (not anti-multiplicative): the matrix index order is
+unchanged under entrywise conjugation, so `(A * B).map star =
+A.map star * B.map star` and the Kronecker bilinearity yields
+`Rconj (A * B) = Rconj A * Rconj B`.
+
+Together with `Rconj_zero`, `Rconj_one`, `Rconj_add`, `Rconj_smul_real`,
+and `Rconj_star`, this packages `Rconj` as a unital `*`-algebra
+homomorphism over `ℝ` (not over `ℂ`: scalar multiplication only commutes
+with `Rconj` after conjugating the scalar; for real scalars `r`, the
+conjugate is `r` itself, so ℝ-linearity is automatic).
+-/
+
+omit [Fintype n] in
+@[simp]
+lemma Rconj_zero : Rconj (0 : Matrix n n ℂ) = 0 := by
+  unfold Rconj
+  simp only [Matrix.map_zero _ (star_zero ℂ)]
+  exact Matrix.zero_kronecker _
+
+omit [Fintype n] in
+@[simp]
+lemma Rconj_one : Rconj (1 : Matrix n n ℂ) = 1 := by
+  unfold Rconj
+  -- `(1 : Matrix n n ℂ).map star = 1` entrywise.
+  have h1 : ((1 : Matrix n n ℂ).map star) = (1 : Matrix n n ℂ) := by
+    ext i j
+    by_cases hij : i = j
+    · subst hij
+      simp [Matrix.one_apply_eq, Matrix.map_apply]
+    · simp [Matrix.one_apply_ne hij, Matrix.map_apply]
+  rw [h1]
+  exact Matrix.one_kronecker_one
+
+omit [Fintype n] in
+@[simp]
+lemma Rconj_add (B₁ B₂ : Matrix n n ℂ) :
+    Rconj (B₁ + B₂) = Rconj B₁ + Rconj B₂ := by
+  unfold Rconj
+  -- `(B₁ + B₂).map star = B₁.map star + B₂.map star` since `star`
+  -- distributes over addition on `ℂ`.
+  have hadd : (B₁ + B₂).map (star : ℂ → ℂ) =
+      B₁.map star + B₂.map star := by
+    ext i j; simp [Matrix.map_apply, Matrix.add_apply]
+  rw [hadd]
+  exact Matrix.kroneckerMap_add_left (· * ·)
+    (fun a₁ a₂ b => add_mul a₁ a₂ b) _ _ _
+
+omit [Fintype n] in
+/-- For a *real* scalar `r`, the conjugated right superoperator is
+`ℝ`-linear: `Rconj (r • B) = r • Rconj B`.  Note: this only holds for
+real scalars; for general complex scalars the conjugate appears,
+`Rconj (c • B) = star c • Rconj B`. -/
+@[simp]
+lemma Rconj_smul_real (r : ℝ) (B : Matrix n n ℂ) :
+    Rconj (r • B) = r • Rconj B := by
+  unfold Rconj
+  -- `(r • B).map star = r • B.map star`, because `star (r • z) = r • star z`
+  -- when `r` is real (the real scalar passes through conjugation unchanged).
+  have hsmul : (r • B).map (star : ℂ → ℂ) = r • B.map star := by
+    ext i j
+    simp [Matrix.map_apply, Matrix.smul_apply]
+  rw [hsmul]
+  exact Matrix.kroneckerMap_smul_left (· * ·) (r : ℂ)
+    (fun a b => Algebra.smul_mul_assoc (r : ℂ) a b) _ _
+
+lemma Rconj_mul (A B : Matrix n n ℂ) :
+    Rconj (A * B) = Rconj A * Rconj B := by
+  unfold Rconj
+  -- (A * B).map star = A.map star * B.map star, via `Matrix.map_mul`
+  -- with the ring homomorphism `starRingEnd ℂ`.
+  have hmul : (A * B).map (star : ℂ → ℂ) =
+      A.map star * B.map star := by
+    -- Apply `Matrix.map_mul` via the bundled `starRingEnd ℂ` and identify
+    -- `star : ℂ → ℂ` with `(starRingEnd ℂ : ℂ → ℂ)`.
+    show (A * B).map ((starRingEnd ℂ : ℂ →+* ℂ) : ℂ → ℂ) =
+      A.map ((starRingEnd ℂ : ℂ →+* ℂ) : ℂ → ℂ) *
+      B.map ((starRingEnd ℂ : ℂ →+* ℂ) : ℂ → ℂ)
+    exact Matrix.map_mul (f := starRingEnd ℂ) (L := A) (M := B)
+  rw [hmul]
+  -- (A.map star * B.map star) ⊗ 1 = (A.map star ⊗ 1) * (B.map star ⊗ 1)
+  rw [← Matrix.mul_kronecker_mul]
+  simp
+
+omit [Fintype n] in
+lemma Rconj_star (B : Matrix n n ℂ) :
+    Rconj (star B) = star (Rconj B) := by
+  unfold Rconj
+  -- Strategy: rewrite both matrix-level `star`s to `conjTranspose`, then
+  -- distribute conjTranspose over the Kronecker product on the RHS,
+  -- and finally show the two Kronecker factors agree entrywise.
+  rw [show (star (B.map star ⊗ₖ (1 : Matrix n n ℂ)) :
+        Matrix (n × n) (n × n) ℂ) =
+      (B.map star ⊗ₖ (1 : Matrix n n ℂ)).conjTranspose from
+        Matrix.star_eq_conjTranspose _,
+      Matrix.conjTranspose_kronecker, Matrix.conjTranspose_one]
+  -- Goal:  (star B).map star ⊗ₖ 1 = (B.map star).conjTranspose ⊗ₖ 1
+  -- The two Kronecker factors agree definitionally:
+  -- both unfold to `fun i j => star (star (B j i))`.
+  rfl
+
+/-! ### `Rconj` as a real `*`-algebra homomorphism and its continuity
+
+We package the lemmas above into a unital `*`-algebra homomorphism
+`RconjHom` over `ℝ` (not over `ℂ`, since `Rconj` is only conjugate-linear
+over `ℂ` — see `Rconj_smul_real`).  Continuity follows from finite
+dimensionality of `Matrix n n ℂ` as an `ℝ`-vector space.
+-/
+
+/-- The conjugated right superoperator `Rconj`, packaged as a unital
+real `*`-algebra homomorphism from `Matrix n n ℂ` to
+`Matrix (n × n) (n × n) ℂ`.
+
+Note: only ℝ-linearity is supported here, since `Rconj (c • B) =
+(star c) • Rconj B` for general `c : ℂ`. For real scalars `r`, the
+conjugate is `r` itself, so ℝ-linearity follows from `Rconj_smul_real`. -/
+noncomputable def RconjHom :
+    Matrix n n ℂ →⋆ₐ[ℝ] Matrix (n × n) (n × n) ℂ where
+  toFun := Rconj
+  map_one' := Rconj_one
+  map_mul' := Rconj_mul
+  map_zero' := Rconj_zero
+  map_add' := Rconj_add
+  commutes' := fun r => by
+    -- `algebraMap ℝ (Matrix n n ℂ) r = r • 1` on both sides.
+    simp only [Algebra.algebraMap_eq_smul_one, Rconj_smul_real, Rconj_one]
+  map_star' := Rconj_star
+
+@[simp]
+lemma RconjHom_apply (B : Matrix n n ℂ) : RconjHom B = Rconj B := rfl
+
+open scoped Matrix.Norms.Elementwise in
+/-- The conjugated right superoperator `Rconj` is continuous: it is an
+`ℝ`-linear map between finite-dimensional `ℝ`-vector spaces (using the
+elementwise matrix norm and the fact that `Matrix n n ℂ` is a finite-
+dimensional `ℝ`-vector space). -/
+lemma continuous_RconjHom :
+    Continuous (RconjHom : Matrix n n ℂ → Matrix (n × n) (n × n) ℂ) := by
+  -- Expose `Rconj` as an `ℝ`-linear map and invoke continuity from finite
+  -- dimensionality.
+  let Rlin : Matrix n n ℂ →ₗ[ℝ] Matrix (n × n) (n × n) ℂ :=
+    { toFun := Rconj
+      map_add' := Rconj_add
+      map_smul' := fun r B => Rconj_smul_real r B }
+  change Continuous (Rlin : Matrix n n ℂ → Matrix (n × n) (n × n) ℂ)
+  exact Rlin.continuous_of_finiteDimensional
+
 end LiebSuperop
