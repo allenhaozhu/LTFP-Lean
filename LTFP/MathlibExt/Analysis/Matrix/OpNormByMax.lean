@@ -6,6 +6,7 @@ Authors: LTFP-Lean contributors
 import Mathlib.Analysis.CStarAlgebra.Matrix
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Algebra.Order.Chebyshev
+import Mathlib.Data.Complex.Basic
 
 /-!
 # `l₂` operator norm of a square matrix is bounded by `card × entrywise sup`
@@ -148,5 +149,83 @@ theorem l2_opNorm_le_card_mul_of_nnnorm_entry_le (A : Matrix n n ℝ)
   refine l2_opNorm_le_card_mul_of_entry_le A s.coe_nonneg ?_
   intro i j
   exact_mod_cast h_entry i j
+
+/-- ℂ-valued analogue of `l2_opNorm_le_card_mul_of_entry_le`.
+
+For a square ℂ-valued matrix `A` whose entries are all bounded by
+`s ≥ 0` in norm, the `l²` operator (spectral) norm is bounded by
+`(Fintype.card n) * s`.
+
+The proof goes through `Matrix.toEuclideanCLM` (now over `𝕜 := ℂ`)
+and applies the Cauchy–Schwarz inequality
+(`Finset.sum_mul_sq_le_sq_mul_sq`) row-wise. This is the ℂ-analogue
+needed by the matrix-Bernstein adapters in
+`LTFP/MathlibExt/Probability/NTKMatrixSummand.lean` and
+`LTFP/MathlibExt/Probability/GradNeuronNTKMatrixSummand.lean`. -/
+theorem l2_opNorm_le_card_mul_of_entry_le_C
+    (A : Matrix n n ℂ) {s : ℝ} (hs : 0 ≤ s)
+    (h_entry : ∀ i j : n, ‖A i j‖ ≤ s) :
+    ‖A‖ ≤ (Fintype.card n : ℝ) * s := by
+  rw [← Matrix.l2_opNorm_toEuclideanCLM]
+  set M : ℝ := (Fintype.card n : ℝ) * s with hM_def
+  have hcard_nat : 0 ≤ (Fintype.card n : ℝ) := by exact_mod_cast Nat.zero_le _
+  have hM_nonneg : 0 ≤ M := mul_nonneg hcard_nat hs
+  refine ContinuousLinearMap.opNorm_le_bound _ hM_nonneg ?_
+  intro x
+  have hAct :
+      Matrix.toEuclideanCLM (n := n) (𝕜 := ℂ) A x =
+        (EuclideanSpace.equiv n ℂ).symm
+          (A *ᵥ ((EuclideanSpace.equiv n ℂ) x)) := rfl
+  set y : n → ℂ := EuclideanSpace.equiv n ℂ x with hy_def
+  have hM_x_nonneg : 0 ≤ M * ‖x‖ := mul_nonneg hM_nonneg (norm_nonneg _)
+  have h_entry_sq : ∀ i j : n, ‖A i j‖ ^ 2 ≤ s ^ 2 := by
+    intro i j
+    exact pow_le_pow_left₀ (norm_nonneg _) (h_entry i j) 2
+  have h_target_sq :
+      ‖Matrix.toEuclideanCLM (n := n) (𝕜 := ℂ) A x‖ ^ 2 ≤ (M * ‖x‖) ^ 2 := by
+    rw [hAct]
+    rw [EuclideanSpace.norm_sq_eq, mul_pow]
+    have h_lhs :
+        ∑ i, ‖((EuclideanSpace.equiv n ℂ).symm (A *ᵥ y)) i‖ ^ 2
+        = ∑ i, ‖(A *ᵥ y) i‖ ^ 2 := rfl
+    rw [h_lhs]
+    have h_x_sq : ‖x‖ ^ 2 = ∑ j, ‖y j‖ ^ 2 := EuclideanSpace.norm_sq_eq x
+    rw [h_x_sq]
+    have h_pointwise : ∀ i : n,
+        ‖(A *ᵥ y) i‖ ^ 2 ≤ (Fintype.card n : ℝ) * s ^ 2 * ∑ j, ‖y j‖ ^ 2 := by
+      intro i
+      have h_mulvec : (A *ᵥ y) i = ∑ j, A i j * y j := by
+        simp [Matrix.mulVec, dotProduct]
+      have h_step0 : ‖∑ j, A i j * y j‖ ≤ ∑ j, ‖A i j‖ * ‖y j‖ := by
+        refine (norm_sum_le _ _).trans ?_
+        refine Finset.sum_le_sum (fun j _ => ?_)
+        rw [norm_mul]
+      have h_step1 : (∑ j, ‖A i j‖ * ‖y j‖) ^ 2 ≤
+          (∑ j, ‖A i j‖ ^ 2) * ∑ j, ‖y j‖ ^ 2 := by
+        have hcs := Finset.sum_mul_sq_le_sq_mul_sq (s := (Finset.univ : Finset n))
+          (f := fun j => ‖A i j‖) (g := fun j => ‖y j‖)
+        simpa using hcs
+      have h_step2 : ∑ j : n, ‖A i j‖ ^ 2 ≤ ∑ _j : n, s ^ 2 := by
+        refine Finset.sum_le_sum fun j _ => h_entry_sq i j
+      have h_step3 : ∑ _j : n, s ^ 2 = (Fintype.card n : ℝ) * s ^ 2 := by
+        rw [Finset.sum_const, Finset.card_univ]; ring
+      calc ‖(A *ᵥ y) i‖ ^ 2
+          = ‖∑ j, A i j * y j‖ ^ 2 := by rw [h_mulvec]
+        _ ≤ (∑ j, ‖A i j‖ * ‖y j‖) ^ 2 := by
+            exact pow_le_pow_left₀ (norm_nonneg _) h_step0 2
+        _ ≤ (∑ j, ‖A i j‖ ^ 2) * ∑ j, ‖y j‖ ^ 2 := h_step1
+        _ ≤ ((Fintype.card n : ℝ) * s ^ 2) * ∑ j, ‖y j‖ ^ 2 := by
+            apply mul_le_mul_of_nonneg_right _ (Finset.sum_nonneg (fun _ _ => sq_nonneg _))
+            calc ∑ j, ‖A i j‖ ^ 2
+                ≤ ∑ _j : n, s ^ 2 := h_step2
+              _ = (Fintype.card n : ℝ) * s ^ 2 := h_step3
+        _ = (Fintype.card n : ℝ) * s ^ 2 * ∑ j, ‖y j‖ ^ 2 := by ring
+    calc ∑ i, ‖(A *ᵥ y) i‖ ^ 2
+        ≤ ∑ _i : n, (Fintype.card n : ℝ) * s ^ 2 * ∑ j, ‖y j‖ ^ 2 :=
+          Finset.sum_le_sum fun i _ => h_pointwise i
+      _ = (Fintype.card n : ℝ) * ((Fintype.card n : ℝ) * s ^ 2 * ∑ j, ‖y j‖ ^ 2) := by
+          rw [Finset.sum_const, Finset.card_univ]; ring
+      _ = M ^ 2 * ∑ j, ‖y j‖ ^ 2 := by rw [hM_def]; ring
+  exact le_of_sq_le_sq h_target_sq hM_x_nonneg
 
 end Matrix
