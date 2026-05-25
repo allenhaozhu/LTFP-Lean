@@ -103,4 +103,5 @@ import LTFP.MathlibExt.MatrixAnalysis.OperatorConvexScalarBridge
 import LTFP.MathlibExt.MatrixAnalysis.OperatorMonotoneScalarBridge
 import LTFP.MathlibExt.MatrixAnalysis.PosSemidefClosed
 import LTFP.MathlibExt.MatrixAnalysis.SpectralTraceExp
+import LTFP.MathlibExt.MatrixAnalysis.TraceExpMonotone
 import LTFP.MathlibExt.Topology.UAT
