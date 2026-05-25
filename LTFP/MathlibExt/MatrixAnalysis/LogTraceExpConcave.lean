@@ -357,4 +357,140 @@ theorem log_re_trace_exp_log_concave
   intro A hA
   exact h_sSup_eq A hA
 
+/-! ### Lieb–Tropp partial victory: concavity on the commuting-with-`H` slice -/
+
+/-- **Lieb–Tropp on the commuting-with-`H` slice.**
+
+For a fixed Hermitian `H : Matrix n n ℂ`, the trace-exp functional
+
+  `A ↦ (Matrix.trace (NormedSpace.exp (H + CFC.log A))).re`
+
+is concave on the convex slice of strictly positive matrices that
+*commute* with `H`:
+
+  `{ A | IsStrictlyPositive A ∧ A * H = H * A }`.
+
+This is the partial-victory form of Lieb–Tropp concavity that can be
+proved without the full DPI / Lie–Trotter machinery: on the commuting
+slice `A H = H A` lifts to `(log A) H = H (log A)` via `Commute.cfc_real`,
+so `exp (H + log A) = exp H · exp (log A) = exp H · A`. The functional
+then reduces to the real-linear functional `A ↦ Re tr (exp H · A)` of `A`,
+and linear maps are concave on any convex set.
+
+**Proof outline.**
+
+1. The commuting slice is convex: strict-positivity is convex
+   (`CFC.convex_setOf_isStrictlyPositive_matrix`), and `{A | A * H = H * A}`
+   is a linear subspace (closed under addition and scalar multiplication).
+2. For strict-pos `A` commuting with `H`: `Commute H (CFC.log A)` by
+   `Commute.cfc_real` (since `log = cfc Real.log` and `H` is self-adjoint
+   ↔ commutes with `star H = H`).
+3. `NormedSpace.exp (H + CFC.log A) = NormedSpace.exp H * A`
+   via `NormedSpace.exp_add_of_commute` and `CFC.exp_log` (strict-pos `A`).
+4. The map `A ↦ (trace (exp H * A)).re` is ℝ-linear (composition of
+   left-mul by `exp H`, the linear trace, and `Complex.re`).
+5. Linear ⇒ concave on any convex set via `LinearMap.concaveOn`.
+-/
+theorem re_trace_exp_log_concave_commuting
+    {n : Type*} [Fintype n] [DecidableEq n] [Nonempty n]
+    (H : Matrix n n ℂ) (hH : H.IsHermitian) :
+    ConcaveOn ℝ
+      {A : Matrix n n ℂ | IsStrictlyPositive A ∧ A * H = H * A}
+      (fun A => (Matrix.trace (NormedSpace.exp (H + CFC.log A) :
+        Matrix n n ℂ)).re) := by
+  classical
+  -- The strict-positive cone (convex, by Mathlib).
+  set SP : Set (Matrix n n ℂ) := {A : Matrix n n ℂ | IsStrictlyPositive A}
+    with hSP_def
+  -- The commuting subspace `{A | A * H = H * A}` (linear, hence convex).
+  set CH : Set (Matrix n n ℂ) := {A : Matrix n n ℂ | A * H = H * A}
+    with hCH_def
+  -- The target slice = SP ∩ CH.
+  set S : Set (Matrix n n ℂ) := SP ∩ CH with hS_def
+  -- ── Step 1.  Convexity of `S`. ─────────────────────────────────────
+  have hSP_conv : Convex ℝ SP := CFC.convex_setOf_isStrictlyPositive_matrix
+  have hCH_conv : Convex ℝ CH := by
+    -- `CH` is closed under convex (in fact linear) combinations because
+    -- `A ↦ A*H - H*A` is ℝ-linear and vanishes on both endpoints.
+    intro A₁ hA₁ A₂ hA₂ a b _ _ _
+    show (a • A₁ + b • A₂) * H = H * (a • A₁ + b • A₂)
+    have hA₁eq : A₁ * H = H * A₁ := hA₁
+    have hA₂eq : A₂ * H = H * A₂ := hA₂
+    rw [add_mul, mul_add, Matrix.smul_mul, Matrix.smul_mul,
+        Matrix.mul_smul, Matrix.mul_smul, hA₁eq, hA₂eq]
+  have hS_conv : Convex ℝ S := hSP_conv.inter hCH_conv
+  -- The set in the statement matches `S` (`mem`-coincide).
+  have hS_eq : S = {A : Matrix n n ℂ | IsStrictlyPositive A ∧ A * H = H * A} := by
+    ext A; simp [hS_def, hSP_def, hCH_def]
+  -- ── Step 2.  Pointwise factorization on `S`. ──────────────────────
+  --   For `A ∈ S`:  exp (H + log A) = exp H * A.
+  have hH_sa : IsSelfAdjoint H := hH.isSelfAdjoint
+  have hkey :
+      ∀ A ∈ S,
+        (NormedSpace.exp (H + CFC.log A) : Matrix n n ℂ) =
+          NormedSpace.exp H * A := by
+    intro A hA
+    obtain ⟨hA_sp, hAH⟩ : IsStrictlyPositive A ∧ A * H = H * A := hA
+    -- Commute H A from `A * H = H * A`.
+    have hcomm_HA : Commute H A := (hAH).symm
+    -- Lift commutation to `CFC.log A` via `Commute.cfc_real`.
+    -- `CFC.log a = cfc Real.log a`.
+    have hcomm_HlogA : Commute H (CFC.log A) := by
+      show Commute H (cfc Real.log A)
+      -- `Commute.cfc_real` gives `Commute (cfc f a) b` from `Commute a b`.
+      -- We want `Commute H (cfc Real.log A)`, i.e. the *other* direction.
+      -- Take `a := A`, `b := H`, then symmetrize.
+      have h₁ : Commute A H := hAH
+      have h₂ : Commute (cfc Real.log A) H := h₁.cfc_real _
+      exact h₂.symm
+    -- `exp` is additive on commuting pairs.
+    -- `NormedSpace.exp_add_of_commute` requires `NormedAlgebra ℚ 𝔸`; we
+    -- restrict the natural `NormedAlgebra ℂ (Matrix n n ℂ)` to ℚ (same
+    -- trick as in `MatrixExpPositivity.continuous_re_trace_exp`).
+    let +nondep : NormedAlgebra ℚ (Matrix n n ℂ) :=
+      NormedAlgebra.restrictScalars ℚ ℂ (Matrix n n ℂ)
+    have hexp_add :
+        (NormedSpace.exp (H + CFC.log A) : Matrix n n ℂ) =
+          NormedSpace.exp H * NormedSpace.exp (CFC.log A) :=
+      NormedSpace.exp_add_of_commute hcomm_HlogA
+    -- `exp ∘ log = id` on strict-positives (CFC).
+    have hexp_log : (NormedSpace.exp (CFC.log A) : Matrix n n ℂ) = A :=
+      CFC.exp_log A hA_sp
+    rw [hexp_add, hexp_log]
+  -- ── Step 3.  Re tr (exp H · A) is ℝ-linear in A. ──────────────────
+  -- Build the ℝ-linear map  A ↦ Re tr (exp H · A).
+  let expH : Matrix n n ℂ := NormedSpace.exp H
+  -- Left multiplication by `expH` as an ℝ-linear endomorphism.
+  let leftMul : Matrix n n ℂ →ₗ[ℝ] Matrix n n ℂ :=
+    { toFun := fun A => expH * A
+      map_add' := by intros; simp [mul_add]
+      map_smul' := by intros; simp }
+  -- Compose:  Re ∘ trace ∘ leftMul  is ℝ-linear.
+  let traceExpHmul_LM : Matrix n n ℂ →ₗ[ℝ] ℝ :=
+    (Complex.reLm.comp (Matrix.traceLinearMap n ℝ ℂ)).comp leftMul
+  have hLM_eq : ∀ A : Matrix n n ℂ,
+      traceExpHmul_LM A = (Matrix.trace (expH * A)).re := by
+    intro A; rfl
+  -- The linear functional is concave on `S` (and on any convex set).
+  have hlin_concave :
+      ConcaveOn ℝ S (fun A => (Matrix.trace (expH * A)).re) := by
+    have := traceExpHmul_LM.concaveOn (s := S) hS_conv
+    simpa [hLM_eq] using this
+  -- ── Step 4.  Rewrite the target along `hkey` and conclude. ───────
+  -- On `S`, the target equals the linear functional.
+  have hcongr : ∀ A ∈ S,
+      (Matrix.trace (expH * A)).re =
+        (Matrix.trace (NormedSpace.exp (H + CFC.log A) :
+          Matrix n n ℂ)).re := by
+    intro A hA
+    rw [hkey A hA]
+  have hconcave_S :
+      ConcaveOn ℝ S
+        (fun A => (Matrix.trace (NormedSpace.exp (H + CFC.log A) :
+          Matrix n n ℂ)).re) :=
+    hlin_concave.congr hcongr
+  -- Transport across the set-equality `S = {A | sp A ∧ A*H = H*A}`.
+  rw [hS_eq] at hconcave_S
+  exact hconcave_S
+
 end Matrix
