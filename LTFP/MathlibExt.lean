@@ -87,6 +87,7 @@ import LTFP.MathlibExt.MatrixAnalysis.LiebTroppConcave
 import LTFP.MathlibExt.MatrixAnalysis.LiebTroppJensen
 import LTFP.MathlibExt.MatrixAnalysis.LogTraceExpConcave
 import LTFP.MathlibExt.MatrixAnalysis.MatrixBernsteinSkeleton
+import LTFP.MathlibExt.MatrixAnalysis.MatrixCFCContinuity
 import LTFP.MathlibExt.MatrixAnalysis.MatrixChernoff
 import LTFP.MathlibExt.MatrixAnalysis.MatrixEntropyLimit
 import LTFP.MathlibExt.MatrixAnalysis.MatrixExpPositivity
