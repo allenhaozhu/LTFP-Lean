@@ -1055,4 +1055,164 @@ theorem lieb_concavity_complementary_PSD
     exact h_f_concave ε hε_pos
   exact h_closed.mem_of_tendsto h_tendsto h_eventually
 
+/-! ### Sub-Part 7.6: Monotonicity of the complementary trace functional
+
+For positive semidefinite `A₁ ≤ A₂` and `B₁ ≤ B₂` in the Löwner order,
+the bilinear trace functional
+`(A, B) ↦ Re Tr(K* · A^p · K · B^(1-p))` is monotonically nondecreasing
+in both arguments. The proof telescopes through `F(A₁, B₂)` using the
+Löwner-Heinz monotonicity of `x ↦ x^p` on `[0, 1]` (`CFC.rpow_le_rpow`)
+and a small helper showing PSD × PSD trace has nonnegative real part. -/
+
+/-- For two positive semidefinite complex matrices `P` and `Q`, the
+trace of the product `P * Q` has nonnegative real part.
+
+This is the classical fact that `tr(PQ) ≥ 0` for PSD `P, Q`. The proof
+cycles `tr(P * Q) = tr(√Q * P * √Q)` and observes the right side is the
+trace of a PSD matrix (`(√Q)ᴴ * P * √Q` with `√Q` selfadjoint). -/
+lemma re_trace_mul_nonneg_of_posSemidef
+    {n : Type*} [Fintype n] [DecidableEq n]
+    {P Q : Matrix n n ℂ} (hP : P.PosSemidef) (hQ : Q.PosSemidef) :
+    0 ≤ (Matrix.trace (P * Q)).re := by
+  classical
+  -- Let `S = √Q` (CFC square root of `Q`).
+  set S : Matrix n n ℂ := CFC.sqrt Q with hS_def
+  -- `S` is PSD, hence Hermitian; so `Sᴴ = S`, i.e. `star S = S`.
+  have hS_psd : S.PosSemidef :=
+    Matrix.nonneg_iff_posSemidef.mp (CFC.sqrt_nonneg Q)
+  have hS_her : S.IsHermitian := hS_psd.isHermitian
+  -- `S * S = Q`.
+  have hSS : S * S = Q := CFC.sqrt_mul_sqrt_self Q
+  -- Cycle the trace: `tr(P * Q) = tr(P * S * S) = tr(S * P * S)`.
+  have hcyc :
+      Matrix.trace (P * Q) = Matrix.trace (S * P * S) := by
+    have h1 : P * Q = P * S * S := by
+      rw [← hSS]; exact (Matrix.mul_assoc _ _ _).symm
+    have h2 : Matrix.trace (P * S * S) = Matrix.trace (S * P * S) :=
+      Matrix.trace_mul_cycle P S S
+    rw [h1, h2]
+  -- `S * P * S = Sᴴ * P * S` since `S` is Hermitian; this is PSD.
+  have hSstar : Sᴴ = S := hS_her
+  have hPSD : (S * P * S).PosSemidef := by
+    have hKK : (Sᴴ * P * S).PosSemidef :=
+      hP.conjTranspose_mul_mul_same S
+    rwa [hSstar] at hKK
+  -- `0 ≤ trace (S * P * S)` in `ℂ`, so its real part is `≥ 0`.
+  have htr_nonneg : (0 : ℂ) ≤ Matrix.trace (S * P * S) :=
+    hPSD.trace_nonneg
+  have hre :
+      0 ≤ (Matrix.trace (S * P * S)).re := (Complex.nonneg_iff.mp htr_nonneg).1
+  rw [hcyc]
+  exact hre
+
+/-- **Sub-Part 7.6 (monotonicity of the complementary Lieb functional).**
+For PSD `A₁ ≤ A₂` and `B₁ ≤ B₂` in the Loewner order, and `p ∈ [0, 1]`,
+the trace functional
+`(A, B) ↦ Re Tr(K* · A^p · K · B^(1-p))` is monotone nondecreasing.
+
+Combined with `CFC.lieb_concavity_complementary_PSD`, this gives the
+two structural properties (concavity + monotonicity) of the bilinear
+form that drive the operator-convex / operator-concave packaging used
+in downstream applications. -/
+theorem lieb_complementary_monotone
+    {n : Type*} [Fintype n] [DecidableEq n]
+    (K : Matrix n n ℂ) {p : ℝ} (hp : p ∈ Set.Icc (0 : ℝ) 1)
+    {A₁ A₂ B₁ B₂ : Matrix n n ℂ}
+    (hA₁ : A₁.PosSemidef) (hA₂ : A₂.PosSemidef)
+    (hB₁ : B₁.PosSemidef) (hB₂ : B₂.PosSemidef)
+    (hA : A₁ ≤ A₂) (hB : B₁ ≤ B₂) :
+    (Matrix.trace (star K * (A₁ ^ p) * K * (B₁ ^ ((1 : ℝ) - p)))).re ≤
+      (Matrix.trace (star K * (A₂ ^ p) * K * (B₂ ^ ((1 : ℝ) - p)))).re := by
+  classical
+  -- The PSD hypotheses on the corners are recorded in the signature for
+  -- documentation; they are implied by `0 ≤ A_i` / `0 ≤ B_i` and not
+  -- needed in the proof itself (`CFC.rpow_nonneg` is unconditional).
+  let _ := hA₁; let _ := hA₂; let _ := hB₁; let _ := hB₂
+  -- The exponents lie in [0, 1].
+  have hp' : (1 : ℝ) - p ∈ Set.Icc (0 : ℝ) 1 := by
+    refine ⟨by linarith [hp.2], by linarith [hp.1]⟩
+  -- PSD ⇒ rpow PSD (Löwner-Heinz).
+  have hA₁p_psd : (A₁ ^ p).PosSemidef :=
+    Matrix.nonneg_iff_posSemidef.mp
+      (CFC.rpow_nonneg (a := A₁) (y := p))
+  have hA₂p_psd : (A₂ ^ p).PosSemidef :=
+    Matrix.nonneg_iff_posSemidef.mp
+      (CFC.rpow_nonneg (a := A₂) (y := p))
+  have hB₁q_psd : (B₁ ^ ((1 : ℝ) - p)).PosSemidef :=
+    Matrix.nonneg_iff_posSemidef.mp
+      (CFC.rpow_nonneg (a := B₁) (y := (1 : ℝ) - p))
+  have hB₂q_psd : (B₂ ^ ((1 : ℝ) - p)).PosSemidef :=
+    Matrix.nonneg_iff_posSemidef.mp
+      (CFC.rpow_nonneg (a := B₂) (y := (1 : ℝ) - p))
+  -- Löwner-Heinz monotonicity of `x ↦ x^p` on `[0, 1]`.
+  have hApow : A₁ ^ p ≤ A₂ ^ p := CFC.rpow_le_rpow hp hA
+  have hBpow : B₁ ^ ((1 : ℝ) - p) ≤ B₂ ^ ((1 : ℝ) - p) :=
+    CFC.rpow_le_rpow hp' hB
+  -- The PSD differences.
+  have hDA_psd : (A₂ ^ p - A₁ ^ p).PosSemidef := Matrix.le_iff.mp hApow
+  have hDB_psd : (B₂ ^ ((1 : ℝ) - p) - B₁ ^ ((1 : ℝ) - p)).PosSemidef :=
+    Matrix.le_iff.mp hBpow
+  -- `star K = Kᴴ`.
+  have hstarK : (star K : Matrix n n ℂ) = Kᴴ := Matrix.star_eq_conjTranspose K
+  -- The two "sandwich" PSD matrices.
+  have hMid_A2 : (star K * (A₂ ^ p) * K).PosSemidef := by
+    rw [hstarK]; exact hA₂p_psd.conjTranspose_mul_mul_same K
+  have hMid_A1 : (star K * (A₁ ^ p) * K).PosSemidef := by
+    rw [hstarK]; exact hA₁p_psd.conjTranspose_mul_mul_same K
+  have hMid_dA : (star K * (A₂ ^ p - A₁ ^ p) * K).PosSemidef := by
+    rw [hstarK]; exact hDA_psd.conjTranspose_mul_mul_same K
+  -- Telescoping step A: `F(A₁, B₂) ≤ F(A₂, B₂)`.
+  -- Difference: `Re tr (star K * (A₂^p - A₁^p) * K * B₂^(1-p))` ≥ 0.
+  have hstepA :
+      (Matrix.trace (star K * (A₁ ^ p) * K * (B₂ ^ ((1 : ℝ) - p)))).re ≤
+        (Matrix.trace (star K * (A₂ ^ p) * K * (B₂ ^ ((1 : ℝ) - p)))).re := by
+    -- Rearrange to a difference.
+    have hsub :
+        Matrix.trace (star K * (A₂ ^ p) * K * (B₂ ^ ((1 : ℝ) - p))) -
+          Matrix.trace (star K * (A₁ ^ p) * K * (B₂ ^ ((1 : ℝ) - p))) =
+        Matrix.trace ((star K * (A₂ ^ p - A₁ ^ p) * K) *
+          (B₂ ^ ((1 : ℝ) - p))) := by
+      rw [← Matrix.trace_sub]
+      congr 1
+      simp [sub_mul, mul_sub]
+    have hnn :
+        0 ≤ (Matrix.trace ((star K * (A₂ ^ p - A₁ ^ p) * K) *
+              (B₂ ^ ((1 : ℝ) - p)))).re :=
+      re_trace_mul_nonneg_of_posSemidef hMid_dA hB₂q_psd
+    have hresub :
+        (Matrix.trace (star K * (A₂ ^ p) * K * (B₂ ^ ((1 : ℝ) - p)))).re -
+            (Matrix.trace (star K * (A₁ ^ p) * K *
+              (B₂ ^ ((1 : ℝ) - p)))).re =
+          (Matrix.trace ((star K * (A₂ ^ p - A₁ ^ p) * K) *
+              (B₂ ^ ((1 : ℝ) - p)))).re := by
+      rw [← Complex.sub_re, hsub]
+    linarith [hresub ▸ hnn]
+  -- Telescoping step B: `F(A₁, B₁) ≤ F(A₁, B₂)`.
+  have hstepB :
+      (Matrix.trace (star K * (A₁ ^ p) * K * (B₁ ^ ((1 : ℝ) - p)))).re ≤
+        (Matrix.trace (star K * (A₁ ^ p) * K * (B₂ ^ ((1 : ℝ) - p)))).re := by
+    have hsub :
+        Matrix.trace (star K * (A₁ ^ p) * K * (B₂ ^ ((1 : ℝ) - p))) -
+          Matrix.trace (star K * (A₁ ^ p) * K * (B₁ ^ ((1 : ℝ) - p))) =
+        Matrix.trace ((star K * (A₁ ^ p) * K) *
+          (B₂ ^ ((1 : ℝ) - p) - B₁ ^ ((1 : ℝ) - p))) := by
+      rw [← Matrix.trace_sub]
+      congr 1
+      simp [mul_sub]
+    have hnn :
+        0 ≤ (Matrix.trace ((star K * (A₁ ^ p) * K) *
+              (B₂ ^ ((1 : ℝ) - p) - B₁ ^ ((1 : ℝ) - p)))).re :=
+      re_trace_mul_nonneg_of_posSemidef hMid_A1 hDB_psd
+    have hresub :
+        (Matrix.trace (star K * (A₁ ^ p) * K *
+              (B₂ ^ ((1 : ℝ) - p)))).re -
+            (Matrix.trace (star K * (A₁ ^ p) * K *
+              (B₁ ^ ((1 : ℝ) - p)))).re =
+          (Matrix.trace ((star K * (A₁ ^ p) * K) *
+              (B₂ ^ ((1 : ℝ) - p) - B₁ ^ ((1 : ℝ) - p)))).re := by
+      rw [← Complex.sub_re, hsub]
+    linarith [hresub ▸ hnn]
+  -- Combine: transitivity.
+  exact le_trans hstepB hstepA
+
 end CFC
