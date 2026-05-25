@@ -847,4 +847,125 @@ theorem gibbs_variational_inequality
   -- Therefore `(trace (P · H)).re - (trace (P log P)).re ≤ log Z`.
   linarith
 
+/-! ## Gibbs variational equality (achievability)
+
+The Gibbs variational inequality is in fact tight: the supremum of
+`Re tr (P · H) - Re tr (P · log P)` over strictly positive unit-trace
+`P` is attained at the **Gibbs state** `P* := Z⁻¹ • exp H` where
+`Z := Re tr (exp H)`. The bound is achieved with equality, giving
+
+  `log Z = Re tr (P* · H) - Re tr (P* · log P*)`.
+
+This is the *achievability direction* needed for the Lieb–Tropp/Lindblad
+bridge in the matrix Bernstein chain. -/
+
+/-- **Gibbs variational equality (achievability direction).**
+
+For any Hermitian matrix `H : Matrix n n ℂ`, the Gibbs state
+`P* := Z⁻¹ • exp H` (where `Z := Re tr (exp H)`) is strictly positive,
+has unit real-trace, and achieves the Gibbs variational bound with
+equality:
+
+  `Re tr (P* · H) - Re tr (P* · log P*) = log (Re tr (exp H))`.
+
+Combined with `gibbs_variational_inequality`, this shows that
+`log (Re tr (exp H))` is the **supremum** of
+`Re tr (P · H) - Re tr (P · log P)` over strictly positive unit-trace
+`P`, with the supremum attained at the Gibbs state.
+
+The proof is purely algebraic: substitute `P = Z⁻¹ • exp H`, use
+`CFC.log_smul'` and `CFC.log_exp` to rewrite `log P` as `log Z⁻¹ • 1 + H`,
+distribute the trace, and use `Re tr P = 1` to cancel. -/
+theorem gibbs_variational_equality
+    {n : Type*} [Fintype n] [DecidableEq n] [Nonempty n]
+    {H : Matrix n n ℂ} (hH : H.IsHermitian) :
+    ∃ (P : Matrix n n ℂ) (_ : IsStrictlyPositive P) (_ : (Matrix.trace P).re = 1),
+      (Matrix.trace (P * H)).re - (Matrix.trace (P * CFC.log P)).re =
+        Real.log (Matrix.trace (NormedSpace.exp H : Matrix n n ℂ)).re := by
+  classical
+  -- Set `E := exp H`, mirroring the Part 4 proof.
+  set E : Matrix n n ℂ := NormedSpace.exp H with hE_def
+  have hH_sa : IsSelfAdjoint H := hH
+  have hE_herm : E.IsHermitian := Matrix.IsHermitian.exp hH
+  have hE_nn : (0 : Matrix n n ℂ) ≤ E := hH_sa.exp_nonneg
+  have hE_unit : IsUnit E := Matrix.isUnit_exp H
+  have hE_sp : IsStrictlyPositive E := hE_unit.isStrictlyPositive hE_nn
+  have hE_pd : E.PosDef := Matrix.isStrictlyPositive_iff_posDef.mp hE_sp
+  -- `Z := (trace E).re` and `0 < Z`.
+  set Z : ℝ := (Matrix.trace E).re with hZ_def
+  have hE_diag_pos : ∀ i, 0 < (E i i).re := by
+    intro i
+    have hd : (0 : ℂ) < E i i := hE_pd.diag_pos
+    rw [Complex.lt_def] at hd
+    exact hd.1
+  have hZ_pos : 0 < Z := by
+    rw [hZ_def, Matrix.trace, Complex.re_sum]
+    have hpos := fun i (_ : i ∈ (Finset.univ : Finset n)) => hE_diag_pos i
+    have hne : (Finset.univ : Finset n).Nonempty := Finset.univ_nonempty
+    exact Finset.sum_pos (fun i hi => hpos i hi) hne
+  have hZ_ne : Z ≠ 0 := ne_of_gt hZ_pos
+  have hZ_inv_pos : 0 < Z⁻¹ := inv_pos.mpr hZ_pos
+  -- The Gibbs state `P := Z⁻¹ • E` is strictly positive.
+  set P : Matrix n n ℂ := Z⁻¹ • E with hP_def
+  have hP_sp : IsStrictlyPositive P := hE_sp.smul hZ_inv_pos
+  -- `(trace E).re = ∑ i, (E i i).re` and `trace E` is real.
+  have htraceE_real : ((Matrix.trace E).re : ℂ) = Matrix.trace E := by
+    rw [Matrix.trace]
+    rw [show (∑ i, Matrix.diag E i) = ∑ i, (((Matrix.diag E i).re : ℝ) : ℂ) from ?_]
+    · simp [Complex.re_sum]
+    · apply Finset.sum_congr rfl
+      intro i _
+      exact (hE_herm.coe_re_apply_self i).symm
+  have htraceE_im : (Matrix.trace E).im = 0 := by
+    have h := congrArg Complex.im htraceE_real
+    simp at h
+    linarith [h]
+  -- `(trace P).re = 1`.
+  have hPtrace : (Matrix.trace P).re = 1 := by
+    rw [hP_def, Matrix.trace_smul]
+    show (((Z⁻¹ : ℝ) : ℂ) * Matrix.trace E).re = 1
+    rw [Complex.mul_re, Complex.ofReal_re, Complex.ofReal_im]
+    rw [htraceE_im]
+    ring_nf
+    rw [← hZ_def]
+    exact inv_mul_cancel₀ hZ_ne
+  -- `CFC.log E = H`.
+  have hlog_E : CFC.log E = H := by
+    rw [hE_def]
+    exact CFC.log_exp H hH_sa
+  -- `CFC.log P = algebraMap ℝ _ (log Z⁻¹) + H`.
+  have hlog_P : CFC.log P = algebraMap ℝ (Matrix n n ℂ) (Real.log Z⁻¹) + H := by
+    rw [hP_def]
+    rw [CFC.log_smul' E hZ_inv_pos hE_sp]
+    rw [hlog_E]
+  -- `Real.log Z⁻¹ = -Real.log Z`.
+  have hlogZ_inv : Real.log Z⁻¹ = -Real.log Z := Real.log_inv Z
+  -- `algebraMap ℝ (Matrix n n ℂ) r = r • 1`.
+  have halg_eq : algebraMap ℝ (Matrix n n ℂ) (Real.log Z⁻¹)
+                  = (Real.log Z⁻¹) • (1 : Matrix n n ℂ) :=
+    Algebra.algebraMap_eq_smul_one (Real.log Z⁻¹)
+  -- `trace (P * CFC.log P) = log Z⁻¹ • trace P + trace (P * H)`.
+  have htr_PlogP :
+      Matrix.trace (P * CFC.log P)
+        = (Real.log Z⁻¹) • Matrix.trace P + Matrix.trace (P * H) := by
+    rw [hlog_P, halg_eq]
+    rw [show P * ((Real.log Z⁻¹) • (1 : Matrix n n ℂ) + H)
+          = (Real.log Z⁻¹) • (P * 1) + P * H from by
+        rw [mul_add, Matrix.mul_smul]]
+    rw [Matrix.mul_one, Matrix.trace_add, Matrix.trace_smul]
+  -- The real part: `(trace (P * CFC.log P)).re = log Z⁻¹ * (trace P).re + (trace (P * H)).re`.
+  have htr_PlogP_re :
+      (Matrix.trace (P * CFC.log P)).re
+        = Real.log Z⁻¹ * (Matrix.trace P).re + (Matrix.trace (P * H)).re := by
+    rw [htr_PlogP]
+    simp [Complex.add_re, Complex.real_smul, Complex.ofReal_re, Complex.ofReal_im,
+          Complex.mul_re]
+  -- Now assemble: `Re tr(P · H) - Re tr(P · log P)
+  --   = Re tr(P · H) - (log Z⁻¹ · 1 + Re tr(P · H))
+  --   = -log Z⁻¹
+  --   = log Z`.
+  refine ⟨P, hP_sp, hPtrace, ?_⟩
+  rw [htr_PlogP_re, hPtrace, hlogZ_inv]
+  ring
+
 end Matrix
