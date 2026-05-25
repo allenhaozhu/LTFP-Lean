@@ -66,6 +66,7 @@ import LTFP.MathlibExt.Probability.CoveringNumberReal
 import LTFP.MathlibExt.Probability.Symmetrization
 import LTFP.MathlibExt.Probability.UniformDeviationRademacher
 import LTFP.MathlibExt.Probability.WideNetworkDudley
+import LTFP.MathlibExt.MatrixAnalysis.BernsteinCFCLift
 import LTFP.MathlibExt.MatrixAnalysis.CStarEffrosNormalizer
 import LTFP.MathlibExt.MatrixAnalysis.CStarFin2Adapter
 import LTFP.MathlibExt.MatrixAnalysis.CStarFin2HansenPedersen
