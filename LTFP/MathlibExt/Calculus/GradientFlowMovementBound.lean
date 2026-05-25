@@ -172,4 +172,41 @@ theorem gradientFlow_movement_on_good_event
   exact gradientFlow_movement_of_bounded_gradient
     (θ ω) (gradL ω) K (hθ ω) (hODE ω) (hbound ω hGood) t t₀
 
+/-- **Width-scaled gradient-flow movement bound on a good event.**
+A trivial composition adapter over `gradientFlow_movement_on_good_event`:
+if, additionally, the global gradient-norm bound `K` and the time horizon
+`T` jointly satisfy the *lazy radius* inequality
+`K · |T| ≤ A / √m` (e.g. with `A = O(1)` and width `m`), then the
+trajectory's movement is uniformly bounded by the lazy radius:
+
+`‖θ ω T - θ ω 0‖ ≤ A / √m`.
+
+This is the natural carrier shape consumed by the lazy-training /
+NTK-concentration pipeline (B8 N5 and the wide-network linearization
+arguments) when discharging the parametric `hmove` hypothesis: the
+"width-scaled" form factors out the explicit `K · |T|` quantity that
+needs to be bounded experiment-by-experiment, and replaces it with the
+single dimensionless lazy-radius constant `A / √m` that downstream
+linearization lemmas can consume directly. The width `m` is positive
+by hypothesis to keep `√m` away from zero. -/
+theorem gradientFlow_movement_on_good_event_le_lazy_radius
+    {Ω E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    {Good : Ω → Prop}
+    {θ : Ω → ℝ → E} {gradL : Ω → E → E}
+    {K : NNReal} {m : ℕ} (_hm : 0 < m) {A : ℝ}
+    (hθ : ∀ ω, Differentiable ℝ (θ ω))
+    (hODE : ∀ ω t, deriv (θ ω) t = -(gradL ω (θ ω t)))
+    (hbound : ∀ ω, Good ω → ∀ z, ‖gradL ω z‖₊ ≤ K)
+    {T : ℝ}
+    (hrad : (K : ℝ) * |T| ≤ A / Real.sqrt (m : ℝ)) :
+    ∀ ω, Good ω →
+      ‖θ ω T - θ ω 0‖ ≤ A / Real.sqrt (m : ℝ) := by
+  intro ω hGood
+  have hmove : ‖θ ω T - θ ω 0‖ ≤ (K : ℝ) * |T - 0| :=
+    gradientFlow_movement_on_good_event
+      Good θ gradL K hθ hODE hbound T 0 ω hGood
+  have hT : |T - 0| = |T| := by rw [sub_zero]
+  rw [hT] at hmove
+  exact hmove.trans hrad
+
 end LTFP.MathlibExt.Calculus
