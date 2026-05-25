@@ -6,6 +6,8 @@ Authors: Allen Hao Zhu
 import Mathlib.Algebra.Star.StarAlgHom
 import Mathlib.Analysis.Matrix.Normed
 import Mathlib.Analysis.Matrix.Order
+import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.Rpow.Basic
+import Mathlib.Analysis.SpecialFunctions.Pow.Continuity
 import Mathlib.LinearAlgebra.Matrix.FiniteDimensional
 import Mathlib.LinearAlgebra.Matrix.Kronecker
 import Mathlib.LinearAlgebra.Matrix.PosDef
@@ -55,7 +57,7 @@ and `LiebSuperop.R B` without name collisions with the algebraic
 left/right multiplication operators on `n × n` matrices.
 -/
 
-open scoped Kronecker ComplexOrder
+open scoped Kronecker ComplexOrder NNReal
 
 namespace LiebSuperop
 
@@ -225,5 +227,34 @@ lemma continuous_LHom :
       map_smul' := fun c A => L_smul c A }
   change Continuous (Llin : Matrix n n ℂ → Matrix (n × n) (n × n) ℂ)
   exact Llin.continuous_of_finiteDimensional
+
+/-! ### Compatibility of `L` with real powers via the CFC
+
+For a positive semidefinite `A : Matrix n n ℂ` and a nonnegative real
+exponent `r`, the left superoperator `L` commutes with the operator
+`rpow`: `(L A) ^ r = L (A ^ r)`.  This is the matrix-level instance of
+the general fact that star algebra homomorphisms commute with the
+continuous functional calculus (`StarAlgHom.map_cfc`), specialized to
+the function `x ↦ x ^ r` on `ℝ≥0`.
+-/
+
+open scoped MatrixOrder in
+/-- The left superoperator `L` commutes with real powers on positive
+semidefinite matrices: `(L A) ^ r = L (A ^ r)`. -/
+lemma L_rpow (A : Matrix n n ℂ) {r : ℝ} (hr : 0 ≤ r) (hA : A.PosSemidef) :
+    (L A) ^ r = L (A ^ r) := by
+  -- Strategy: rewrite both sides via `CFC.rpow_def` to expose the
+  -- continuous functional calculus, then transport across `LHom`
+  -- using `StarAlgHom.map_cfc`.
+  have hA0 := hA.nonneg
+  have hLA0 := (L_posSemidef_of_posSemidef hA).nonneg
+  have hcont : Continuous (fun x : ℝ≥0 => x ^ r) := NNReal.continuous_rpow_const hr
+  -- Transport the CFC across the star-algebra homomorphism `LHom`.
+  have hmap :=
+    (LHom (n := n)).map_cfc (S := ℂ) (R := ℝ≥0)
+      (fun x : ℝ≥0 => x ^ r) A hcont.continuousOn continuous_LHom hA0 hLA0
+  -- Unfold both `rpow`s and rewrite via `hmap`.
+  simp only [LHom_apply] at hmap
+  exact hmap.symm
 
 end LiebSuperop
