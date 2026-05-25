@@ -9,6 +9,7 @@ no `sorry`).
 
 import LTFP.MathlibExt.Analysis.ClosedConvexProjection
 import LTFP.MathlibExt.Analysis.ConcaveOnPartialSup
+import LTFP.MathlibExt.Analysis.Exp.BernsteinRemainder
 import LTFP.MathlibExt.Analysis.Smoothness
 import LTFP.MathlibExt.Analysis.Subgradient.L1
 import LTFP.MathlibExt.Analysis.Subgradient.SumRule
