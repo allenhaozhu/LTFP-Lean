@@ -84,6 +84,7 @@ import LTFP.MathlibExt.MatrixAnalysis.LiebSuperopCStar
 import LTFP.MathlibExt.MatrixAnalysis.LiebSuperopRpowPersp
 import LTFP.MathlibExt.MatrixAnalysis.LiebTraceComplementary
 import LTFP.MathlibExt.MatrixAnalysis.LiebTroppConcave
+import LTFP.MathlibExt.MatrixAnalysis.LiebTroppJensen
 import LTFP.MathlibExt.MatrixAnalysis.LogTraceExpConcave
 import LTFP.MathlibExt.MatrixAnalysis.MatrixBernsteinSkeleton
 import LTFP.MathlibExt.MatrixAnalysis.MatrixChernoff
