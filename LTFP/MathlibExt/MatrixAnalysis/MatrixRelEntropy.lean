@@ -47,6 +47,7 @@ import Mathlib.Analysis.Matrix.HermitianFunctionalCalculus
 import Mathlib.Analysis.Matrix.Order
 import Mathlib.Analysis.Matrix.PosDef
 import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.Normed.Algebra.MatrixExponential
 import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.ExpLog.Basic
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Mathlib.Analysis.SpecialFunctions.Log.NegMulLog
@@ -714,5 +715,136 @@ theorem matrix_relative_entropy_nonneg
     simp [Finset.sum_add_distrib, Finset.sum_sub_distrib]
   rw [hsum_split] at hklein_sum
   linarith [hPB', hklein_sum]
+
+/-! ## Gibbs variational inequality
+
+For Hermitian `H` and a strictly positive matrix `P` with `Re tr P = 1`,
+
+  `Re tr (P · H) - Re tr (P · log P) ≤ log (Re tr (exp H))`.
+
+This is the matrix analogue of the classical Gibbs variational principle
+`E_P[H] - H_P ≤ log Z` for the partition function `Z := tr(exp H)`. It
+follows directly from `matrix_relative_entropy_nonneg` applied with
+`Q := Z⁻¹ • exp H`: this `Q` has `Re tr Q = 1` and `log Q = H - log Z · 1`,
+so the Klein nonnegativity rearranges to the Gibbs bound. -/
+
+/-- **Gibbs variational inequality (matrix form).**
+
+For any Hermitian matrix `H : Matrix n n ℂ` and any strictly positive
+matrix `P` with `Re tr P = 1`,
+
+  `Re tr (P · H) - Re tr (P · log P) ≤ log (Re tr (exp H))`.
+
+The right-hand side is the log of the partition function
+`Z := Re tr (exp H)`, which is positive because `exp H` is strictly
+positive. The proof normalizes `Q := Z⁻¹ • exp H` and applies the matrix
+relative entropy nonnegativity `matrix_relative_entropy_nonneg`. -/
+theorem gibbs_variational_inequality
+    {n : Type*} [Fintype n] [DecidableEq n] [Nonempty n]
+    {H : Matrix n n ℂ} (hH : H.IsHermitian)
+    {P : Matrix n n ℂ} (hP : IsStrictlyPositive P) (hPtrace : (Matrix.trace P).re = 1) :
+    (Matrix.trace (P * H)).re - (Matrix.trace (P * CFC.log P)).re ≤
+      Real.log (Matrix.trace (NormedSpace.exp H)).re := by
+  classical
+  -- Set `E := exp H`. Then `E` is Hermitian (hence self-adjoint) and a unit, so
+  -- `E` is strictly positive.
+  set E : Matrix n n ℂ := NormedSpace.exp H with hE_def
+  have hH_sa : IsSelfAdjoint H := hH
+  have hE_herm : E.IsHermitian := Matrix.IsHermitian.exp hH
+  have hE_sa : IsSelfAdjoint E := hE_herm
+  have hE_nn : (0 : Matrix n n ℂ) ≤ E := hH_sa.exp_nonneg
+  have hE_unit : IsUnit E := Matrix.isUnit_exp H
+  have hE_sp : IsStrictlyPositive E := hE_unit.isStrictlyPositive hE_nn
+  -- `E` is positive definite (sum of strictly positive eigenvalues).
+  have hE_pd : E.PosDef := Matrix.isStrictlyPositive_iff_posDef.mp hE_sp
+  -- Define `Z := (trace E).re` and show `0 < Z`.
+  set Z : ℝ := (Matrix.trace E).re with hZ_def
+  -- Each diagonal entry of `E` is positive (in `ComplexOrder`), so its `.re` is `> 0`.
+  have hE_diag_pos : ∀ i, 0 < (E i i).re := by
+    intro i
+    have hd : (0 : ℂ) < E i i := hE_pd.diag_pos
+    -- `0 < z` in `ComplexOrder` ⇒ `0 < z.re` and `z.im = 0`.
+    rw [Complex.lt_def] at hd
+    exact hd.1
+  -- `(trace E).re = ∑ i, (E i i).re > 0` (sum of positives, nonempty index).
+  have hZ_pos : 0 < Z := by
+    rw [hZ_def, Matrix.trace, Complex.re_sum]
+    have hpos := fun i (_ : i ∈ (Finset.univ : Finset n)) => hE_diag_pos i
+    have hne : (Finset.univ : Finset n).Nonempty := Finset.univ_nonempty
+    exact Finset.sum_pos (fun i hi => hpos i hi) hne
+  have hZ_ne : Z ≠ 0 := ne_of_gt hZ_pos
+  have hZ_inv_pos : 0 < Z⁻¹ := inv_pos.mpr hZ_pos
+  -- Define `Q := Z⁻¹ • E` and show it is strictly positive.
+  set Q : Matrix n n ℂ := Z⁻¹ • E with hQ_def
+  have hQ_sp : IsStrictlyPositive Q := hE_sp.smul hZ_inv_pos
+  -- Compute `(trace Q).re = 1`. The trace of a Hermitian matrix is real.
+  have htraceE_real : ((Matrix.trace E).re : ℂ) = Matrix.trace E := by
+    -- `trace E = ∑ i, E i i = ∑ i, (E i i).re` (since `E` is Hermitian).
+    rw [Matrix.trace]
+    rw [show (∑ i, Matrix.diag E i) = ∑ i, (((Matrix.diag E i).re : ℝ) : ℂ) from ?_]
+    · simp [Complex.re_sum]
+    · apply Finset.sum_congr rfl
+      intro i _
+      exact (hE_herm.coe_re_apply_self i).symm
+  have htraceE_im : (Matrix.trace E).im = 0 := by
+    have h := congrArg Complex.im htraceE_real
+    simp at h
+    linarith [h]
+  have htraceQ_re : (Matrix.trace Q).re = 1 := by
+    rw [hQ_def, Matrix.trace_smul]
+    -- `(Z⁻¹ • trace E).re = Z⁻¹ * (trace E).re = Z⁻¹ * Z = 1`.
+    show (((Z⁻¹ : ℝ) : ℂ) * Matrix.trace E).re = 1
+    rw [Complex.mul_re, Complex.ofReal_re, Complex.ofReal_im]
+    rw [htraceE_im]
+    ring_nf
+    rw [← hZ_def]
+    exact inv_mul_cancel₀ hZ_ne
+  -- Compute `CFC.log Q = algebraMap ℝ _ (log Z⁻¹) + log E = algebraMap ℝ _ (log Z⁻¹) + H`.
+  have hlog_E : CFC.log E = H := by
+    rw [hE_def]
+    exact CFC.log_exp H hH_sa
+  have hlog_Q : CFC.log Q = algebraMap ℝ (Matrix n n ℂ) (Real.log Z⁻¹) + H := by
+    rw [hQ_def]
+    rw [CFC.log_smul' E hZ_inv_pos hE_sp]
+    rw [hlog_E]
+  -- Rewrite `Real.log Z⁻¹ = -Real.log Z`.
+  have hlogZ_inv : Real.log Z⁻¹ = -Real.log Z := Real.log_inv Z
+  -- Now express `trace (P * CFC.log Q)`.
+  -- `P * (algebraMap ℝ _ (log Z⁻¹) + H) = P * algebraMap ℝ _ (log Z⁻¹) + P * H`.
+  -- `algebraMap ℝ (Matrix n n ℂ) r = r • 1`.
+  have halg_eq : algebraMap ℝ (Matrix n n ℂ) (Real.log Z⁻¹)
+                  = (Real.log Z⁻¹) • (1 : Matrix n n ℂ) :=
+    Algebra.algebraMap_eq_smul_one (Real.log Z⁻¹)
+  -- Compute `trace (P * CFC.log Q)`.
+  have htr_PlogQ :
+      Matrix.trace (P * CFC.log Q)
+        = (Real.log Z⁻¹) • Matrix.trace P + Matrix.trace (P * H) := by
+    rw [hlog_Q, halg_eq]
+    rw [show P * ((Real.log Z⁻¹) • (1 : Matrix n n ℂ) + H)
+          = (Real.log Z⁻¹) • (P * 1) + P * H from by
+        rw [mul_add, Matrix.mul_smul]]
+    rw [Matrix.mul_one, Matrix.trace_add, Matrix.trace_smul]
+  -- The real part of `trace (P * CFC.log Q)`.
+  have htr_PlogQ_re :
+      (Matrix.trace (P * CFC.log Q)).re
+        = Real.log Z⁻¹ * (Matrix.trace P).re + (Matrix.trace (P * H)).re := by
+    rw [htr_PlogQ]
+    -- `((r • z) + w).re = r * z.re + w.re` for `r : ℝ`, `z w : ℂ`.
+    simp [Complex.add_re, Complex.real_smul, Complex.ofReal_re, Complex.ofReal_im,
+          Complex.mul_re]
+  -- Apply the matrix relative entropy nonnegativity.
+  have hklein := matrix_relative_entropy_nonneg hP hQ_sp
+  -- `hklein : 0 ≤ (trace (P · log P - P · log Q - P + Q)).re`.
+  -- Expand the trace.
+  have hexpand :
+      (Matrix.trace (P * CFC.log P - P * CFC.log Q - P + Q)).re
+        = (Matrix.trace (P * CFC.log P)).re - (Matrix.trace (P * CFC.log Q)).re
+            - (Matrix.trace P).re + (Matrix.trace Q).re := by
+    simp [Matrix.trace_sub, Matrix.trace_add]
+  rw [hexpand, htr_PlogQ_re, hPtrace, htraceQ_re, hlogZ_inv] at hklein
+  -- `hklein : 0 ≤ (trace (P log P)).re - (-log Z * 1 + (trace (P · H)).re) - 1 + 1`.
+  -- Simplify: `0 ≤ (trace (P log P)).re + log Z - (trace (P · H)).re`.
+  -- Therefore `(trace (P · H)).re - (trace (P log P)).re ≤ log Z`.
+  linarith
 
 end Matrix
