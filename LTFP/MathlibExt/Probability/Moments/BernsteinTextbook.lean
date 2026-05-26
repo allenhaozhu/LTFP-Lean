@@ -454,4 +454,160 @@ theorem bach_taylor_mgf_iid_sum
       ≤ (∏ _i : Fin n, Real.exp α) := h_prod_le
     _ = Real.exp ((n : ℝ) * α) := h_prod_const
 
+/-! ### Part T.3 — Bernstein tail (Bach Proposition 1.4 / eq. 1.11)
+
+Combine the iid MGF bound with the one-sided Chernoff inequality
+`μ(∑ Z ≥ ε) ≤ exp(-s·ε) · mgf(∑ Z, s)`, then optimise `s`. Bach's
+optimal choice is `s := ε / (n·σ² + c·ε/3)`, which lies in the
+admissible regime `|s|·c < 3` (since `s·c = c·ε / (n·σ² + cε/3) < 3`
+whenever `n·σ² > 0` or `ε > 0`), and collapses the bound to the
+Bernstein form `exp(-n · ε² / (2·(n·σ² + c·ε/3)))`.
+-/
+
+/-- **Bach Bernstein tail (Part T.3, one-sided).**
+
+For iid `Z₁, …, Zₙ` satisfying Bach's hypotheses (centered, bounded
+`|Zᵢ| ≤ c`, common variance `σ²`), every `ε > 0` admits the one-sided
+Bernstein tail bound
+
+  `μ(∑ᵢ Zᵢ ≥ ε) ≤ exp(- ε² / (2·(n·σ² + c·ε/3)))`.
+
+This is the rate that follows from Bach's per-summand MGF bound by
+composing through `bach_taylor_mgf_iid_sum` and the classical Chernoff
+inequality at the optimal Bernstein-textbook choice
+`s := ε / (n·σ² + c·ε/3)`. -/
+theorem bach_bernstein_tail_one_sided
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {n : ℕ} (hn : 0 < n) (Z : Fin n → Ω → ℝ)
+    (h_indep : iIndepFun Z μ)
+    (h_meas : ∀ i, Measurable (Z i))
+    (c : ℝ) (hc : 0 ≤ c)
+    (h_bdd : ∀ i, ∀ᵐ ω ∂μ, |Z i ω| ≤ c)
+    (h_centered : ∀ i, ∫ ω, Z i ω ∂μ = 0)
+    (sigma2 : ℝ) (hsigma2_pos : 0 < sigma2)
+    (h_ident : ∀ i, sigma2 = ∫ ω, (Z i ω) ^ 2 ∂μ)
+    (ε : ℝ) (hε : 0 < ε) :
+    μ.real {ω | (ε : ℝ) ≤ ∑ i : Fin n, Z i ω} ≤
+      Real.exp (-ε ^ 2 /
+        (2 * ((n : ℝ) * sigma2 + c * ε / 3))) := by
+  -- Setup positivity.
+  have hnR_pos : (0 : ℝ) < n := by exact_mod_cast hn
+  have h_nsigma2_pos : 0 < (n : ℝ) * sigma2 := mul_pos hnR_pos hsigma2_pos
+  have hcε_nn : 0 ≤ c * ε := mul_nonneg hc hε.le
+  have h_cε3_nn : 0 ≤ c * ε / 3 := by positivity
+  have h_denom_pos : 0 < (n : ℝ) * sigma2 + c * ε / 3 := by linarith
+  have h_denom_ne : (n : ℝ) * sigma2 + c * ε / 3 ≠ 0 := ne_of_gt h_denom_pos
+  have h_two_denom_pos :
+      0 < 2 * ((n : ℝ) * sigma2 + c * ε / 3) := by linarith
+  -- Bach's optimal Chernoff parameter `s := ε / (n·σ² + c·ε/3)`.
+  set s : ℝ := ε / ((n : ℝ) * sigma2 + c * ε / 3) with hs_def
+  have hs_pos : 0 < s := by
+    rw [hs_def]; exact div_pos hε h_denom_pos
+  have hs_nn : 0 ≤ s := hs_pos.le
+  -- Side condition: `|s| · c < 3`.
+  -- `s · c = c · ε / (n σ² + c ε / 3) < 3`
+  -- iff  `c · ε < 3 (n σ² + c ε / 3) = 3 n σ² + c ε`
+  -- iff  `0 < 3 n σ²`, which holds since `n ≥ 1` and `σ² > 0`.
+  have hsc : |s| * c < 3 := by
+    rw [abs_of_nonneg hs_nn]
+    rw [hs_def, div_mul_eq_mul_div]
+    rw [show ε * c = c * ε from mul_comm _ _]
+    rw [div_lt_iff₀ h_denom_pos]
+    have h_3nsigma2 : 0 < 3 * ((n : ℝ) * sigma2) := by positivity
+    nlinarith [h_nsigma2_pos]
+  -- Step 1: classical Chernoff bound.
+  -- Apply `measure_ge_le_exp_mul_mgf` to the sum `∑ Z i`.
+  have h_int_exp_sum :
+      Integrable (fun ω => Real.exp (s * (∑ i : Fin n, Z i) ω)) μ := by
+    refine h_indep.integrable_exp_mul_sum (t := s) h_meas ?_
+    intro i _
+    exact integrable_exp_mul_of_bounded (h_meas i) hc (h_bdd i) s
+  have h_Chernoff :=
+    ProbabilityTheory.measure_ge_le_exp_mul_mgf
+      (X := ∑ i : Fin n, Z i) (μ := μ) (t := s) ε hs_nn h_int_exp_sum
+  -- Rewrite the LHS event.
+  have h_set_eq :
+      {ω | ε ≤ (∑ i : Fin n, Z i) ω} =
+        {ω | ε ≤ ∑ i : Fin n, Z i ω} := by
+    ext ω; simp [Finset.sum_apply]
+  rw [h_set_eq] at h_Chernoff
+  -- Step 2: bound the MGF using `bach_taylor_mgf_iid_sum`.
+  set α : ℝ := s ^ 2 * sigma2 / (2 * (1 - |s| * c / 3)) with hα_def
+  have h_mgf_le :
+      ProbabilityTheory.mgf (∑ i : Fin n, Z i) μ s ≤
+        Real.exp ((n : ℝ) * α) := by
+    -- `bach_taylor_mgf_iid_sum` gives the integral form.
+    have h := bach_taylor_mgf_iid_sum Z h_indep h_meas c hc h_bdd
+                h_centered sigma2 h_ident s hsc
+    unfold ProbabilityTheory.mgf
+    simp only [Finset.sum_apply]
+    exact h
+  -- Step 3: combine and simplify the exponent.
+  have h_exp_pos : 0 < Real.exp (-s * ε) := Real.exp_pos _
+  have h_step1 :
+      μ.real {ω | ε ≤ ∑ i : Fin n, Z i ω} ≤
+        Real.exp (-s * ε) *
+          ProbabilityTheory.mgf (∑ i : Fin n, Z i) μ s :=
+    h_Chernoff
+  have h_step2 :
+      Real.exp (-s * ε) *
+          ProbabilityTheory.mgf (∑ i : Fin n, Z i) μ s ≤
+        Real.exp (-s * ε) * Real.exp ((n : ℝ) * α) :=
+    mul_le_mul_of_nonneg_left h_mgf_le h_exp_pos.le
+  have h_step3 :
+      Real.exp (-s * ε) * Real.exp ((n : ℝ) * α)
+        = Real.exp (-s * ε + (n : ℝ) * α) := by
+    rw [← Real.exp_add]
+  -- Step 4: collapse `-s · ε + n · α` to `-ε² / (2(nσ² + cε/3))`.
+  -- At `s := ε / (n σ² + c ε / 3)`:
+  --   `s · ε = ε² / (n σ² + c ε / 3)`.
+  --   `1 - |s| · c / 3 = n σ² / (n σ² + c ε / 3)`  (algebra).
+  --   `α := s² σ² / (2(1 - |s| c / 3)) = ε² / (2 n (n σ² + c ε / 3))`.
+  --   `n · α = ε² / (2 (n σ² + c ε / 3))`.
+  --   `-s ε + n α = -ε²/D + ε²/(2D) = -ε²/(2D)`  where D = n σ² + c ε / 3.
+  have h_collapse :
+      -s * ε + (n : ℝ) * α
+        = -ε ^ 2 / (2 * ((n : ℝ) * sigma2 + c * ε / 3)) := by
+    -- Define `D := n σ² + c ε / 3` for shorthand.
+    set D : ℝ := (n : ℝ) * sigma2 + c * ε / 3 with hD_def
+    have hD_pos : 0 < D := h_denom_pos
+    have hD_ne : D ≠ 0 := h_denom_ne
+    -- `s = ε / D`.
+    have hs_form : s = ε / D := hs_def
+    -- `|s| = s` since `s ≥ 0`.
+    have habs : |s| = s := abs_of_nonneg hs_nn
+    -- `s · c = c ε / D`.
+    have hsc_form : s * c = c * ε / D := by
+      rw [hs_form, div_mul_eq_mul_div, mul_comm ε c]
+    -- `1 - |s| · c / 3 = (3D - c ε) / (3D) = ...`
+    -- Cleaner: just `field_simp` everything.
+    -- Compute `-s · ε + n · α`.
+    rw [hα_def]
+    rw [habs, hs_form]
+    -- Goal: `-(ε / D) * ε + n * ((ε / D)^2 * sigma2 / (2 * (1 - ε / D * c / 3))) = -ε^2 / (2 * D)`
+    -- Compute `1 - (ε / D) * c / 3 = 1 - c ε / (3 D) = (3D - cε) / (3D)`.
+    -- `3 D = 3 n σ² + c ε`, so `3 D - c ε = 3 n σ²`.
+    have h_aux : 1 - ε / D * c / 3 = (n : ℝ) * sigma2 / D := by
+      rw [hD_def]
+      field_simp
+      ring
+    rw [h_aux]
+    -- Now: `-(ε/D)·ε + n · ((ε/D)² σ² / (2 · n σ²/D)) = -ε²/(2D)`.
+    -- `(ε/D)² σ² / (2 · n σ²/D) = ε² σ² / (D² · 2 · n σ²/D) = ε² σ² D / (2 n σ² D²) = ε² / (2 n D)`.
+    -- Multiply by n: `n · ε² / (2 n D) = ε² / (2 D)`.
+    -- So result: `-ε²/D + ε²/(2D) = -ε²/(2D)`.
+    have hnσ2_pos : 0 < (n : ℝ) * sigma2 := h_nsigma2_pos
+    have hnσ2_ne : (n : ℝ) * sigma2 ≠ 0 := ne_of_gt hnσ2_pos
+    field_simp
+    ring
+  -- Chain it all.
+  calc μ.real {ω | ε ≤ ∑ i : Fin n, Z i ω}
+      ≤ Real.exp (-s * ε) *
+          ProbabilityTheory.mgf (∑ i : Fin n, Z i) μ s := h_step1
+    _ ≤ Real.exp (-s * ε) * Real.exp ((n : ℝ) * α) := h_step2
+    _ = Real.exp (-s * ε + (n : ℝ) * α) := h_step3
+    _ = Real.exp (-ε ^ 2 /
+          (2 * ((n : ℝ) * sigma2 + c * ε / 3))) := by
+        rw [h_collapse]
+
 end ProbabilityTheory
