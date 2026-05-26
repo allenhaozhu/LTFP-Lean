@@ -168,13 +168,14 @@ control and is a separate theorem.)
 We expose the purely algebraic right-hand side of the Lipschitz
 Riemann-sum bound as a stand-alone real-valued function, prove the
 structural properties (nonnegativity, antitonicity in `n`, vanishing at
-`L = 0`) that any honest concrete proof discharges along the way, and
-discharge the bound itself in an abstract parametric form — see
-`abstract_lipschitz_riemann_sum_error` below — that takes the per-
-subinterval Lipschitz error as a hypothesis. The concrete deduction of
-that per-subinterval hypothesis from `LipschitzOnWith` and
-`intervalIntegral` is the remaining gap, to be closed when the relevant
-`MeasureTheory.intervalIntegral` API is consolidated. -/
+`L = 0`), discharge the bound in an abstract parametric form
+(`abstract_lipschitz_riemann_sum_error`, which takes the per-subinterval
+Lipschitz error as a hypothesis), and finally land the unconditional
+left-endpoint variant in `lipschitz_riemann_sum_error` below: the
+analytic deduction of the per-subinterval hypothesis from global
+Lipschitz-ness via `intervalIntegral.norm_integral_le_of_norm_le`
+is packaged as `lipschitz_riemann_subinterval_error` and stitched
+through `intervalIntegral.sum_integral_adjacent_intervals`. -/
 noncomputable def quadratureErrorBound (L a b : ℝ) (n : ℕ) : ℝ :=
   L * (b - a) ^ 2 / (2 * n)
 
@@ -386,6 +387,149 @@ theorem lipschitz_riemann_subinterval_error
           ≤ ∫ x in x₀..x₀ + h, L * (x - x₀) := h_norm_le
       _ = L * h ^ 2 / 2 := hL_integral
   simpa [Real.norm_eq_abs] using this
+
+/-- §1.2.5 — Lipschitz left-endpoint Riemann-sum quadrature error (♦♦),
+the unconditional Part Q.C.
+
+For `g : ℝ → ℝ` globally `L`-Lipschitz (`|g x − g y| ≤ L · |x − y|` for
+all `x, y`), the left-endpoint Riemann-sum estimate of `∫_a^b g(x) dx`
+on the uniform partition of `[a, b]` into `n` subintervals of width
+`h = (b − a)/n` satisfies the textbook bound
+
+  `|∫_a^b g(x) dx − h · Σ_{i=0}^{n-1} g(a + i·h)| ≤ L (b − a)² / (2n)`
+                                                 = `quadratureErrorBound L a b n`.
+
+This is Bach 2024 §1.2.5 (p. 18) in its unconditional form (the
+`abstract_lipschitz_riemann_sum_error` above wires through the
+per-subinterval hypothesis, which is supplied here by
+`lipschitz_riemann_subinterval_error` and assembled via
+`intervalIntegral.sum_integral_adjacent_intervals`).
+
+Note: Bach §1.2.5 also discusses the *trapezoidal* rule (with `|f''| ≤ L`
+giving `L / (12 n²)`); that variant requires `C²` data and is a separate
+theorem. See `docs/ERRATA.md` for the §1.2.5 labelling note. -/
+theorem lipschitz_riemann_sum_error
+    (g : ℝ → ℝ) (a b L : ℝ) (n : ℕ)
+    (hn : 0 < n) (hab : a ≤ b) (hL : 0 ≤ L)
+    (hg_lip : ∀ x y, |g x - g y| ≤ L * |x - y|)
+    (hg_int : IntervalIntegrable g MeasureTheory.volume a b) :
+    |(∫ x in a..b, g x)
+        - ((b - a) / n) * ∑ i : Fin n, g (a + (i : ℕ) * ((b - a) / n))|
+      ≤ quadratureErrorBound L a b n := by
+  -- Set up the uniform partition `partN k = a + k · h`.
+  set h : ℝ := (b - a) / n with hdef_h
+  set partN : ℕ → ℝ := fun k => a + (k : ℝ) * h with hdef_partN
+  -- Basic positivity facts.
+  have hnR : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have hba : 0 ≤ b - a := sub_nonneg.mpr hab
+  have hh_nn : 0 ≤ h := by
+    rw [hdef_h]; exact div_nonneg hba hnR.le
+  -- Endpoint identities for the partition.
+  have hpart0 : partN 0 = a := by simp [hdef_partN]
+  have hpartN : partN n = b := by
+    rw [hdef_partN]
+    have : (n : ℝ) * ((b - a) / n) = b - a := by
+      field_simp
+    linarith
+  -- Step-shift: `partN (k+1) = partN k + h` for every `k`.
+  have hstep : ∀ k : ℕ, partN (k + 1) = partN k + h := by
+    intro k
+    simp [hdef_partN, Nat.cast_add, Nat.cast_one, add_mul, one_mul]
+    ring
+  -- For each subinterval, `g` is integrable (a restriction of the
+  -- global integrability on `[a, b]`).
+  have hg_int_sub : ∀ k < n,
+      IntervalIntegrable g MeasureTheory.volume (partN k) (partN (k + 1)) := by
+    intro k hk
+    -- `[partN k, partN (k+1)] ⊆ [a, b]`.
+    have hk_le_n : (k : ℝ) ≤ n := by exact_mod_cast hk.le
+    have hk1_le_n : ((k : ℝ) + 1) ≤ n := by exact_mod_cast hk
+    have h_le_partk : a ≤ partN k := by
+      rw [hdef_partN]
+      have : 0 ≤ (k : ℝ) * h := mul_nonneg (Nat.cast_nonneg _) hh_nn
+      linarith
+    have h_partk1_le : partN (k + 1) ≤ b := by
+      rw [hstep, ← hpartN]
+      have h_eq : partN k + h = a + ((k : ℝ) + 1) * h := by
+        rw [hdef_partN]; ring
+      have h_partN_n : partN n = a + (n : ℝ) * h := by
+        rw [hdef_partN]
+      rw [h_eq, h_partN_n]
+      have hmul : ((k : ℝ) + 1) * h ≤ (n : ℝ) * h :=
+        mul_le_mul_of_nonneg_right hk1_le_n hh_nn
+      linarith
+    have h_partk_le_partk1 : partN k ≤ partN (k + 1) := by
+      rw [hstep]; linarith
+    exact hg_int.mono_set (Set.uIcc_subset_uIcc
+      (by simp [Set.mem_uIcc]; exact Or.inl ⟨h_le_partk, by linarith⟩)
+      (by simp [Set.mem_uIcc]; exact Or.inl ⟨by linarith, h_partk1_le⟩))
+  -- Build the per-subinterval error sequence indexed by `Fin n`.
+  let e : Fin n → ℝ :=
+    fun i => (∫ x in partN i..partN (i + 1), g x) - h * g (partN i)
+  -- Apply Part Q.A pointwise to bound `|e i| ≤ L · h² / 2`.
+  have h_each : ∀ i : Fin n, |e i| ≤ L * h ^ 2 / 2 := by
+    intro i
+    -- On `[partN i, partN i + h]`, `g` is Lipschitz against `partN i`.
+    have hlip_sub : ∀ x ∈ Set.Icc (partN i) (partN i + h),
+        |g x - g (partN i)| ≤ L * (x - partN i) := by
+      intro x hx
+      have hx_ge : partN i ≤ x := hx.1
+      have hdiff_nn : 0 ≤ x - partN i := sub_nonneg.mpr hx_ge
+      calc
+        |g x - g (partN i)| ≤ L * |x - partN i| := hg_lip x (partN i)
+        _ = L * (x - partN i) := by rw [abs_of_nonneg hdiff_nn]
+    -- `g` is integrable on `[partN i, partN i + h]` (it equals
+    -- `partN (i+1)`).
+    have hg_int_i :
+        IntervalIntegrable g MeasureTheory.volume (partN i) (partN i + h) := by
+      have hi_lt : (i : ℕ) < n := i.isLt
+      have := hg_int_sub i hi_lt
+      simpa [hstep] using this
+    have := lipschitz_riemann_subinterval_error
+      g (partN i) h L hh_nn hL hlip_sub hg_int_i
+    -- Identify `partN i + h = partN (i + 1)` to align with `e i`.
+    have h_eq : (∫ x in partN i..partN i + h, g x) = ∫ x in partN i..partN (i + 1), g x := by
+      rw [hstep]
+    rw [h_eq] at this
+    exact this
+  -- Telescoping: `∑ i, ∫ x in partN i..partN (i+1), g x = ∫ x in a..b, g x`.
+  have h_tele :
+      (∑ k ∈ Finset.range n, ∫ x in partN k..partN (k + 1), g x)
+        = ∫ x in a..b, g x := by
+    have := intervalIntegral.sum_integral_adjacent_intervals
+      (a := partN) (n := n) (μ := MeasureTheory.volume) (f := g) hg_int_sub
+    rw [hpart0, hpartN] at this
+    exact this
+  -- Convert the Fin-indexed sum of `e i` to a Finset.range form and
+  -- align with the telescope identity.
+  have hFin_to_range_integral :
+      (∑ i : Fin n, ∫ x in partN i..partN (i + 1), g x)
+        = ∑ k ∈ Finset.range n, ∫ x in partN k..partN (k + 1), g x :=
+    Fin.sum_univ_eq_sum_range
+      (fun k => ∫ x in partN k..partN (k + 1), g x) n
+  have h_sum :
+      (∑ i : Fin n, e i)
+        = (∫ x in a..b, g x) - h * ∑ i : Fin n, g (partN i) := by
+    have hsum_e :
+        (∑ i : Fin n, e i)
+          = (∑ i : Fin n, ∫ x in partN i..partN (i + 1), g x)
+              - h * ∑ i : Fin n, g (partN i) := by
+      simp only [e]
+      rw [Finset.sum_sub_distrib, ← Finset.mul_sum]
+    rw [hsum_e, hFin_to_range_integral, h_tele]
+  -- Finally, apply the abstract carrier.
+  have h_total : (∫ x in a..b, g x)
+        - ((b - a) / n) * ∑ i : Fin n, g (a + (i : ℕ) * ((b - a) / n))
+      = ∑ i : Fin n, e i := by
+    rw [h_sum]
+  rw [h_total]
+  -- Translate `L * h² / 2 = L * ((b-a)/n)² / 2` (definitional).
+  have h_each' : ∀ i : Fin n, |e i| ≤ L * ((b - a) / n) ^ 2 / 2 := by
+    intro i
+    have := h_each i
+    simpa [hdef_h] using this
+  exact abstract_lipschitz_riemann_sum_error L a b n hn hL hab
+    (∑ i : Fin n, e i) e rfl h_each'
 
 /-- §1.2.5 — Quadrature expectation (♦♦), elementary preservation core.
 
@@ -667,11 +811,30 @@ holds. This exercises the unconditional analytic discharge of the
 per-subinterval hypothesis used in `abstract_lipschitz_riemann_sum_error`. -/
 example (c : ℝ) :
     |(∫ _ in (0 : ℝ)..1, c) - 1 * c| ≤ 0 * (1 : ℝ) ^ 2 / 2 := by
-  have := LTFP.lipschitz_riemann_subinterval_error
+  -- Apply the per-subinterval bound with `g(x) = c` (any `c`) on `[0, 1]`
+  -- and Lipschitz constant `L = 0`. The RHS reduces to `0`.
+  have h := LTFP.lipschitz_riemann_subinterval_error
     (fun _ => c) 0 1 0 zero_le_one (le_refl 0)
-    (fun x _ => by simp)
+    (fun _ _ => by simp)
+    intervalIntegrable_const
+  set_option linter.unnecessarySimpa false in
+  simpa using h
+
+#check @LTFP.lipschitz_riemann_sum_error
+
+/-- Smoke test for the unconditional Lipschitz Riemann-sum quadrature
+bound: the constant function `g(x) = c` is `0`-Lipschitz globally, so
+the left-endpoint Riemann sum exactly reproduces the integral and the
+quadrature error bound `quadratureErrorBound 0 0 1 4 = 0` holds. -/
+example (c : ℝ) :
+    |(∫ _ in (0 : ℝ)..1, c)
+        - ((1 - 0) / (4 : ℕ)) *
+          ∑ _ : Fin 4, c|
+      ≤ LTFP.quadratureErrorBound 0 0 1 4 :=
+  LTFP.lipschitz_riemann_sum_error (fun _ => c) 0 1 0 4
+    (by decide) zero_le_one (le_refl 0)
+    (fun _ _ => by simp)
     (intervalIntegrable_const)
-  simpa using this
 
 #check @LTFP.matrix_bernstein
 
