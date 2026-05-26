@@ -8,6 +8,7 @@ import Mathlib.MeasureTheory.Constructions.Pi
 import Mathlib.MeasureTheory.Integral.Pi
 import Mathlib.MeasureTheory.Measure.Decomposition.RadonNikodym
 import Mathlib.Probability.Distributions.Gaussian.Real
+import Mathlib.Probability.Moments.Basic
 import LTFP.MathlibExt.Probability.Distance.Bhattacharyya
 import LTFP.MathlibExt.Probability.Distance.GaussianBhattacharyya
 import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussianMeasure
@@ -339,6 +340,131 @@ theorem integral_pi_sqrt_gaussianPDFReal_mul_eq
   refine Finset.prod_congr rfl (fun i _ => ?_)
   -- Each factor reduces to the scalar BH integral.
   exact integral_sqrt_gaussianPDFReal_mul_eq (m₀ i) (m₁ i) hv
+
+/-! ### Step 6: Multivariate moment-generating function (diagonal covariance)
+
+The MGF identity for the multivariate Gaussian with diagonal covariance
+`σ² · I` and zero mean factorises into a product of univariate Gaussian
+MGFs, via `multivariateGaussian_diagonal_eq_map_pi_gaussianReal` (Step 3)
++ `MeasureTheory.integral_fintype_prod_eq_prod` + Mathlib's scalar
+`ProbabilityTheory.mgf_gaussianReal`. The key intermediate identity is
+stated directly on the product measure side
+(`Measure.pi (gaussianReal 0 σ²)`), with the corresponding identity on
+the carrier `multivariateGaussian 0 (σ²·I)` then a one-line
+pushforward consequence. -/
+
+/-- **Multivariate MGF (diagonal covariance, product-measure side).** For
+the product measure of `d` i.i.d. mean-zero Gaussians with common
+variance `σ : ℝ≥0`, the integral of `exp (∑ᵢ xᵢ · vᵢ)` equals the
+exponential of `σ · (∑ᵢ vᵢ²) / 2`. This is the load-bearing scalar
+identity behind the closed-form Bhattacharyya identity for the
+multivariate diagonal Gaussian: substituting `vᵢ = (m₀ + m₁)ᵢ / (2σ²)`
+in the linear coefficient and combining with the density-expansion
+prefactor produces the multivariate BH closed form. -/
+theorem integral_exp_inner_pi_gaussianReal_zero
+    (σ : ℝ≥0) (v : Fin d → ℝ) :
+    ∫ x : Fin d → ℝ, Real.exp (∑ i, x i * v i)
+        ∂(Measure.pi (fun _ : Fin d => gaussianReal 0 σ))
+      = Real.exp ((σ : ℝ) / 2 * ∑ i, (v i) ^ 2) := by
+  classical
+  -- Step 1: exp(∑) = ∏ exp.
+  have h_exp : ∀ x : Fin d → ℝ,
+      Real.exp (∑ i, x i * v i) = ∏ i, Real.exp (x i * v i) := by
+    intro x
+    exact Real.exp_sum (Finset.univ : Finset (Fin d)) (fun i => x i * v i)
+  simp_rw [h_exp]
+  -- Step 2: ∫ ∏ ∂(pi μ) = ∏ ∫ ∂μ.
+  rw [MeasureTheory.integral_fintype_prod_eq_prod
+    (μ := fun _ : Fin d => gaussianReal 0 σ)
+    (f := fun i x => Real.exp (x * v i))]
+  -- Step 3: each scalar factor is the MGF of `gaussianReal 0 σ` at `v i`.
+  -- mgf_gaussianReal: with `p.map X = gaussianReal μ v`,
+  --   mgf X p t = exp (μ * t + v * t² / 2).
+  -- We apply with p = gaussianReal 0 σ, X = id, μ = 0, v = σ, t = v i.
+  have h_factor : ∀ i,
+      ∫ x : ℝ, Real.exp (x * v i) ∂(gaussianReal 0 σ)
+        = Real.exp ((σ : ℝ) * (v i) ^ 2 / 2) := by
+    intro i
+    -- Rewrite x * v i as v i * x to match `mgf`'s `t * X ω` convention.
+    have h_swap : ∀ x : ℝ, Real.exp (x * v i) = Real.exp (v i * x) := by
+      intro x; rw [mul_comm]
+    simp_rw [h_swap]
+    -- This is now `mgf id (gaussianReal 0 σ) (v i)`.
+    have h_mgf : ProbabilityTheory.mgf id (gaussianReal (0 : ℝ) σ) (v i)
+        = Real.exp ((0 : ℝ) * v i + (σ : ℝ) * (v i) ^ 2 / 2) := by
+      have hmap : (gaussianReal (0 : ℝ) σ).map (id : ℝ → ℝ) = gaussianReal 0 σ := by
+        rw [Measure.map_id]
+      exact ProbabilityTheory.mgf_gaussianReal hmap (v i)
+    -- Unfold mgf id (gaussianReal 0 σ) (v i) = ∫ exp (v i * id x) ∂(gaussianReal 0 σ)
+    -- = ∫ exp (v i * x) ∂(gaussianReal 0 σ).
+    have h_unfold : ProbabilityTheory.mgf id (gaussianReal (0 : ℝ) σ) (v i)
+        = ∫ x : ℝ, Real.exp (v i * x) ∂(gaussianReal 0 σ) := by
+      unfold ProbabilityTheory.mgf
+      simp only [id_eq]
+    rw [← h_unfold, h_mgf]
+    -- 0 * v i + σ * (v i)² / 2 = σ * (v i)² / 2.
+    congr 1; ring
+  simp_rw [h_factor]
+  -- Step 4: ∏ exp(σ · (v i)² / 2) = exp(∑ σ · (v i)² / 2) = exp((σ/2) · ∑ (v i)²).
+  rw [← Real.exp_sum]
+  congr 1
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl (fun i _ => ?_)
+  ring
+
+/-- **Multivariate MGF (diagonal covariance, carrier side).** For the
+zero-mean multivariate Gaussian with covariance `σ² · I` on
+`EuclideanSpace ℝ (Fin d)`, the integral of the exponential of the
+coordinate-wise inner product `∑ᵢ (ofLp x)ᵢ · vᵢ` against any test
+coefficient vector `v : Fin d → ℝ` equals
+`exp((σ²/2) · ∑ᵢ vᵢ²)`. This is the headline MGF identity at the
+covariance scale `σ² · I`; it is the Route C lever for the
+closed-form multivariate Bhattacharyya identity (combine with affine
+translation + density expansion to recover the multivariate BH closed
+form). -/
+theorem integral_exp_inner_multivariateGaussian_diagonal
+    (σ : ℝ) (v : Fin d → ℝ) :
+    ∫ x : EuclideanSpace ℝ (Fin d),
+        Real.exp (∑ i, (WithLp.ofLp (p := 2) (V := Fin d → ℝ) x) i * v i)
+      ∂(multivariateGaussian (0 : EuclideanSpace ℝ (Fin d))
+          ((σ ^ 2) • (1 : Matrix (Fin d) (Fin d) ℝ))
+          (posSemidef_sq_smul_one (n := d) σ))
+      = Real.exp ((σ ^ 2) / 2 * ∑ i, (v i) ^ 2) := by
+  classical
+  -- Step 1: identify the carrier measure with the pushforward of the
+  -- product measure through `toLp 2`.
+  rw [multivariateGaussian_diagonal_eq_map_pi_gaussianReal
+    (0 : EuclideanSpace ℝ (Fin d)) σ]
+  -- Step 2: change of variables via `integral_map` for the measurable
+  -- equivalence `toLp 2`.
+  rw [MeasureTheory.integral_map (MeasurableEquiv.toLp 2 (Fin d → ℝ)).measurable.aemeasurable
+    (by fun_prop : AEStronglyMeasurable
+      (fun x : EuclideanSpace ℝ (Fin d) =>
+        Real.exp (∑ i, (WithLp.ofLp (p := 2) (V := Fin d → ℝ) x) i * v i))
+      _)]
+  -- The mean argument `(WithLp.ofLp 0)` is `0 : Fin d → ℝ`, so the
+  -- product becomes `pi (gaussianReal 0 σ²)`.
+  have h_mean_zero : (WithLp.ofLp (p := 2) (V := Fin d → ℝ)
+      (0 : EuclideanSpace ℝ (Fin d))) = (0 : Fin d → ℝ) := rfl
+  rw [show (fun i : Fin d =>
+        gaussianReal ((WithLp.ofLp (p := 2) (V := Fin d → ℝ)
+            (0 : EuclideanSpace ℝ (Fin d))) i)
+          (⟨σ ^ 2, sq_nonneg _⟩))
+      = (fun _ : Fin d => gaussianReal (0 : ℝ) (⟨σ ^ 2, sq_nonneg _⟩)) from by
+    funext i; rw [h_mean_zero]; rfl]
+  -- After the change of variables, the integrand on `Fin d → ℝ` is
+  -- `exp(∑ᵢ (ofLp (toLp z))ᵢ · vᵢ) = exp(∑ᵢ zᵢ · vᵢ)`.
+  have h_ofLp_toLp : ∀ z : Fin d → ℝ,
+      (WithLp.ofLp (p := 2) (V := Fin d → ℝ)
+        (MeasurableEquiv.toLp 2 (Fin d → ℝ) z)) = z := fun _ => rfl
+  simp_rw [h_ofLp_toLp]
+  -- Step 3: apply the product-side MGF identity.
+  -- σ² packaged as NNReal: ⟨σ², sq_nonneg σ⟩.
+  have h_apply := integral_exp_inner_pi_gaussianReal_zero
+    (d := d) ⟨σ ^ 2, sq_nonneg σ⟩ v
+  -- h_apply : ∫ x, exp(∑ᵢ xᵢ · vᵢ) ∂(pi (gaussianReal 0 ⟨σ², _⟩))
+  --   = exp((⟨σ², _⟩ : ℝ) / 2 · ∑ᵢ vᵢ²) = exp(σ² / 2 · ∑ᵢ vᵢ²).
+  convert h_apply using 1
 
 end LTFP.MathlibExt.Probability
 
