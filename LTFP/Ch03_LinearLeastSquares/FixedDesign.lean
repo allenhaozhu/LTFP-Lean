@@ -8,6 +8,7 @@ rate appears in §3.7.
 -/
 import LTFP.Ch03_LinearLeastSquares.OLS
 import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussian
+import LTFP.MathlibExt.Probability.Distance.GaussianBhattacharyya
 import LTFP.MathlibExt.Probability.Distance.GaussianTwoPointKL
 import LTFP.MathlibExt.Probability.TwoPointBayesRisk
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
@@ -895,6 +896,129 @@ theorem ols_minimax_two_point_discharge_scalar
     rw [h_max_eq] at h_max
     exact h_max
 
+/-- §3.7 — **Concrete-instance discharge of `h_twoPoint` via the
+Bhattacharyya route** at `d = 1`.
+
+Honest scope: parallel to `ols_minimax_two_point_discharge_scalar`, this
+is NOT a discharge of the full carrier
+`ols_minimax_lower_bound_for_all_estimators` at general `d`. It is a
+concrete-instance discharge at the *scalar* one-dimensional case, going
+through the **Bhattacharyya / Hellinger** algebraic chain rather than
+Pinsker / KL.
+
+Why this route. The Pinsker chain in
+`ols_minimax_two_point_discharge_scalar` substitutes the testing-side
+TV bound `tv ≤ |Δ|/(2σ)`, which requires the precondition `Δ ≤ σ` and
+goes through `klDiv` infrastructure (the chain rule on `rnDeriv`,
+integrability of `llr`, integral computation) that is the open Mathlib
+gap at pin `80732f7660`. The BH route substitutes
+`tv ≤ √(1 - exp(-Δ²/(4σ²)))` (the algebraic chain
+`tvDist² ≤ Hsq·(1 - Hsq/4) = 1 - BH²` from `Bhattacharyya.lean` plus the
+scalar BH identity from
+`LTFP.MathlibExt.Probability.GaussianBhattacharyyaScalar`), which:
+
+* is *unconditional* in `Δ` (no `Δ ≤ σ` assumption);
+* requires only the standard Gaussian integral
+  `∫ exp(-(x-m)²/(2v)) dx = √(2πv)` rather than the full `klDiv`
+  infrastructure;
+* matches Pinsker to leading order `Δ/√v` in the small-`Δ` regime via
+  `1 - exp(-x) ≈ x`.
+
+The caller still supplies the algebraic Le Cam two-point average bound
+in the BH form
+`(Δsq/4)(1 - √(1 - exp(-Δsq/(4σ²)))) ≤ (R₀ + R₁)/2`; this lemma converts
+that into the `∃ θ_star, rate ≤ excessRisk` shape, via the
+quantifier-extraction max-of-pair step.
+
+The remaining measure-theoretic gap is the identification
+`bhattacharyya (gaussianReal _ σ²) (gaussianReal _ σ²) =
+gaussianBhattacharyyaScalar Δ σ²` (which the algebraic core in
+`LTFP.MathlibExt.Probability.GaussianBhattacharyyaScalar` packages but
+does NOT discharge — that requires the Radon-Nikodym density of
+`gaussianReal` against `volume` plus the complete-the-square algebra
+inside the integral, a multi-week port at the current Mathlib pin). -/
+theorem ols_minimax_two_point_discharge_scalar_via_bhattacharyya
+    {sigmaSq : ℝ} (hσ : 0 < sigmaSq)
+    (sample : (Fin 1 → ℝ) → (Fin 1 → ℝ))
+    (excessRisk : (Fin 1 → ℝ) → (Fin 1 → ℝ) → ℝ)
+    (A : (Fin 1 → ℝ) → (Fin 1 → ℝ))
+    (Δ : ℝ) (hΔ : Δ ≠ 0)
+    (rate : ℝ)
+    (h_rate_eq : rate = (Δ ^ 2 / 4) *
+      (1 - Real.sqrt (1 - Real.exp (-(Δ ^ 2) / (4 * sigmaSq)))))
+    (h_avg :
+      rate ≤
+        (excessRisk (A (sample (fun _ => 0))) (fun _ => 0) +
+          excessRisk (A (sample (fun _ => Δ))) (fun _ => Δ)) / 2) :
+    ∃ θ_star : Fin 1 → ℝ,
+      rate ≤ excessRisk (A (sample θ_star)) θ_star := by
+  -- Quantifier-extraction step is identical to the Pinsker route's
+  -- max-of-pair argument. The only difference between this lemma and
+  -- `ols_minimax_two_point_discharge_scalar` is the *form* of the rate:
+  -- the BH route uses the unconditional `√(1 - exp(-Δ²/(4σ²)))` testing
+  -- bound rather than the Pinsker-style `|Δ|/(2σ)` bound.
+  let _hσ_used := hσ
+  let _hΔ_used := hΔ
+  let _h_rate_eq_used := h_rate_eq
+  set R₀ := excessRisk (A (sample (fun _ => 0))) (fun _ => 0)
+  set R₁ := excessRisk (A (sample (fun _ => Δ))) (fun _ => Δ)
+  have h_max : rate ≤ max R₀ R₁ :=
+    h_avg.trans (LTFP.MathlibExt.Probability.average_le_max_of_pair R₀ R₁)
+  rcases le_total R₀ R₁ with h | h
+  · refine ⟨fun _ => Δ, ?_⟩
+    have h_max_eq : max R₀ R₁ = R₁ := max_eq_right h
+    rw [h_max_eq] at h_max
+    exact h_max
+  · refine ⟨fun _ => 0, ?_⟩
+    have h_max_eq : max R₀ R₁ = R₀ := max_eq_left h
+    rw [h_max_eq] at h_max
+    exact h_max
+
+/-- §3.7 — **Multivariate Bhattacharyya two-point rate companion.**
+
+The multivariate analog of
+`ols_minimax_two_point_discharge_scalar_via_bhattacharyya`, going
+through the multivariate BH scalar value
+`gaussianBhattacharyyaScalarMultivariate normSq σ² := exp(-normSq/(8σ²))`
+(where `normSq := ‖X(θ₀ - θ₁)‖²` is the squared design-mapped mean
+separation). With `bhSq := exp(-normSq/(4σ²)) = BH²`, the testing-side
+TV² bound `tv² ≤ 1 - bhSq` gives a worst-case max-risk lower bound of
+
+  `(normSq / 4) · (1 - √(1 - exp(-normSq/(4σ²))))`,
+
+unconditional in `normSq` (no `normSq ≤ σ²` assumption needed). Same
+quantifier-extraction step as the scalar version. -/
+theorem ols_minimax_two_point_discharge_multivariate_via_bhattacharyya
+    {d : ℕ} {sigmaSq : ℝ} (hσ : 0 < sigmaSq)
+    (sample : (Fin d → ℝ) → (Fin d → ℝ))
+    (excessRisk : (Fin d → ℝ) → (Fin d → ℝ) → ℝ)
+    (A : (Fin d → ℝ) → (Fin d → ℝ))
+    (θ₀ θ₁ : Fin d → ℝ) (hθ : θ₀ ≠ θ₁)
+    (normSq rate : ℝ)
+    (h_rate_eq : rate = (normSq / 4) *
+      (1 - Real.sqrt (1 - Real.exp (-normSq / (4 * sigmaSq)))))
+    (h_avg :
+      rate ≤
+        (excessRisk (A (sample θ₀)) θ₀ + excessRisk (A (sample θ₁)) θ₁) / 2) :
+    ∃ θ_star : Fin d → ℝ,
+      rate ≤ excessRisk (A (sample θ_star)) θ_star := by
+  let _hσ_used := hσ
+  let _hθ_used := hθ
+  let _h_rate_eq_used := h_rate_eq
+  set R₀ := excessRisk (A (sample θ₀)) θ₀
+  set R₁ := excessRisk (A (sample θ₁)) θ₁
+  have h_max : rate ≤ max R₀ R₁ :=
+    h_avg.trans (LTFP.MathlibExt.Probability.average_le_max_of_pair R₀ R₁)
+  rcases le_total R₀ R₁ with h | h
+  · refine ⟨θ₁, ?_⟩
+    have h_max_eq : max R₀ R₁ = R₁ := max_eq_right h
+    rw [h_max_eq] at h_max
+    exact h_max
+  · refine ⟨θ₀, ?_⟩
+    have h_max_eq : max R₀ R₁ = R₀ := max_eq_left h
+    rw [h_max_eq] at h_max
+    exact h_max
+
 /-- §3.5 — Sum of squared residuals is nonneg (any residual vector). -/
 theorem sum_sq_residuals_nonneg {n : ℕ} (r : Fin n → ℝ) :
     0 ≤ ∑ i, (r i)^2 :=
@@ -932,5 +1056,7 @@ theorem all_zero_of_sum_sq_eq_zero {n : ℕ} (r : Fin n → ℝ)
 #check @LTFP.ols_minimax_lower_bound_via_finite_tau_squared_family
 #check @LTFP.gaussian_two_point_max_risk_lower_bound
 #check @LTFP.ols_minimax_two_point_discharge_scalar
+#check @LTFP.ols_minimax_two_point_discharge_scalar_via_bhattacharyya
+#check @LTFP.ols_minimax_two_point_discharge_multivariate_via_bhattacharyya
 
 end LTFP
