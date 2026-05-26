@@ -78,6 +78,7 @@ import LTFP.MathlibExt.Probability.MovementFromResidualDecay
 import LTFP.MathlibExt.Probability.ResidualGronwallDecay
 import LTFP.MathlibExt.Probability.ResidualODE
 import LTFP.MathlibExt.Probability.NTKLazyTrainingEndToEnd
+import LTFP.MathlibExt.Probability.NTKBootstrapRadius
 import LTFP.MathlibExt.Probability.NTKCoercivityPreservation
 import LTFP.MathlibExt.Probability.CoveringNumberEuclidean
 import LTFP.MathlibExt.Probability.CoveringNumberReal
