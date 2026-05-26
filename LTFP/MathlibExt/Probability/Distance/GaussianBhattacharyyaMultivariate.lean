@@ -12,6 +12,7 @@ import Mathlib.Probability.Moments.Basic
 import LTFP.MathlibExt.Probability.Distance.Bhattacharyya
 import LTFP.MathlibExt.Probability.Distance.GaussianBhattacharyya
 import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussianMeasure
+import LTFP.MathlibExt.Probability.RnDerivPi
 
 /-!
 # Multivariate diagonal-covariance Bhattacharyya identity
@@ -465,6 +466,79 @@ theorem integral_exp_inner_multivariateGaussian_diagonal
   -- h_apply : ∫ x, exp(∑ᵢ xᵢ · vᵢ) ∂(pi (gaussianReal 0 ⟨σ², _⟩))
   --   = exp((⟨σ², _⟩ : ℝ) / 2 · ∑ᵢ vᵢ²) = exp(σ² / 2 · ∑ᵢ vᵢ²).
   convert h_apply using 1
+
+/-! ### Step 7: Product factorisation of the Bhattacharyya affinity
+
+With `Measure.rnDeriv_pi` (DS.2) and `Measure.absolutelyContinuous_pi`
+available in `RnDerivPi.lean`, the Bhattacharyya affinity of two
+product Gaussians factors as the product of coordinate Bhattacharyya
+affinities. -/
+
+/-- **Product factorisation of the Bhattacharyya affinity for a product of
+univariate Gaussians (diagonal covariance).** The Bhattacharyya affinity
+between two product Gaussian measures on `Fin d → ℝ` with shared diagonal
+covariance `σ² · I` and means `m₀, m₁` factors as the product of
+coordinatewise scalar Bhattacharyya affinities. -/
+theorem bhattacharyya_pi_gaussianReal_diagonal_eq_prod
+    (m₀ m₁ : Fin d → ℝ) {v : NNReal} (hv : v ≠ 0) :
+    bhattacharyya
+        (Measure.pi (fun i : Fin d => gaussianReal (m₀ i) v))
+        (Measure.pi (fun i : Fin d => gaussianReal (m₁ i) v))
+      = ∏ i : Fin d, gaussianBhattacharyyaScalar (m₀ i - m₁ i) (v : ℝ) := by
+  -- Coordinatewise absolute continuity.
+  have hμν_coord : ∀ i : Fin d,
+      (gaussianReal (m₀ i) v) ≪ (gaussianReal (m₁ i) v) := fun i =>
+    gaussianReal_absolutelyContinuous_gaussianReal (m₀ i) (m₁ i) hv
+  -- Product-level absolute continuity (uses Measure.absolutelyContinuous_pi).
+  have hμν_pi : (Measure.pi (fun i : Fin d => gaussianReal (m₀ i) v))
+      ≪ (Measure.pi (fun i : Fin d => gaussianReal (m₁ i) v)) :=
+    Measure.absolutelyContinuous_pi _ _ hμν_coord
+  -- Rewrite via the asymmetric integral form of Bhattacharyya.
+  rw [bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac _ _ hμν_pi]
+  -- Apply Measure.rnDeriv_pi to factor the rnDeriv.
+  have h_rn_pi := Measure.rnDeriv_pi
+    (fun i : Fin d => gaussianReal (m₀ i) v)
+    (fun i : Fin d => gaussianReal (m₁ i) v) hμν_coord
+  -- Rewrite the integrand inside the integral.
+  -- Step A: each coordinate rnDeriv is a.e. finite.
+  have h_rn_finite : ∀ i : Fin d, ∀ᵐ x ∂(gaussianReal (m₁ i) v),
+      (gaussianReal (m₀ i) v).rnDeriv (gaussianReal (m₁ i) v) x ≠ ⊤ :=
+    fun i => Measure.rnDeriv_ne_top _ _
+  -- Step B: rewrite the integrand using h_rn_pi to push the product into the sqrt.
+  have h_integrand : (fun x : Fin d → ℝ => Real.sqrt
+        (((Measure.pi (fun i : Fin d => gaussianReal (m₀ i) v)).rnDeriv
+          (Measure.pi (fun i : Fin d => gaussianReal (m₁ i) v)) x).toReal))
+      =ᵐ[Measure.pi (fun i : Fin d => gaussianReal (m₁ i) v)]
+      (fun x : Fin d → ℝ => ∏ i : Fin d, Real.sqrt
+        (((gaussianReal (m₀ i) v).rnDeriv (gaussianReal (m₁ i) v) (x i)).toReal)) := by
+    -- From h_rn_pi: (pi μ).rnDeriv (pi ν) x =ᵐ ∏ᵢ (μᵢ.rnDeriv νᵢ) (xᵢ).
+    -- Take toReal then sqrt; push through ENNReal.toReal_prod (each factor finite a.e.)
+    -- and Real.sqrt_prod (each factor ≥ 0).
+    filter_upwards [h_rn_pi] with x hx
+    rw [hx]
+    -- Need: √((∏ᵢ aᵢ).toReal) = ∏ᵢ √(aᵢ.toReal).
+    rw [show ((∏ i : Fin d,
+            (gaussianReal (m₀ i) v).rnDeriv (gaussianReal (m₁ i) v) (x i)).toReal)
+        = ∏ i : Fin d,
+            ((gaussianReal (m₀ i) v).rnDeriv (gaussianReal (m₁ i) v) (x i)).toReal from by
+      rw [ENNReal.toReal_prod]]
+    -- ∏ √aᵢ = √(∏ aᵢ): use rpow.
+    have h_nonneg : ∀ i ∈ (Finset.univ : Finset (Fin d)),
+        (0 : ℝ) ≤ ((gaussianReal (m₀ i) v).rnDeriv (gaussianReal (m₁ i) v) (x i)).toReal :=
+      fun i _ => ENNReal.toReal_nonneg
+    simp_rw [Real.sqrt_eq_rpow]
+    exact (Real.finset_prod_rpow Finset.univ _ h_nonneg (1/2)).symm
+  -- Step C: substitute the integrand and apply integral_fintype_prod_eq_prod.
+  rw [MeasureTheory.integral_congr_ae h_integrand]
+  rw [MeasureTheory.integral_fintype_prod_eq_prod
+    (μ := fun i : Fin d => gaussianReal (m₁ i) v)
+    (f := fun i x => Real.sqrt
+      (((gaussianReal (m₀ i) v).rnDeriv (gaussianReal (m₁ i) v) x).toReal))]
+  -- Step D: each coordinate factor is the scalar Bhattacharyya.
+  refine Finset.prod_congr rfl (fun i _ => ?_)
+  rw [← bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac
+      (gaussianReal (m₀ i) v) (gaussianReal (m₁ i) v) (hμν_coord i)]
+  exact bhattacharyya_gaussianReal_scalar_eq (m₀ i) (m₁ i) hv
 
 end LTFP.MathlibExt.Probability
 
