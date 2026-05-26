@@ -540,6 +540,78 @@ theorem bhattacharyya_pi_gaussianReal_diagonal_eq_prod
       (gaussianReal (m₀ i) v) (gaussianReal (m₁ i) v) (hμν_coord i)]
   exact bhattacharyya_gaussianReal_scalar_eq (m₀ i) (m₁ i) hv
 
+/-- **Closed-form product of coordinate scalar Bhattacharyya values.** The
+product over coordinates of the scalar Bhattacharyya affinities, each
+with the same variance `v`, telescopes into a single exponential of the
+negative squared coordinate-distance sum divided by `8v`. -/
+theorem prod_gaussianBhattacharyyaScalar_eq
+    (m₀ m₁ : Fin d → ℝ) (v : ℝ) :
+    (∏ i : Fin d, gaussianBhattacharyyaScalar (m₀ i - m₁ i) v)
+      = Real.exp (-(∑ i : Fin d, (m₀ i - m₁ i) ^ 2) / (8 * v)) := by
+  unfold gaussianBhattacharyyaScalar
+  rw [← Real.exp_sum]
+  congr 1
+  rw [neg_div, Finset.sum_div, ← Finset.sum_neg_distrib]
+  refine Finset.sum_congr rfl (fun i _ => ?_)
+  ring
+
+/-! ### Step 8: Headline — multivariate Bhattacharyya identity
+
+The headline result for the multivariate diagonal-covariance Gaussian
+Bhattacharyya identity composes:
+
+1. `multivariateGaussian_diagonal_eq_map_pi_gaussianReal` (Step 3) to
+   identify the multivariate Gaussian as the `toLp 2` pushforward of a
+   product measure.
+2. `bhattacharyya_map_measurableEquiv` (Step 1) to push the Bhattacharyya
+   affinity through the pushforward, reducing to the product-measure side.
+3. `bhattacharyya_pi_gaussianReal_diagonal_eq_prod` (Step 7) to factor
+   the product Bhattacharyya into a product of coordinate scalars.
+4. `prod_gaussianBhattacharyyaScalar_eq` to telescope the product of
+   coordinate scalars into a single exponential. -/
+
+/-- **Headline: multivariate Bhattacharyya identity (diagonal covariance).**
+For two zero-mean-shifted multivariate Gaussians on `EuclideanSpace ℝ (Fin d)`
+with shared scalar diagonal covariance `σ² · I` (with `σ ≠ 0`), the
+Bhattacharyya affinity is the closed-form scalar
+`exp(-‖m₀ - m₁‖² / (8 σ²))`, where `‖·‖²` denotes the squared
+coordinate-wise sum (i.e., the squared `EuclideanSpace` norm). -/
+theorem bhattacharyya_multivariateGaussian_diagonal_eq
+    (m₀ m₁ : EuclideanSpace ℝ (Fin d)) {σ : ℝ} (hσ : σ ≠ 0) :
+    bhattacharyya
+        (multivariateGaussian m₀ ((σ ^ 2) • (1 : Matrix (Fin d) (Fin d) ℝ))
+          (posSemidef_sq_smul_one (n := d) σ))
+        (multivariateGaussian m₁ ((σ ^ 2) • (1 : Matrix (Fin d) (Fin d) ℝ))
+          (posSemidef_sq_smul_one (n := d) σ))
+      = Real.exp (-(∑ i : Fin d,
+          ((WithLp.ofLp (p := 2) (V := Fin d → ℝ) m₀) i
+            - (WithLp.ofLp (p := 2) (V := Fin d → ℝ) m₁) i) ^ 2) / (8 * σ ^ 2)) := by
+  -- σ² ≠ 0.
+  have hσ2 : σ ^ 2 ≠ 0 := pow_ne_zero 2 hσ
+  have hv : (⟨σ ^ 2, sq_nonneg _⟩ : NNReal) ≠ 0 := by
+    rw [Ne, ← NNReal.coe_inj]; exact hσ2
+  -- Step 1: identify the multivariate Gaussians as pushforwards of product measures.
+  have h_eq_μ := multivariateGaussian_diagonal_eq_map_pi_gaussianReal m₀ σ
+  have h_eq_ν := multivariateGaussian_diagonal_eq_map_pi_gaussianReal m₁ σ
+  rw [h_eq_μ, h_eq_ν]
+  -- Step 2: push Bhattacharyya through the measurable equiv `toLp 2`.
+  rw [bhattacharyya_map_measurableEquiv _ _ (MeasurableEquiv.toLp 2 (Fin d → ℝ))]
+  -- Step 3: factorise the product Bhattacharyya into coordinate scalars.
+  rw [bhattacharyya_pi_gaussianReal_diagonal_eq_prod
+    (WithLp.ofLp (p := 2) (V := Fin d → ℝ) m₀)
+    (WithLp.ofLp (p := 2) (V := Fin d → ℝ) m₁) hv]
+  -- Step 4: telescope the product of scalars into a single exponential.
+  -- The NNReal coercion `(⟨σ², _⟩ : NNReal) : ℝ` is `σ²` (definitionally).
+  show (∏ i : Fin d,
+      gaussianBhattacharyyaScalar
+        ((WithLp.ofLp (p := 2) (V := Fin d → ℝ) m₀) i
+          - (WithLp.ofLp (p := 2) (V := Fin d → ℝ) m₁) i)
+        (σ ^ 2))
+    = _
+  rw [prod_gaussianBhattacharyyaScalar_eq
+    (WithLp.ofLp (p := 2) (V := Fin d → ℝ) m₀)
+    (WithLp.ofLp (p := 2) (V := Fin d → ℝ) m₁) (σ ^ 2)]
+
 end LTFP.MathlibExt.Probability
 
 end
