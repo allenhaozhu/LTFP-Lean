@@ -379,4 +379,64 @@ theorem fullTrainingKernel_apply_abs_le_of_bounded
       exact mul_le_mul_of_nonneg_right h1 hG_nn
     linarith
 
+/-! ### Operator-norm bound -/
+
+open scoped Matrix.Norms.L2Operator in
+/-- **Operator-norm bound for the dynamic training kernel under bounded output weights.**
+
+Lifting the entrywise bound
+`fullTrainingKernel_apply_abs_le_of_bounded` via the Cauchy–Schwarz
+glue lemma `Matrix.l2_opNorm_le_card_mul_of_entry_le`, the `ℓ²`
+operator norm of the dynamic training kernel is bounded by
+`n · (M ^ 2 + Aa ^ 2 · M' ^ 2 · G)`:
+
+  `‖fullTrainingKernel σ σ' b θ xs‖`
+    `≤ n · (M ^ 2 + Aa ^ 2 · M' ^ 2 · G)`,
+
+provided each output weight satisfies `|a_j| ≤ Aa`.
+
+This is the operator-norm analogue of the per-entry bound
+(Part E3c.1), and is the form downstream lazy-training arguments use
+when controlling the training-kernel drift through `‖·‖`. The bound is
+*parameter-free* on the right-hand side: it depends only on the data
+envelopes `M, M', G, Aa`, not on the particular trajectory point `θ`. -/
+theorem fullTrainingKernel_opNorm_le_of_bounded
+    {n m : ℕ}
+    (σ σ' : ℝ → ℝ)
+    {M M' G Aa : ℝ}
+    (hM : 0 ≤ M) (hM' : 0 ≤ M')
+    (hσ_bdd : ∀ z, |σ z| ≤ M)
+    (hσ'_bdd : ∀ z, |σ' z| ≤ M')
+    (b : Fin m → ℝ)
+    (xs : Fin n → EuclideanSpace ℝ (Fin d))
+    (hG_nn : 0 ≤ G)
+    (hG : ∀ a b : Fin n, |inner ℝ (xs a) (xs b)| ≤ G)
+    (hAa : 0 ≤ Aa)
+    (θ : Param d m)
+    (ha_bound : ∀ j, |θ.1 j| ≤ Aa) :
+    ‖fullTrainingKernel σ σ' b θ xs‖
+      ≤ (n : ℝ) * (M ^ 2 + Aa ^ 2 * M' ^ 2 * G) := by
+  classical
+  -- The entrywise envelope `s := M^2 + Aa^2 * M'^2 * G ≥ 0`.
+  set s : ℝ := M ^ 2 + Aa ^ 2 * M' ^ 2 * G with hs_def
+  have hM2_nn : 0 ≤ M ^ 2 := sq_nonneg _
+  have hAa2_nn : 0 ≤ Aa ^ 2 := sq_nonneg _
+  have hM'2_nn : 0 ≤ M' ^ 2 := sq_nonneg _
+  have hs_nn : 0 ≤ s := by
+    have : 0 ≤ Aa ^ 2 * M' ^ 2 * G :=
+      mul_nonneg (mul_nonneg hAa2_nn hM'2_nn) hG_nn
+    linarith
+  -- Entrywise: ‖K i j‖ ≤ s.
+  have h_entry : ∀ i j : Fin n,
+      ‖fullTrainingKernel σ σ' b θ xs i j‖ ≤ s := by
+    intro i j
+    have h := fullTrainingKernel_apply_abs_le_of_bounded
+      σ σ' hM hM' hσ_bdd hσ'_bdd b xs hG hAa θ ha_bound i j
+    simpa [Real.norm_eq_abs, hs_def] using h
+  -- Apply the Cauchy–Schwarz glue lemma.
+  have h_op :=
+    Matrix.l2_opNorm_le_card_mul_of_entry_le
+      (fullTrainingKernel σ σ' b θ xs) hs_nn h_entry
+  rwa [Fintype.card_fin] at h_op
+
 end ProbabilityTheory
