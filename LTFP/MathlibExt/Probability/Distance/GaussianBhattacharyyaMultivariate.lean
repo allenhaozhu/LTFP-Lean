@@ -55,7 +55,7 @@ into a product of `d` copies of the scalar Bhattacharyya integral.
 noncomputable section
 
 open MeasureTheory ProbabilityTheory
-open scoped ENNReal NNReal Matrix
+open scoped ENNReal NNReal Matrix MatrixOrder
 
 namespace LTFP.MathlibExt.Probability
 
@@ -176,6 +176,113 @@ lemma map_pi_gaussianReal_coordAffine (m : Fin d → ℝ) (σ : ℝ) :
   -- The LHS function `fun z i => m i + σ * z i` is definitionally `coordAffineMap m σ`.
   exact hpi
 
+/-! ### Step 3: Identifying `multivariateGaussian m (σ²·I)` with the product
+
+The key matrix identity is `CFC.sqrt ((σ:ℝ)² • (1 : Matrix (Fin d) (Fin d) ℝ))
+  = |σ| • 1`. This is a special case of `CFC.sqrt_eq_iff`: the right-hand
+side squares to `σ² • 1`, hence by uniqueness of the PSD square root, it
+equals `CFC.sqrt (σ²·1)`. -/
+
+/-- Self-product of `|σ| • 1` (as a matrix) equals `σ² • 1`. -/
+lemma abs_smul_one_mul_self (σ : ℝ) :
+    (|σ| • (1 : Matrix (Fin d) (Fin d) ℝ)) * (|σ| • 1) = (σ ^ 2) • 1 := by
+  rw [Matrix.smul_mul, Matrix.mul_smul, smul_smul, mul_one]
+  congr 1
+  rw [← sq, sq_abs]
+
+/-- `|σ| • 1` is positive semidefinite. -/
+lemma posSemidef_abs_smul_one (σ : ℝ) :
+    (|σ| • (1 : Matrix (Fin d) (Fin d) ℝ)).PosSemidef :=
+  Matrix.PosSemidef.smul Matrix.PosSemidef.one (abs_nonneg _)
+
+/-- The continuous functional calculus square root of `σ² • I` is `|σ| • I`. -/
+lemma cfc_sqrt_sq_smul_one (σ : ℝ) :
+    CFC.sqrt ((σ ^ 2) • (1 : Matrix (Fin d) (Fin d) ℝ)) =
+      |σ| • (1 : Matrix (Fin d) (Fin d) ℝ) := by
+  rw [CFC.sqrt_eq_iff _ _
+    (Matrix.PosSemidef.smul Matrix.PosSemidef.one (sq_nonneg _)).nonneg
+    (posSemidef_abs_smul_one σ).nonneg]
+  exact abs_smul_one_mul_self σ
+
+/-- The `gaussianAffine m (|σ| • 1)` map on `EuclideanSpace ℝ (Fin d)`,
+read through `toLp 2` / `ofLp`, is the coordinate-wise affine map
+`coordAffineMap (ofLp m) |σ|` on `Fin d → ℝ`. Specifically,
+`(gaussianAffine m (|σ| • 1)) ∘ toLp 2 = toLp 2 ∘ coordAffineMap (ofLp m) |σ|`. -/
+lemma gaussianAffine_abs_smul_one_toLp (m : EuclideanSpace ℝ (Fin d)) (σ : ℝ) :
+    (gaussianAffine m (|σ| • (1 : Matrix (Fin d) (Fin d) ℝ)))
+        ∘ (MeasurableEquiv.toLp 2 (Fin d → ℝ))
+      = (MeasurableEquiv.toLp 2 (Fin d → ℝ))
+        ∘ (coordAffineMap (WithLp.ofLp (p := 2) (V := Fin d → ℝ) m) |σ|) := by
+  funext z
+  -- Unfold both sides; both live in `EuclideanSpace ℝ (Fin d) = PiLp 2 (Fin d → ℝ)`.
+  -- It suffices to show pointwise (per-coordinate) equality on the underlying
+  -- `Fin d → ℝ` carrier via `WithLp.ofLp`.
+  apply (MeasurableEquiv.toLp 2 (Fin d → ℝ)).symm.injective
+  -- `(toLp 2).symm = ofLp`, so this reduces both sides to `Fin d → ℝ`.
+  show WithLp.ofLp (p := 2) (V := Fin d → ℝ)
+        (gaussianAffine m (|σ| • (1 : Matrix (Fin d) (Fin d) ℝ))
+          (MeasurableEquiv.toLp 2 (Fin d → ℝ) z))
+      = coordAffineMap (WithLp.ofLp (p := 2) (V := Fin d → ℝ) m) |σ| z
+  -- Unfold `gaussianAffine` and split the sum through `ofLp`.
+  unfold gaussianAffine
+  rw [WithLp.ofLp_add, Matrix.ofLp_toEuclideanCLM]
+  -- `ofLp (toLp z) = z`, so the matrix-vector product becomes `(|σ|·1) *ᵥ z`.
+  have hLp : WithLp.ofLp (p := 2) (V := Fin d → ℝ)
+        (MeasurableEquiv.toLp 2 (Fin d → ℝ) z) = z := rfl
+  rw [hLp]
+  -- The RHS unfolds coordinate-wise to `i ↦ (ofLp m) i + |σ| * z i`.
+  funext i
+  unfold coordAffineMap
+  show (WithLp.ofLp (p := 2) (V := Fin d → ℝ) m) i
+        + ((|σ| • (1 : Matrix (Fin d) (Fin d) ℝ)) *ᵥ z) i
+      = (WithLp.ofLp (p := 2) (V := Fin d → ℝ) m) i + |σ| * z i
+  congr 1
+  -- `((|σ|•1) *ᵥ z) i = |σ| * z i`.
+  simp [Matrix.smul_mulVec, Matrix.one_mulVec]
+
+/-- **Identification of the diagonal multivariate Gaussian as a product
+measure pushforward.** For mean `m : EuclideanSpace ℝ (Fin d)` and scalar
+`σ : ℝ`, the multivariate Gaussian `N(m, σ² · I)` equals the pushforward
+of the product of univariate Gaussians `pi (gaussianReal (mᵢ) σ²)`
+through the measurable equivalence `toLp 2`. -/
+theorem multivariateGaussian_diagonal_eq_map_pi_gaussianReal
+    (m : EuclideanSpace ℝ (Fin d)) (σ : ℝ) :
+    multivariateGaussian m ((σ ^ 2) • (1 : Matrix (Fin d) (Fin d) ℝ))
+        (posSemidef_sq_smul_one (n := d) σ)
+      = (Measure.pi (fun i => gaussianReal
+          ((WithLp.ofLp (p := 2) (V := Fin d → ℝ) m) i)
+          (⟨σ ^ 2, sq_nonneg _⟩))).map
+        (MeasurableEquiv.toLp 2 (Fin d → ℝ)) := by
+  unfold multivariateGaussian
+  -- Substitute CFC.sqrt (σ²·1) = |σ|·1.
+  rw [cfc_sqrt_sq_smul_one σ]
+  -- Now LHS = (stdMultivariateGaussian d).map (gaussianAffine m (|σ|·1))
+  -- Unfold stdMultivariateGaussian and use map_map.
+  unfold stdMultivariateGaussian
+  rw [Measure.map_map (measurable_gaussianAffine m (|σ| • 1))
+    (MeasurableEquiv.toLp 2 (Fin d → ℝ)).measurable]
+  -- Now LHS = (pi (gaussianReal 0 1)).map (gaussianAffine m (|σ|·1) ∘ toLp 2)
+  rw [gaussianAffine_abs_smul_one_toLp m σ]
+  -- Now LHS = (pi (gaussianReal 0 1)).map (toLp 2 ∘ coordAffineMap (ofLp m) |σ|)
+  -- = ((pi (gaussianReal 0 1)).map (coordAffineMap (ofLp m) |σ|)).map (toLp 2)
+  rw [← Measure.map_map (MeasurableEquiv.toLp 2 (Fin d → ℝ)).measurable
+    (measurable_coordAffineMap _ _)]
+  -- Apply map_pi_gaussianReal_coordAffine.
+  rw [map_pi_gaussianReal_coordAffine
+    (WithLp.ofLp (p := 2) (V := Fin d → ℝ) m) |σ|]
+  -- The variance `⟨|σ|², _⟩ = ⟨σ², _⟩` since `|σ|² = σ²`.
+  have h_var : (⟨|σ| ^ 2, sq_nonneg _⟩ : NNReal) = ⟨σ ^ 2, sq_nonneg _⟩ := by
+    rw [← NNReal.coe_inj]; simp [sq_abs]
+  -- Rewrite the variance inside the product.
+  conv_lhs => rw [show (fun i : Fin d =>
+      gaussianReal ((WithLp.ofLp (p := 2) (V := Fin d → ℝ) m) i)
+        (⟨|σ| ^ 2, sq_nonneg _⟩))
+    = (fun i : Fin d =>
+      gaussianReal ((WithLp.ofLp (p := 2) (V := Fin d → ℝ) m) i)
+        (⟨σ ^ 2, sq_nonneg _⟩)) from by
+      funext i; rw [h_var]]
+
 end LTFP.MathlibExt.Probability
 
 end
+
