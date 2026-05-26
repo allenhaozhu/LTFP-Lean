@@ -430,7 +430,23 @@ single-hidden-layer ramp/ReLU networks on the real line.
 
 The hypothesis "separating subalgebra" appearing in
 `cybenko_uat_of_separatesPoints` has been fully discharged: the only
-input is one injective continuous map `ι : C(X, ℝ)`. -/
+input is one injective continuous map `ι : C(X, ℝ)`.
+
+**Proof-route honesty (textbook-strict).** This carrier proves universal
+approximation via **Stone–Weierstrass density** on the ramp subalgebra:
+`Algebra.adjoin ℝ (rampSet ι)` separates points (the content of
+`rampSubalgebra_separates_points`), hence is dense in `C(X, ℝ)` by the
+Stone–Weierstrass theorem (Mathlib's `ContinuousMap.subalgebra_topologicalClosure_eq_top_of_separatesPoints`).
+Bach §9.3 takes a different route: **constructive CPA-exactness** —
+continuous piecewise affine functions are *exactly* representable via
+finite ReLU neurons (partition of unity over a uniform grid), and Bach
+then cites Rudin 1987 for CPA density in `C([−R, R])` to close the
+approximation argument. The two routes prove the same theorem name but
+via different techniques; this carrier follows the Stone–Weierstrass
+(Cybenko 1989 / Leshno et al. 1993) qualitative-density route, *not*
+Bach's quantitative constructive route. The constructive variant
+(quantitative width bound from a target modulus of continuity) is a
+separate theorem that this carrier does not deliver. -/
 theorem cybenko_uat_ramp_unconditional
     {ι : C(X, ℝ)} (hι : Function.Injective ι)
     (f : C(X, ℝ)) {ε : ℝ} (hε : 0 < ε) :

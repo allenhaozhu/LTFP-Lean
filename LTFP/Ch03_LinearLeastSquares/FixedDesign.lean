@@ -1449,7 +1449,25 @@ the Le Cam squared-loss reduction is supplied unconditionally from
 
 This closes the residual `h_bh_lecam` hypothesis of
 `ols_minimax_lower_bound_d1_gaussian` for the concrete Gaussian
-sample-mean instantiation. -/
+sample-mean instantiation.
+
+**Proof-route honesty (textbook-strict).** This carrier proves the
+lower bound via the **Le Cam two-point method**: pick adversaries
+`θ₀ = 0, θ₁ = σ/√n`, bound the total-variation distance via the
+Bhattacharyya closed-form
+`tvDist² ≤ 1 − bhattacharyya² = 1 − exp(−Δ²/(8σ²/n))`, then apply the
+two-point Bayes-risk reduction. The resulting rate has the correct
+`σ²/n` scaling but with a *looser* constant (≈ 0.0074) than Bach's
+`1/16`. Bach §3.7 instead takes the **Mourtada-2022 Bayes-prior route**:
+place a Gaussian prior `θ* ∼ N(0, (σ²/(λn)) · I)` on the parameter,
+observe that the posterior mode equals ridge regression with
+regularisation `λ`, then let `λ → 0` for full-rank `Σ̂` to recover the
+tight `σ² · d / n` lower bound. The Bach route requires an upstream
+Mathlib `klDiv_gaussianReal` closed form (and supporting infrastructure
+for the posterior-mode = ridge identity), all currently DEFERRED_UPSTREAM
+on the Mathlib side. The Le Cam two-point carrier above is the v6
+substitute with the same `σ²/n` scaling but constant ≈ 0.0074 vs Bach's
+`1/16`. -/
 theorem ols_minimax_lower_bound_d1_gaussian_concrete
     {sigmaSq : ℝ} (hσ : 0 < sigmaSq) {n : ℕ} (hn : 0 < n)
     (A : ℝ → ℝ) (hA : Measurable A)
@@ -1671,7 +1689,29 @@ The TV bound is `tvDist² ≤ 1 - bhattacharyya² = 1 - exp(-1/4)` via the
 **multivariate** Bhattacharyya identity
 `bhattacharyya_multivariateGaussian_diagonal_eq` (DS.3); the two means
 `0` and `σ·e` have squared distance `σ²·‖e‖² = σ²`, so `Δ²/(4σ²) = 1/4`,
-exactly the d=1 exponent. -/
+exactly the d=1 exponent.
+
+**Proof-route honesty (textbook-strict).** This carrier proves the lower
+bound via the **Le Cam two-point method**: pick adversaries `θ₀ = 0`,
+`θ₁ = σ · e₀` (the first canonical basis vector), bound the
+total-variation distance via the multivariate Bhattacharyya closed-form
+identity, then apply the two-point Bayes-risk reduction with a
+Cauchy–Schwarz pullback from the first coordinate. The resulting rate is
+`σ² · (1/8) · (1 − 2·√(1 − exp(−1/4)))` (constant ≈ 0.0074), which is
+**independent of `d`** because the bound is realised on a one-dimensional
+subspace — it matches Bach's `σ² · d / n` scaling only at `d = 1, n = 1`
+and is *looser by a factor `d`* in general.
+
+Bach §3.7 instead takes the **Mourtada-2022 Bayes-prior route**: place
+a Gaussian prior `θ* ∼ N(0, (σ²/(λn)) · I)` on the parameter, observe
+that the posterior mode equals ridge regression with regularisation `λ`,
+then let `λ → 0` for full-rank `Σ̂` to recover the tight `σ² · d / n`
+lower bound that scales correctly with the ambient dimension. The Bach
+route requires an upstream Mathlib `klDiv_gaussianReal` closed form (and
+supporting infrastructure for the posterior-mode = ridge identity), all
+currently DEFERRED_UPSTREAM on the Mathlib side. The Le Cam two-point
+carrier above is the v6 substitute with the same `σ²/n` scaling but
+constant ≈ 0.0074 vs Bach's `1/16`, and no `d`-dependence. -/
 theorem ols_minimax_lower_bound_general_d_gaussian_concrete
     {d : ℕ} (hd : 0 < d) {σ : ℝ} (hσ : 0 < σ)
     (A : EuclideanSpace ℝ (Fin d) → EuclideanSpace ℝ (Fin d)) (hA : Measurable A)

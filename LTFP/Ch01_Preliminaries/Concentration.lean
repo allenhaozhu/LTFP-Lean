@@ -138,7 +138,18 @@ This is the Bernstein inequality in its parametric, pre-optimisation
 form *with the proper sub-Gamma correction*. The canonical two-regime
 form is obtained by specialising `s = ε / (ν + b · ε)`, which collapses
 the exponent to the Bernstein bound `-ε² / (2 (ν + b · ε))`. We leave
-that explicit optimisation to the caller. -/
+that explicit optimisation to the caller.
+
+**Proof-route honesty (textbook-strict).** This carrier composes the
+sub-Gamma class API (`ProbabilityTheory.IsSubGamma.measure_ge_le`),
+which already absorbs the Chernoff step. For a **textbook-strict**
+Bach §1.2.3 variant that proves the Bernstein tail directly via Bach's
+Taylor-expansion MGF route (Lemma 1.2.3(a) — per-summand MGF bound
+`mgf(Z, s) ≤ exp(s² σ² / (2(1 - |s| c / 3)))` for `|s| c < 3`, then iid
+product MGF and Chernoff at the optimal `s = ε/(nσ² + cε/3)`), see
+`LTFP.MathlibExt.Probability.Moments.BernsteinTextbook.bach_bernstein_tail_one_sided`.
+The two routes prove the same shape of bound but the textbook-strict
+variant traces Bach's pedagogical derivation step by step. -/
 theorem bernstein_inequality_of_subGamma
     {Ω : Type*} [MeasurableSpace Ω] {μ : MeasureTheory.Measure Ω}
     [MeasureTheory.IsFiniteMeasure μ]
@@ -405,9 +416,15 @@ per-subinterval hypothesis, which is supplied here by
 `lipschitz_riemann_subinterval_error` and assembled via
 `intervalIntegral.sum_integral_adjacent_intervals`).
 
-Note: Bach §1.2.5 also discusses the *trapezoidal* rule (with `|f''| ≤ L`
-giving `L / (12 n²)`); that variant requires `C²` data and is a separate
-theorem. See `docs/ERRATA.md` for the §1.2.5 labelling note. -/
+**Proof-route honesty (textbook-strict).** This carrier proves the
+**left-endpoint Lipschitz Riemann sum** form:
+  `|∫_a^b f − h·Σ f(a+ih)| ≤ L(b−a)²/(2n)` for L-Lipschitz f.
+Bach §1.2.5's headline result is the **trapezoidal-rule** variant
+  `|∫_a^b f − ...trap...| ≤ L / (12 n²)` for f ∈ C² with `|f''| ≤ L`.
+The trapezoidal variant is a separate theorem (different hypotheses —
+second-derivative control rather than Lipschitz continuity, and a
+quadratic-rather-than-linear convergence rate in `n`) and is NOT proved
+by this carrier. See `docs/ERRATA.md` for the §1.2.5 labelling note. -/
 theorem lipschitz_riemann_sum_error
     (g : ℝ → ℝ) (a b L : ℝ) (n : ℕ)
     (hn : 0 < n) (hab : a ≤ b) (hL : 0 ≤ L)
