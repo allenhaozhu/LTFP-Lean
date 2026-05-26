@@ -6,6 +6,7 @@ Authors: LTFP-Lean contributors
 import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
 import Mathlib.Analysis.SpecialFunctions.Sqrt
+import Mathlib.Probability.Distributions.Gaussian.Real
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
 import LTFP.MathlibExt.Probability.Distance.Pinsker
@@ -608,5 +609,151 @@ theorem gaussianBhattacharyyaScalarMultivariate_mono_var
   have h2 : -normSq / (8 * v₂) = -(normSq / (8 * v₂)) := by ring
   rw [h1, h2]
   linarith
+
+/-! ### Complete-the-square algebraic identity for two-Gaussian product density
+
+The key algebraic step in the measure-theoretic derivation of
+`bhattacharyya (gaussianReal m₀ v) (gaussianReal m₁ v) =
+gaussianBhattacharyyaScalar (m₀ - m₁) v` is the **complete-the-square**
+identity for the geometric mean of the two Gaussian densities:
+
+`√(p_{m₀,v}(x) · p_{m₁,v}(x)) =
+  (1/(2πv))^{1/2} · exp(-((x-m₀)² + (x-m₁)²)/(4v))
+  = exp(-(m₀-m₁)²/(8v)) · (1/(2πv))^{1/2} · exp(-(x - (m₀+m₁)/2)²/(2v))
+  = exp(-(m₀-m₁)²/(8v)) · gaussianPDFReal ((m₀+m₁)/2) v x`.
+
+Once this identity is established, integrating both sides over Lebesgue
+gives the BH closed form: `∫ √(p₀·p₁) dx = exp(-Δ²/(8v)) · ∫ p_{mid} dx
+= exp(-Δ²/(8v)) · 1 = gaussianBhattacharyyaScalar (m₀ - m₁) v`.
+
+The lemma below is the **pure algebraic core** of this step — the
+complete-the-square identity at the level of real numbers, with no
+measure-theoretic content. It composes with the standard density
+algebra `((x-m₀)² + (x-m₁)²) = 2(x - (m₀+m₁)/2)² + (m₀-m₁)²/2` (which
+is the load-bearing manipulation) and `exp_add` to factor the
+exponential out of the integrand. -/
+
+/-- **Complete-the-square algebraic identity** for two Gaussians with
+common variance. For any reals `m₀, m₁, x` and any `v > 0`:
+
+`((x - m₀)² + (x - m₁)²) / (4 v) =
+  (x - (m₀ + m₁)/2)² / (2 v) + (m₀ - m₁)² / (8 v)`.
+
+This is the heart of the derivation
+`√(gaussianPDFReal m₀ v x · gaussianPDFReal m₁ v x) =
+  (2πv)^{-1/2} · exp(-((x-m₀)² + (x-m₁)²) / (4v))
+  = exp(-(m₀-m₁)²/(8v)) · gaussianPDFReal ((m₀+m₁)/2) v x`,
+which when integrated against `volume` and using
+`integral_gaussianPDFReal_eq_one` gives the closed-form
+`bhattacharyya` value `exp(-(m₀-m₁)²/(8v)) =
+gaussianBhattacharyyaScalar (m₀ - m₁) v`. -/
+theorem gaussianBhattacharyya_complete_the_square
+    {v : ℝ} (hv : 0 < v) (m₀ m₁ x : ℝ) :
+    ((x - m₀)^2 + (x - m₁)^2) / (4 * v) =
+      (x - (m₀ + m₁) / 2)^2 / (2 * v) + (m₀ - m₁)^2 / (8 * v) := by
+  have hv_ne : v ≠ 0 := ne_of_gt hv
+  field_simp
+  ring
+
+/-- **Sum-of-squares identity** (the polarization identity behind
+complete-the-square). For any reals `m₀, m₁, x`:
+
+`(x - m₀)² + (x - m₁)² = 2 (x - (m₀ + m₁)/2)² + (m₀ - m₁)²/2`.
+
+This is the load-bearing algebraic manipulation in the
+Bhattacharyya-density derivation — once divided by `4v`, it yields the
+complete-the-square identity above. -/
+theorem gaussianBhattacharyya_sum_of_squares (m₀ m₁ x : ℝ) :
+    (x - m₀)^2 + (x - m₁)^2 = 2 * (x - (m₀ + m₁) / 2)^2 + (m₀ - m₁)^2 / 2 := by
+  ring
+
+/-- **Product-of-Gaussian-densities geometric mean is a translated
+Gaussian density times the BH factor**: for any `m₀, m₁, x` reals and
+any `v : ℝ≥0` with `v ≠ 0`,
+
+`√(gaussianPDFReal m₀ v x · gaussianPDFReal m₁ v x) =
+  gaussianBhattacharyyaScalar (m₀ - m₁) v · gaussianPDFReal ((m₀+m₁)/2) v x`.
+
+This is the *pointwise* statement underlying the Bhattacharyya
+identity for `gaussianReal`. Once integrated over `volume` (using
+`integral_gaussianPDFReal_eq_one`), it gives
+`∫ √(p₀ · p₁) dx = gaussianBhattacharyyaScalar (m₀ - m₁) v`. -/
+theorem sqrt_gaussianPDFReal_mul_eq
+    {v : NNReal} (hv : v ≠ 0) (m₀ m₁ x : ℝ) :
+    Real.sqrt (ProbabilityTheory.gaussianPDFReal m₀ v x *
+      ProbabilityTheory.gaussianPDFReal m₁ v x) =
+        gaussianBhattacharyyaScalar (m₀ - m₁) (v : ℝ) *
+          ProbabilityTheory.gaussianPDFReal ((m₀ + m₁) / 2) v x := by
+  -- Unfold densities and the BH scalar to expose the exponential algebra.
+  unfold gaussianBhattacharyyaScalar
+  unfold ProbabilityTheory.gaussianPDFReal
+  -- Goal shape: √(A · exp(a) · A · exp(b)) = exp(c) · A · exp(d)
+  --   where A = (2πv)^{-1/2} (the common normalization), and the exponents
+  --   match via the complete-the-square identity.
+  have hv_pos : (0 : ℝ) < (v : ℝ) := by
+    have : (0 : NNReal) < v := pos_iff_ne_zero.mpr hv
+    exact_mod_cast this
+  have h_2pi_v_pos : (0 : ℝ) < 2 * Real.pi * (v : ℝ) := by positivity
+  set A : ℝ := (Real.sqrt (2 * Real.pi * (v : ℝ)))⁻¹ with hA_def
+  have hA_pos : 0 < A := by
+    rw [hA_def]
+    exact inv_pos.mpr (Real.sqrt_pos.mpr h_2pi_v_pos)
+  have hA_nn : 0 ≤ A := hA_pos.le
+  -- Define the exponentials.
+  set e0 : ℝ := Real.exp (-(x - m₀)^2 / (2 * (v : ℝ))) with he0
+  set e1 : ℝ := Real.exp (-(x - m₁)^2 / (2 * (v : ℝ))) with he1
+  set emid : ℝ := Real.exp (-(x - (m₀ + m₁) / 2)^2 / (2 * (v : ℝ))) with hemid
+  set ebh : ℝ := Real.exp (-(m₀ - m₁)^2 / (8 * (v : ℝ))) with hebh
+  have he0_pos : 0 < e0 := Real.exp_pos _
+  have he1_pos : 0 < e1 := Real.exp_pos _
+  have hemid_pos : 0 < emid := Real.exp_pos _
+  have hebh_pos : 0 < ebh := Real.exp_pos _
+  -- Goal: √(A * e0 * (A * e1)) = ebh * (A * emid)
+  -- LHS = √(A² · e0 · e1) = A · √(e0 · e1) = A · exp(-((x-m₀)² + (x-m₁)²)/(4v))
+  have h_arg_eq : -(x - m₀)^2 / (2 * (v : ℝ)) + -(x - m₁)^2 / (2 * (v : ℝ)) =
+      -((x - m₀)^2 + (x - m₁)^2) / (2 * (v : ℝ)) := by ring
+  have he0_mul_e1 : e0 * e1 = Real.exp (-((x - m₀)^2 + (x - m₁)^2) / (2 * (v : ℝ))) := by
+    rw [he0, he1, ← Real.exp_add, h_arg_eq]
+  have h_sqrt_e0e1 : Real.sqrt (e0 * e1) =
+      Real.exp (-((x - m₀)^2 + (x - m₁)^2) / (4 * (v : ℝ))) := by
+    rw [he0_mul_e1]
+    -- Use Real.exp_half: exp(t/2) = √(exp t). Here t = -(sumSq)/(2v),
+    -- so t/2 = -(sumSq)/(4v).
+    have h_half : -((x - m₀)^2 + (x - m₁)^2) / (4 * (v : ℝ)) =
+        -((x - m₀)^2 + (x - m₁)^2) / (2 * (v : ℝ)) / 2 := by
+      have hv_ne : (v : ℝ) ≠ 0 := ne_of_gt hv_pos
+      field_simp
+      ring
+    rw [h_half, Real.exp_half]
+  -- Combine: complete-the-square splits the exponent.
+  have h_split : -((x - m₀)^2 + (x - m₁)^2) / (4 * (v : ℝ)) =
+      -((x - (m₀ + m₁) / 2)^2 / (2 * (v : ℝ))) + (-(m₀ - m₁)^2 / (8 * (v : ℝ))) := by
+    -- From complete-the-square identity:
+    -- ((x-m₀)² + (x-m₁)²) / (4v) = (x-mid)²/(2v) + (m₀-m₁)²/(8v).
+    -- Negate both sides.
+    have h := gaussianBhattacharyya_complete_the_square hv_pos m₀ m₁ x
+    have hv_ne : (v : ℝ) ≠ 0 := ne_of_gt hv_pos
+    have h2v_ne : (2 * (v : ℝ)) ≠ 0 := by positivity
+    have h4v_ne : (4 * (v : ℝ)) ≠ 0 := by positivity
+    have h8v_ne : (8 * (v : ℝ)) ≠ 0 := by positivity
+    field_simp
+    field_simp at h
+    linarith
+  -- Set up the final shape.
+  have h_LHS : Real.sqrt (A * e0 * (A * e1)) = A * Real.sqrt (e0 * e1) := by
+    have hA_sq : A * e0 * (A * e1) = A^2 * (e0 * e1) := by ring
+    rw [hA_sq, Real.sqrt_mul (by positivity), Real.sqrt_sq hA_nn]
+  rw [h_LHS, h_sqrt_e0e1, h_split]
+  -- Now: A * exp(-(x-mid)²/(2v) + (-(m₀-m₁)²/(8v))) = ebh * (A * emid)
+  rw [Real.exp_add]
+  rw [hemid, hebh]
+  -- Match exp arguments by rewriting `-((x - (m₀+m₁)/2)^2 / (2v))` as
+  -- `-(x - (m₀+m₁)/2)^2 / (2v)`.
+  have h_neg_div_e : -((x - (m₀ + m₁) / 2)^2 / (2 * (v : ℝ))) =
+      -(x - (m₀ + m₁) / 2)^2 / (2 * (v : ℝ)) := by ring
+  have h_neg_div_b : -(m₀ - m₁)^2 / (8 * (v : ℝ)) =
+      -((m₀ - m₁)^2) / (8 * (v : ℝ)) := by ring
+  rw [h_neg_div_e]
+  ring
 
 end LTFP.MathlibExt.Probability
