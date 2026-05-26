@@ -373,4 +373,85 @@ theorem bach_taylor_mgf
       ≤ 1 + s ^ 2 * sigma2 / D := h_chain
     _ ≤ Real.exp (s ^ 2 * sigma2 / D) := h_one_add_le
 
+/-! ### Part T.2 — iid Chernoff composition
+
+For iid `Z₁, …, Zₙ` each satisfying Bach's hypotheses, the MGF of the
+sum factorises by independence into the product of per-summand MGFs;
+applying Bach's per-summand bound and the identity
+`(exp x)^n = exp(n · x)` yields the iid composition.
+-/
+
+/-- **Bach iid composition (Part T.2).** For iid `Z : Fin n → Ω → ℝ`
+all measurable, all satisfying `|Z i ω| ≤ c` a.s. and `∫ Z i = 0`, with
+common variance `sigma2 = ∫ (Z 0)² dμ`, the MGF of the sum
+`∑ᵢ Z i ω` satisfies
+
+  `∫ exp(s · ∑ᵢ Z i ω) dμ ≤ exp(n · s² · σ² / (2 · (1 − |s|·c / 3)))`
+
+in the regime `|s| · c < 3`.
+
+The hypothesis `h_ident : ∀ i, ∫ (Z i)² dμ = sigma2` captures the
+identically-distributed condition on second moments (since both
+hypotheses on centring and bound are required to hold for every `i`).
+
+The proof composes Bach's per-summand MGF bound (`bach_taylor_mgf`) with
+the independence-product identity `mgf (∑ᵢ Zᵢ) = ∏ᵢ mgf Zᵢ`
+(`iIndepFun.mgf_sum`) and the identity `(exp α)^n = exp(n · α)`. -/
+theorem bach_taylor_mgf_iid_sum
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {n : ℕ} (Z : Fin n → Ω → ℝ)
+    (h_indep : iIndepFun Z μ)
+    (h_meas : ∀ i, Measurable (Z i))
+    (c : ℝ) (hc : 0 ≤ c)
+    (h_bdd : ∀ i, ∀ᵐ ω ∂μ, |Z i ω| ≤ c)
+    (h_centered : ∀ i, ∫ ω, Z i ω ∂μ = 0)
+    (sigma2 : ℝ) (h_ident : ∀ i, sigma2 = ∫ ω, (Z i ω) ^ 2 ∂μ)
+    (s : ℝ) (hsc : |s| * c < 3) :
+    ∫ ω, Real.exp (s * (∑ i : Fin n, Z i ω)) ∂μ ≤
+      Real.exp ((n : ℝ) * (s ^ 2 * sigma2 / (2 * (1 - |s| * c / 3)))) := by
+  classical
+  -- Step 1: rewrite the LHS as `mgf (∑ Z) μ s`.
+  -- Note `∑ i, Z i ω = (∑ i, Z i) ω` by `Finset.sum_apply`.
+  have hLHS_eq :
+      ∫ ω, Real.exp (s * (∑ i : Fin n, Z i ω)) ∂μ
+        = ProbabilityTheory.mgf (∑ i : Fin n, Z i) μ s := by
+    unfold ProbabilityTheory.mgf
+    simp only [Finset.sum_apply]
+  -- Use independence to factor into a product of single MGFs.
+  have hsum_mgf := h_indep.mgf_sum (t := s) h_meas (s := Finset.univ)
+  -- Each MGF is bounded by Bach's per-summand bound.
+  set α : ℝ := s ^ 2 * sigma2 / (2 * (1 - |s| * c / 3)) with hα_def
+  have h_each_mgf_le :
+      ∀ i : Fin n, ProbabilityTheory.mgf (Z i) μ s ≤ Real.exp α := by
+    intro i
+    have h1 := bach_taylor_mgf (Z i) (h_meas i) c hc (h_bdd i)
+                  (h_centered i) sigma2 (h_ident i) s hsc
+    -- Match `mgf` against `∫ exp (s * Z i)`.
+    unfold ProbabilityTheory.mgf
+    exact h1
+  have h_mgf_nn : ∀ i, 0 ≤ ProbabilityTheory.mgf (Z i) μ s := by
+    intro i
+    unfold ProbabilityTheory.mgf
+    apply integral_nonneg
+    intro ω
+    exact (Real.exp_pos _).le
+  -- Product of per-summand MGFs bounded by product of `exp α` = `(exp α)^n`.
+  have h_prod_le :
+      (∏ i : Fin n, ProbabilityTheory.mgf (Z i) μ s)
+        ≤ ∏ _i : Fin n, Real.exp α := by
+    apply Finset.prod_le_prod
+    · intro i _; exact h_mgf_nn i
+    · intro i _; exact h_each_mgf_le i
+  -- `∏ exp α = (exp α)^n = exp (n · α)`.
+  have h_prod_const :
+      (∏ _i : Fin n, Real.exp α) = Real.exp ((n : ℝ) * α) := by
+    rw [Finset.prod_const, Finset.card_univ, Fintype.card_fin]
+    rw [← Real.exp_nat_mul]
+  -- Chain.
+  rw [hLHS_eq, hsum_mgf]
+  -- Need `∏ i ∈ Finset.univ, mgf ≤ exp (n * α)`.
+  calc (∏ i ∈ Finset.univ, ProbabilityTheory.mgf (Z i) μ s)
+      ≤ (∏ _i : Fin n, Real.exp α) := h_prod_le
+    _ = Real.exp ((n : ℝ) * α) := h_prod_const
+
 end ProbabilityTheory
