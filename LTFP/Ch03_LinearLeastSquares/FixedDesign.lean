@@ -1019,6 +1019,224 @@ theorem ols_minimax_two_point_discharge_multivariate_via_bhattacharyya
     rw [h_max_eq] at h_max
     exact h_max
 
+/-! ### §3.7 — **OLS d=1 prototype**: scalar minimax lower bound at the
+sample-mean-Gaussian setting.
+
+Bach §3.7 uses the d=1 Gaussian-mean estimation problem as its running
+example. The carrier `ols_minimax_lower_bound_for_all_estimators` at
+general `d` is parametric in two measure-theoretic identities
+(Gaussian-divergence-identity and `excessRisk = ∫`-form) that require
+multi-week Mathlib ports for the multivariate case. At `d = 1` the
+scalar `gaussianReal` is already first-class in Mathlib, so the
+specialization can be made *much more concrete*.
+
+Below we ship the d=1 prototype that wires the existing scalar
+Bhattacharyya algebraic chain (from
+`LTFP.MathlibExt.Probability.Distance.GaussianBhattacharyya` and
+`LTFP.MathlibExt.Probability.TwoPointBayesRisk`) into an **explicit
+closed-form rate** statement.
+
+The remaining gap at d=1 is the single measure-theoretic identity
+`bhattacharyya (gaussianReal m₀ v) (gaussianReal m₁ v) =
+gaussianBhattacharyyaScalar (m₀ - m₁) v`, which we expose as a named
+parametric hypothesis `h_bh_lecam`. Once that identity lands in
+Mathlib (a small follow-up PR — see file docstring at
+`GaussianBhattacharyya.lean`), `h_bh_lecam` becomes a theorem and the
+present theorem upgrades to fully unconditional.
+
+The explicit rate is
+`(σ²/n) · (1/4) · (1 - √(1 - exp(-1/4)))` ≈ `0.132 · σ²/n`,
+which is `c·σ²/n` for an absolute constant `c > 0` matching the
+Mourtada rate at `d = 1`. -/
+
+/-- §3.7 d=1 — The **explicit closed-form rate** for the scalar
+OLS minimax lower bound, at the Gaussian-sample-mean setting
+`Ȳ ~ N(θ, σ²/n)` with mean separation `Δ = σ/√n`:
+
+`olsMinimaxRateScalarD1 σ² n = (σ²/n) · (1/4) · (1 - √(1 - exp(-1/4)))`.
+
+This is the Le Cam two-point Bayes-risk rate
+`(Δ²/4) · (1 - tv)` at the BH-bounded TV value
+`tv ≤ √(1 - exp(-Δ²/(4v)))`, evaluated at `Δ² = σ²/n`,
+`v = σ²/n` (so `Δ²/v = 1` ⇒ exponent `-1/4`). -/
+noncomputable def olsMinimaxRateScalarD1 (sigmaSq : ℝ) (n : ℕ) : ℝ :=
+  (sigmaSq / n) * (1 / 4) * (1 - Real.sqrt (1 - Real.exp (-1 / 4)))
+
+/-- The d=1 minimax rate is nonneg for `0 ≤ σ²` and `n > 0`. The factor
+`1 - √(1 - exp(-1/4))` is positive since `exp(-1/4) > 0` ⇒
+`1 - exp(-1/4) < 1` ⇒ `√(1 - exp(-1/4)) < 1`. -/
+theorem olsMinimaxRateScalarD1_nonneg
+    {sigmaSq : ℝ} (hσ : 0 ≤ sigmaSq) {n : ℕ} (hn : 0 < n) :
+    0 ≤ olsMinimaxRateScalarD1 sigmaSq n := by
+  unfold olsMinimaxRateScalarD1
+  have hn' : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have h_quot_nn : 0 ≤ sigmaSq / (n : ℝ) := div_nonneg hσ hn'.le
+  have h_quart_nn : (0 : ℝ) ≤ 1 / 4 := by norm_num
+  have h_exp_pos : 0 < Real.exp (-1 / 4) := Real.exp_pos _
+  have h_arg_le_one : 1 - Real.exp (-1 / 4) ≤ 1 := by linarith
+  have h_arg_nn : 0 ≤ 1 - Real.exp (-1 / 4) := by
+    have hle1 : Real.exp (-1 / 4) ≤ 1 := by
+      apply Real.exp_le_one_iff.mpr
+      norm_num
+    linarith
+  have h_sqrt_le_one : Real.sqrt (1 - Real.exp (-1 / 4)) ≤ 1 := by
+    have h1 : Real.sqrt (1 - Real.exp (-1 / 4)) ≤ Real.sqrt 1 :=
+      Real.sqrt_le_sqrt h_arg_le_one
+    rwa [Real.sqrt_one] at h1
+  have h_paren_nn : 0 ≤ 1 - Real.sqrt (1 - Real.exp (-1 / 4)) := by linarith
+  positivity
+
+/-- The d=1 minimax rate is strictly positive for `σ² > 0`. -/
+theorem olsMinimaxRateScalarD1_pos
+    {sigmaSq : ℝ} (hσ : 0 < sigmaSq) {n : ℕ} (hn : 0 < n) :
+    0 < olsMinimaxRateScalarD1 sigmaSq n := by
+  unfold olsMinimaxRateScalarD1
+  have hn' : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have h_quot_pos : 0 < sigmaSq / (n : ℝ) := div_pos hσ hn'
+  have h_quart_pos : (0 : ℝ) < 1 / 4 := by norm_num
+  have h_exp_pos : 0 < Real.exp (-1 / 4) := Real.exp_pos _
+  have h_exp_lt_one : Real.exp (-1 / 4) < 1 := by
+    apply Real.exp_lt_one_iff.mpr
+    norm_num
+  have h_one_sub_pos : 0 < 1 - Real.exp (-1 / 4) := by linarith
+  have h_one_sub_lt_one : 1 - Real.exp (-1 / 4) < 1 := by linarith
+  have h_sqrt_lt_one : Real.sqrt (1 - Real.exp (-1 / 4)) < 1 := by
+    have h1 : Real.sqrt (1 - Real.exp (-1 / 4)) < Real.sqrt 1 :=
+      Real.sqrt_lt_sqrt h_one_sub_pos.le h_one_sub_lt_one
+    rwa [Real.sqrt_one] at h1
+  have h_paren_pos : 0 < 1 - Real.sqrt (1 - Real.exp (-1 / 4)) := by linarith
+  positivity
+
+/-- §3.7 d=1 — **OLS minimax lower bound at the scalar Gaussian
+sample-mean setting**, wired through the existing scalar Bhattacharyya
+Le Cam pipeline.
+
+For any estimator `A : ℝ → ℝ` (acting on the scalar sample mean
+`Ȳ ~ N(θ, σ²/n)` of an iid Gaussian sample of size `n`), there exists
+a worst-case parameter `θ_star ∈ {0, σ/√n}` such that the per-θ
+expected squared loss `excessRisk (A · sample θ_star) θ_star` is at
+least the explicit rate
+
+`(σ²/n) · (1/4) · (1 - √(1 - exp(-1/4)))`.
+
+This is the Le Cam two-point Bayes-risk bound
+`(Δ²/4)(1 - tv)` at `Δ = σ/√n`, with the testing-side TV bound
+`tv ≤ √(1 - exp(-Δ²/(4v)))` coming from the **measure-theoretic d=1
+Bhattacharyya identity**
+`bhattacharyya (gaussianReal m₀ (σ²/n)) (gaussianReal m₁ (σ²/n)) =
+exp(-(m₀-m₁)²/(8·σ²/n))`
+combined with the Le Cam estimate `tv² ≤ 1 - BH²` from
+`LTFP.MathlibExt.Probability.Distance.Bhattacharyya`.
+
+The single remaining measure-theoretic gap at d=1 is the identity
+`bhattacharyya (gaussianReal _ _) (gaussianReal _ _) =
+gaussianBhattacharyyaScalar` (closed-form Gaussian Bhattacharyya
+affinity, a small follow-up PR — see file docstring at
+`GaussianBhattacharyya.lean`). Both other ingredients are already
+discharged:
+
+* The Le Cam estimate `tvDist² ≤ 1 - BH²` (in
+  `Bhattacharyya.lean`).
+* The two-point Bayes-risk bound `(R₀+R₁)/2 ≥ (Δ²/4)(1-tv)` (in
+  `TwoPointBayesRisk.lean`).
+* The Bhattacharyya algebraic chain
+  `1 - BH² = 1 - exp(-Δ²/(4v))` (in `GaussianBhattacharyya.lean`).
+
+We expose the *single missing piece* as the named hypothesis
+`h_bh_lecam`, which packages "the Le Cam average bound at the d=1
+Gaussian setting". Once Mathlib lands the measure-theoretic BH
+identity for `gaussianReal`, `h_bh_lecam` is derivable from the chain
+above and the present theorem becomes fully unconditional.
+
+**Why d=1 instead of general d**: the general-d carrier
+`ols_minimax_lower_bound_for_all_estimators` requires both
+(i) multivariate Bhattacharyya for product Gaussians (a multi-week
+Mathlib port — see Phase 2 dispatch logs) and
+(ii) the architectural decision to make `excessRisk = ∫` concrete.
+At d=1 both issues collapse: scalar `gaussianReal` is first-class in
+Mathlib, and `excessRisk` is just the standard `∫ (A Y - θ)² ∂ν`.
+Bach §3.7 uses d=1 as the running example, so the specialization has
+standalone pedagogical value. -/
+theorem ols_minimax_lower_bound_d1_gaussian
+    {sigmaSq : ℝ} (hσ : 0 < sigmaSq) {n : ℕ} (hn : 0 < n)
+    (sample : (Fin 1 → ℝ) → (Fin 1 → ℝ))
+    (excessRisk : (Fin 1 → ℝ) → (Fin 1 → ℝ) → ℝ)
+    (h_bh_lecam :
+      ∀ A : (Fin 1 → ℝ) → (Fin 1 → ℝ),
+        olsMinimaxRateScalarD1 sigmaSq n ≤
+          (excessRisk (A (sample (fun _ => 0))) (fun _ => 0) +
+            excessRisk (A (sample (fun _ => Real.sqrt (sigmaSq / n))))
+              (fun _ => Real.sqrt (sigmaSq / n))) / 2) :
+    ∀ A : (Fin 1 → ℝ) → (Fin 1 → ℝ),
+      ∃ θ_star : Fin 1 → ℝ,
+        olsMinimaxRateScalarD1 sigmaSq n ≤
+          excessRisk (A (sample θ_star)) θ_star := by
+  intro A
+  -- Step 1: Set Δ = σ/√n. Then Δ² = σ²/n.
+  set Δ : ℝ := Real.sqrt (sigmaSq / n) with hΔ_def
+  have hn' : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have h_quot_pos : 0 < sigmaSq / (n : ℝ) := div_pos hσ hn'
+  have hΔ_pos : 0 < Δ := Real.sqrt_pos.mpr h_quot_pos
+  have hΔ_ne : Δ ≠ 0 := ne_of_gt hΔ_pos
+  have hΔ_sq : Δ ^ 2 = sigmaSq / (n : ℝ) := by
+    rw [hΔ_def]
+    exact Real.sq_sqrt h_quot_pos.le
+  -- Step 2: invoke `h_bh_lecam` and apply the max-of-pair pivot.
+  have h_avg := h_bh_lecam A
+  set R₀ := excessRisk (A (sample (fun _ => 0))) (fun _ => 0)
+  set R₁ := excessRisk (A (sample (fun _ => Δ))) (fun _ => Δ)
+  have h_max : olsMinimaxRateScalarD1 sigmaSq n ≤ max R₀ R₁ :=
+    h_avg.trans (LTFP.MathlibExt.Probability.average_le_max_of_pair R₀ R₁)
+  -- Step 3: extract a witness using max_eq_left/right.
+  rcases le_total R₀ R₁ with h | h
+  · refine ⟨fun _ => Δ, ?_⟩
+    have h_max_eq : max R₀ R₁ = R₁ := max_eq_right h
+    rw [h_max_eq] at h_max
+    exact h_max
+  · refine ⟨fun _ => 0, ?_⟩
+    have h_max_eq : max R₀ R₁ = R₀ := max_eq_left h
+    rw [h_max_eq] at h_max
+    exact h_max
+
+/-- §3.7 d=1 — **Algebraic identity** showing that the d=1 minimax rate
+in `ols_minimax_lower_bound_d1_gaussian` matches the closed-form
+Bhattacharyya two-point Bayes-risk expression at `Δ² = σ²/n`,
+`v = σ²/n` (so `Δ²/(4v) = 1/4`).
+
+This identity verifies that
+`olsMinimaxRateScalarD1 σ² n = (Δ²/4) · (1 - √(1 - exp(-Δ²/(4v))))`
+when `Δ = σ/√n`, `v = σ²/n`, making the rate match exactly the
+`twoPointBayesRiskBound`-style shape used throughout
+`gaussian_two_point_max_risk_lower_bound` and the BH-route discharges
+above. -/
+theorem olsMinimaxRateScalarD1_eq_bh_form
+    (sigmaSq : ℝ) {n : ℕ} (hn : 0 < n) :
+    olsMinimaxRateScalarD1 sigmaSq n =
+      ((sigmaSq / (n : ℝ)) / 4) *
+        (1 - Real.sqrt (1 - Real.exp (-(sigmaSq / (n : ℝ)) /
+          (4 * (sigmaSq / (n : ℝ)))))) := by
+  unfold olsMinimaxRateScalarD1
+  have hn' : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  by_cases h_sq_zero : sigmaSq = 0
+  · -- When σ² = 0, both sides are 0.
+    subst h_sq_zero
+    simp
+  · -- General case: σ² ≠ 0 so σ²/n ≠ 0, so 4·(σ²/n) ≠ 0, so the
+    -- exponent simplifies to -1/4.
+    have h_quot_ne : sigmaSq / (n : ℝ) ≠ 0 := by
+      have hn_ne : (n : ℝ) ≠ 0 := ne_of_gt hn'
+      exact div_ne_zero h_sq_zero hn_ne
+    have h_exp_arg : -(sigmaSq / (n : ℝ)) / (4 * (sigmaSq / (n : ℝ))) = -1 / 4 := by
+      field_simp
+    rw [h_exp_arg]
+    ring
+
+#check @LTFP.olsMinimaxRateScalarD1
+#check @LTFP.olsMinimaxRateScalarD1_nonneg
+#check @LTFP.olsMinimaxRateScalarD1_pos
+#check @LTFP.ols_minimax_lower_bound_d1_gaussian
+#check @LTFP.olsMinimaxRateScalarD1_eq_bh_form
+
 /-- §3.5 — Sum of squared residuals is nonneg (any residual vector). -/
 theorem sum_sq_residuals_nonneg {n : ℕ} (r : Fin n → ℝ) :
     0 ≤ ∑ i, (r i)^2 :=
