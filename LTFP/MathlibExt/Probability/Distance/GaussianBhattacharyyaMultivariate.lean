@@ -282,6 +282,64 @@ theorem multivariateGaussian_diagonal_eq_map_pi_gaussianReal
         (⟨σ ^ 2, sq_nonneg _⟩)) from by
       funext i; rw [h_var]]
 
+/-! ### Step 4: Scalar BH integral via volume (auxiliary identity)
+
+The scalar BH affinity equals the volume integral of the geometric mean
+of the two PDFs. This is the load-bearing ingredient of the scalar BH
+identity, isolated here for product factoring. -/
+
+/-- Scalar version: the integral of the geometric mean of two
+`gaussianPDFReal` functions against Lebesgue volume equals the scalar
+Bhattacharyya value `exp(-Δ²/(8v))`. This is the inner computation that
+the scalar identity `bhattacharyya_gaussianReal_scalar_eq` performs
+after the change of measure from `gaussianReal` to volume. -/
+theorem integral_sqrt_gaussianPDFReal_mul_eq
+    (m₀ m₁ : ℝ) {v : NNReal} (hv : v ≠ 0) :
+    ∫ x : ℝ, Real.sqrt (ProbabilityTheory.gaussianPDFReal m₀ v x *
+        ProbabilityTheory.gaussianPDFReal m₁ v x)
+      = gaussianBhattacharyyaScalar (m₀ - m₁) (v : ℝ) := by
+  -- Use the complete-the-square anvil and the unit integral of gaussianPDFReal.
+  have h_anvil : ∀ x, Real.sqrt (ProbabilityTheory.gaussianPDFReal m₀ v x *
+      ProbabilityTheory.gaussianPDFReal m₁ v x) =
+        gaussianBhattacharyyaScalar (m₀ - m₁) (v : ℝ) *
+          ProbabilityTheory.gaussianPDFReal ((m₀ + m₁) / 2) v x :=
+    sqrt_gaussianPDFReal_mul_eq hv m₀ m₁
+  simp_rw [h_anvil]
+  rw [MeasureTheory.integral_const_mul,
+    ProbabilityTheory.integral_gaussianPDFReal_eq_one ((m₀ + m₁) / 2) hv,
+    mul_one]
+
+/-! ### Step 5: Product BH integral against `Measure.pi volume`
+
+The product integral against `Measure.pi (fun _ => volume)` of the
+coordinate-wise product of geometric means of `gaussianPDFReal` factors
+into a product of `d` copies of the scalar BH integral, via
+`MeasureTheory.integral_fintype_prod_eq_prod`. -/
+
+/-- **Product BH integral identity.** The integral of the coordinate-wise
+product of geometric means of two families of `gaussianPDFReal` densities,
+against the product Lebesgue measure on `Fin d → ℝ`, factors into a
+product of `d` univariate BH scalar values. -/
+theorem integral_pi_sqrt_gaussianPDFReal_mul_eq
+    (m₀ m₁ : Fin d → ℝ) {v : NNReal} (hv : v ≠ 0) :
+    ∫ z : Fin d → ℝ, (∏ i, Real.sqrt
+        (ProbabilityTheory.gaussianPDFReal (m₀ i) v (z i) *
+         ProbabilityTheory.gaussianPDFReal (m₁ i) v (z i)))
+      ∂(MeasureTheory.Measure.pi (fun _ : Fin d => (MeasureTheory.volume : Measure ℝ)))
+      = ∏ i, gaussianBhattacharyyaScalar (m₀ i - m₁ i) (v : ℝ) := by
+  -- Apply `integral_fintype_prod_eq_prod` to factor the product through pi.
+  set f : Fin d → ℝ → ℝ :=
+    fun i x => Real.sqrt
+      (ProbabilityTheory.gaussianPDFReal (m₀ i) v x *
+       ProbabilityTheory.gaussianPDFReal (m₁ i) v x) with hf_def
+  have h_prod := MeasureTheory.integral_fintype_prod_eq_prod
+    (μ := fun _ : Fin d => (MeasureTheory.volume : Measure ℝ)) f
+  -- h_prod : ∫ z, ∏ i, f i (z i) ∂(pi vol) = ∏ i, ∫ x, f i x ∂vol
+  rw [h_prod]
+  refine Finset.prod_congr rfl (fun i _ => ?_)
+  -- Each factor reduces to the scalar BH integral.
+  exact integral_sqrt_gaussianPDFReal_mul_eq (m₀ i) (m₁ i) hv
+
 end LTFP.MathlibExt.Probability
 
 end
