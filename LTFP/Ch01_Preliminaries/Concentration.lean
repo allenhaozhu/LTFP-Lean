@@ -2,8 +2,12 @@
 LTFP §1.2 — Concentration inequalities.
 
 Most theorems already live in `LTFP.Foundations`; this file re-exports them
-under chapter-numbered names and adds Bernstein + matrix-concentration
-placeholders for follow-up tickets.
+under chapter-numbered names. Bernstein's inequality is discharged
+unconditionally as `bernstein_inequality_of_subGamma`, which composes the
+`IsSubGamma` MGF bound from `LTFP.MathlibExt.Probability.Moments.SubExponential`
+with the Chernoff machinery `measure_ge_le_exp_mul_mgf`. Matrix Bernstein is
+discharged via the end-to-end `Matrix.bernstein_full` (see the
+`MathlibExt/MatrixAnalysis/` modules).
 -/
 import LTFP.Foundations.Hoeffding
 import LTFP.Foundations.McDiarmid
