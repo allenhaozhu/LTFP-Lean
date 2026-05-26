@@ -56,6 +56,8 @@ import LTFP.MathlibExt.Probability.DudleyEntropy
 import LTFP.MathlibExt.Probability.FunctionClassConcentration
 import LTFP.MathlibExt.Probability.KernelCoercivity
 import LTFP.MathlibExt.Probability.KullbackLeibler
+import LTFP.MathlibExt.Probability.RnDerivProd
+import LTFP.MathlibExt.Probability.RnDerivPi
 import LTFP.MathlibExt.Probability.Moments.CovarianceBilinProdPi
 import LTFP.MathlibExt.Probability.Moments.SubExponential
 import LTFP.MathlibExt.Probability.LeCam
