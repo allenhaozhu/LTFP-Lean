@@ -11,6 +11,7 @@ import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
 import LTFP.MathlibExt.Probability.Distance.Pinsker
 import LTFP.MathlibExt.Probability.Distance.GaussianTwoPointKL
+import LTFP.MathlibExt.Probability.Distance.Bhattacharyya
 
 /-!
 # Gaussian two-point Bhattacharyya identity (algebraic core)
@@ -755,5 +756,200 @@ theorem sqrt_gaussianPDFReal_mul_eq
       -((m₀ - m₁)^2) / (8 * (v : ℝ)) := by ring
   rw [h_neg_div_e]
   ring
+
+/-! ### Measure-theoretic Bhattacharyya identity for `gaussianReal`
+
+With the pointwise algebraic identity `sqrt_gaussianPDFReal_mul_eq` in
+hand, plus standard Mathlib pieces
+
+* `ProbabilityTheory.gaussianReal_absolutelyContinuous` (μ ≪ volume),
+* `ProbabilityTheory.gaussianReal_absolutelyContinuous'` (volume ≪ μ),
+* `ProbabilityTheory.integral_gaussianReal_eq_integral_smul`
+  (change-of-measure from `gaussianReal` to `volume`),
+* `ProbabilityTheory.integral_gaussianPDFReal_eq_one`
+  (probability mass = 1),
+
+we discharge the measure-theoretic identity
+`bhattacharyya (gaussianReal m₀ v) (gaussianReal m₁ v) =
+gaussianBhattacharyyaScalar (m₀ - m₁) v`.
+
+The proof composes three steps:
+
+1. **Asymmetric form**: Mathlib's `bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac`
+   gives `bhattacharyya μ ν = ∫ x, √((μ.rnDeriv ν).toReal x) ∂ν`, using
+   absolute continuity `gaussianReal m₀ v ≪ gaussianReal m₁ v`.
+2. **Change of measure**: `integral_gaussianReal_eq_integral_smul`
+   converts the integral against `gaussianReal m₁ v` into an integral
+   against `volume` with weight `gaussianPDFReal m₁ v`. Combined with the
+   chain-rule identity `μ.rnDeriv ν · p₁ =ᵐ[volume] p₀` (from
+   `Measure.rnDeriv_mul_rnDeriv'`), and the pointwise positivity of
+   `gaussianPDFReal m₁ v`, the integrand reduces to
+   `√(gaussianPDFReal m₀ v · gaussianPDFReal m₁ v)`.
+3. **Algebraic core + ∫ p = 1**: apply `sqrt_gaussianPDFReal_mul_eq` to
+   factor the integrand as
+   `gaussianBhattacharyyaScalar (m₀ - m₁) v · gaussianPDFReal mid v`,
+   pull the BH constant out, and finish with `integral_gaussianPDFReal_eq_one`. -/
+
+/-- **Absolute continuity between two univariate Gaussian measures with
+the same nonzero variance**. Both `gaussianReal m₀ v` and `gaussianReal
+m₁ v` are equivalent to Lebesgue volume when `v ≠ 0` (their PDFs are
+strictly positive), so they are mutually absolutely continuous. This is
+the input to `bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac`. -/
+theorem gaussianReal_absolutelyContinuous_gaussianReal
+    (m₀ m₁ : ℝ) {v : NNReal} (hv : v ≠ 0) :
+    (ProbabilityTheory.gaussianReal m₀ v).AbsolutelyContinuous
+        (ProbabilityTheory.gaussianReal m₁ v) :=
+  (ProbabilityTheory.gaussianReal_absolutelyContinuous m₀ hv).trans
+    (ProbabilityTheory.gaussianReal_absolutelyContinuous' m₁ hv)
+
+/-- **Pointwise expression of the Radon-Nikodym derivative of one Gaussian
+w.r.t. another (volume a.e.)**. With both Gaussians equivalent to
+Lebesgue volume, the chain rule
+`(μ.rnDeriv ν) · (ν.rnDeriv volume) =ᵐ[volume] μ.rnDeriv volume`
+(from `Measure.rnDeriv_mul_rnDeriv'` with `μ ≪ ν`, `ν ≪ volume`),
+combined with `rnDeriv_gaussianReal`, yields
+
+  `μ.rnDeriv ν * gaussianPDF m₁ v =ᵐ[volume] gaussianPDF m₀ v`,
+
+which is the load-bearing identity for the change-of-measure step. -/
+theorem rnDeriv_gaussianReal_mul_pdf_eq
+    (m₀ m₁ : ℝ) {v : NNReal} (hv : v ≠ 0) :
+    (fun x => (ProbabilityTheory.gaussianReal m₀ v).rnDeriv
+        (ProbabilityTheory.gaussianReal m₁ v) x *
+      ProbabilityTheory.gaussianPDF m₁ v x) =ᵐ[MeasureTheory.volume]
+      ProbabilityTheory.gaussianPDF m₀ v := by
+  -- Chain rule with κ = volume, μ = gaussianReal m₀ v, ν = gaussianReal m₁ v.
+  -- Need μ ≪ volume (NOT μ ≪ ν): we use `rnDeriv_mul_rnDeriv'` form which
+  -- gives the equality ᵐ[ν], then we transfer to ᵐ[volume] via ν ≪ volume
+  -- via the alternative `rnDeriv_mul_rnDeriv` lemma whose conclusion is ᵐ[κ].
+  have hμν : (ProbabilityTheory.gaussianReal m₀ v).AbsolutelyContinuous
+      (ProbabilityTheory.gaussianReal m₁ v) :=
+    gaussianReal_absolutelyContinuous_gaussianReal m₀ m₁ hv
+  -- Chain rule:
+  --   (μ.rnDeriv ν) * (ν.rnDeriv volume) =ᵐ[volume] μ.rnDeriv volume.
+  have h_chain :
+      (ProbabilityTheory.gaussianReal m₀ v).rnDeriv
+          (ProbabilityTheory.gaussianReal m₁ v) *
+        (ProbabilityTheory.gaussianReal m₁ v).rnDeriv MeasureTheory.volume
+        =ᵐ[MeasureTheory.volume]
+        (ProbabilityTheory.gaussianReal m₀ v).rnDeriv MeasureTheory.volume :=
+    MeasureTheory.Measure.rnDeriv_mul_rnDeriv (κ := MeasureTheory.volume) hμν
+  -- Replace each rnDeriv against volume by gaussianPDF via `rnDeriv_gaussianReal`.
+  have h₀ := ProbabilityTheory.rnDeriv_gaussianReal m₀ v
+  have h₁ := ProbabilityTheory.rnDeriv_gaussianReal m₁ v
+  filter_upwards [h_chain, h₀, h₁] with x hx hx₀ hx₁
+  -- hx : (μ.rnDeriv ν * ν.rnDeriv volume) x = μ.rnDeriv volume x in ℝ≥0∞
+  -- hx₀ : (μ.rnDeriv volume) x = gaussianPDF m₀ v x
+  -- hx₁ : (ν.rnDeriv volume) x = gaussianPDF m₁ v x
+  have hx_mul :
+      (ProbabilityTheory.gaussianReal m₀ v).rnDeriv
+          (ProbabilityTheory.gaussianReal m₁ v) x *
+        (ProbabilityTheory.gaussianReal m₁ v).rnDeriv MeasureTheory.volume x =
+      (ProbabilityTheory.gaussianReal m₀ v).rnDeriv MeasureTheory.volume x := hx
+  rw [hx₁] at hx_mul
+  rw [hx₀] at hx_mul
+  exact hx_mul
+
+/-- **Bhattacharyya identity for two univariate Gaussians with common
+variance** (measure-theoretic form). For any reals `m₀, m₁` and any
+positive `v : ℝ≥0`,
+
+`bhattacharyya (gaussianReal m₀ v) (gaussianReal m₁ v) =
+  gaussianBhattacharyyaScalar (m₀ - m₁) v`,
+
+i.e., the affinity equals the closed-form scalar value `exp(-(m₀-m₁)²/(8v))`.
+
+This closes the measure-theoretic discharge of the Gaussian two-point BH
+identity at d=1, which is the load-bearing identity in the Le Cam
+two-point Bayes-risk lower bound (Bach 2024, §3.7). -/
+theorem bhattacharyya_gaussianReal_scalar_eq
+    (m₀ m₁ : ℝ) {v : NNReal} (hv : v ≠ 0) :
+    bhattacharyya (ProbabilityTheory.gaussianReal m₀ v)
+        (ProbabilityTheory.gaussianReal m₁ v) =
+      gaussianBhattacharyyaScalar (m₀ - m₁) (v : ℝ) := by
+  -- Setup.
+  set μ : MeasureTheory.Measure ℝ := ProbabilityTheory.gaussianReal m₀ v with hμ
+  set ν : MeasureTheory.Measure ℝ := ProbabilityTheory.gaussianReal m₁ v with hν
+  have hμν : μ.AbsolutelyContinuous ν :=
+    gaussianReal_absolutelyContinuous_gaussianReal m₀ m₁ hv
+  have hv_pos : (0 : ℝ) < (v : ℝ) := by
+    have : (0 : NNReal) < v := pos_iff_ne_zero.mpr hv
+    exact_mod_cast this
+  -- Step 1: asymmetric-form bridge.
+  -- `bhattacharyya μ ν = ∫ x, √((μ.rnDeriv ν x).toReal) ∂ν`.
+  rw [bhattacharyya_eq_integral_sqrt_rnDeriv_of_ac μ ν hμν]
+  -- Step 2: change of measure from `ν = gaussianReal m₁ v` to `volume`.
+  -- `∫ f ∂ν = ∫ x, gaussianPDFReal m₁ v x • f x ∂volume` (when v ≠ 0).
+  rw [show ν = ProbabilityTheory.gaussianReal m₁ v from rfl,
+    ProbabilityTheory.integral_gaussianReal_eq_integral_smul (μ := m₁) (v := v)
+      (f := fun x => Real.sqrt ((μ.rnDeriv (ProbabilityTheory.gaussianReal m₁ v) x).toReal)) hv]
+  -- Step 3: rewrite the integrand `gaussianPDFReal m₁ v x • √((μ.rnDeriv ν x).toReal)`
+  -- to `√(gaussianPDFReal m₀ v x · gaussianPDFReal m₁ v x)`.
+  -- Use `rnDeriv_gaussianReal_mul_pdf_eq` (valid ᵐ[volume]).
+  have h_rn := rnDeriv_gaussianReal_mul_pdf_eq m₀ m₁ hv
+  have h_pdf_pos : ∀ x, 0 < ProbabilityTheory.gaussianPDFReal m₁ v x :=
+    fun x => ProbabilityTheory.gaussianPDFReal_pos m₁ v x hv
+  -- We want the pointwise integrand identity, valid ᵐ[volume]:
+  --   gaussianPDFReal m₁ v x • √((μ.rnDeriv ν x).toReal)
+  --     = √(gaussianPDFReal m₀ v x · gaussianPDFReal m₁ v x).
+  have h_integrand : ∀ᵐ x ∂MeasureTheory.volume,
+      ProbabilityTheory.gaussianPDFReal m₁ v x •
+        Real.sqrt (((ProbabilityTheory.gaussianReal m₀ v).rnDeriv
+            (ProbabilityTheory.gaussianReal m₁ v) x).toReal) =
+        Real.sqrt (ProbabilityTheory.gaussianPDFReal m₀ v x *
+          ProbabilityTheory.gaussianPDFReal m₁ v x) := by
+    filter_upwards [h_rn] with x hx
+    -- hx : (μ.rnDeriv ν) x * gaussianPDF m₁ v x = gaussianPDF m₀ v x
+    -- Convert to .toReal: (μ.rnDeriv ν x).toReal · gaussianPDFReal m₁ v x =
+    --                     gaussianPDFReal m₀ v x.
+    have hp₁ := h_pdf_pos x
+    set r : ℝ := ((ProbabilityTheory.gaussianReal m₀ v).rnDeriv
+        (ProbabilityTheory.gaussianReal m₁ v) x).toReal with hr
+    set p₀ : ℝ := ProbabilityTheory.gaussianPDFReal m₀ v x with hp0
+    set p₁ : ℝ := ProbabilityTheory.gaussianPDFReal m₁ v x with hp1
+    have hp₁_nn : 0 ≤ p₁ := hp₁.le
+    have hr_nn : 0 ≤ r := ENNReal.toReal_nonneg
+    -- The chain-rule equality lifts to ℝ via toReal.
+    have hx_toReal : r * p₁ = p₀ := by
+      have h_mul := congrArg ENNReal.toReal hx
+      rw [ENNReal.toReal_mul] at h_mul
+      -- (μ.rnDeriv ν x).toReal · (gaussianPDF m₁ v x).toReal = (gaussianPDF m₀ v x).toReal
+      simp only [ProbabilityTheory.toReal_gaussianPDF] at h_mul
+      exact h_mul
+    -- Now: p₁ · √r = √(p₀ · p₁). Since p₁ ≥ 0 and r ≥ 0:
+    -- p₁ · √r = √(p₁²) · √r = √(p₁² · r) = √(p₁ · (p₁ · r)) = √(p₁ · p₀) = √(p₀ · p₁).
+    have h_p1_sqr : p₁ = Real.sqrt (p₁ ^ 2) := (Real.sqrt_sq hp₁_nn).symm
+    -- Use: p₁ * √r = √(p₁²) * √r = √(p₁² · r) = √(p₁ · (p₁ · r)) = √(p₁ · p₀)
+    -- by hx_toReal: p₁ · r = p₀.
+    have hp1r_eq : p₁ * r = p₀ := by linarith [hx_toReal]
+    show p₁ • Real.sqrt r = Real.sqrt (p₀ * p₁)
+    rw [smul_eq_mul]
+    -- Now `p₁ * √r = √(p₀ * p₁)`.
+    have h_sq_mul : (p₁ * Real.sqrt r) ^ 2 = p₀ * p₁ := by
+      have h_sq : (p₁ * Real.sqrt r) ^ 2 = p₁ ^ 2 * r := by
+        rw [mul_pow, Real.sq_sqrt hr_nn]
+      rw [h_sq]
+      have : p₁ ^ 2 * r = p₁ * (p₁ * r) := by ring
+      rw [this, hp1r_eq]
+      ring
+    have h_nn : 0 ≤ p₁ * Real.sqrt r := mul_nonneg hp₁_nn (Real.sqrt_nonneg _)
+    -- Conclude `p₁ * √r = √(p₀ * p₁)` from `(p₁ * √r)² = p₀ * p₁` and `≥ 0`.
+    have h_inv := congrArg Real.sqrt h_sq_mul
+    rw [Real.sqrt_sq h_nn] at h_inv
+    exact h_inv
+  rw [MeasureTheory.integral_congr_ae h_integrand]
+  -- Step 4: apply the algebraic anvil.
+  -- √(p₀ · p₁) = exp(-Δ²/(8v)) · gaussianPDFReal mid v.
+  -- Then ∫ exp(-Δ²/(8v)) · gaussianPDFReal mid v ∂volume
+  --    = exp(-Δ²/(8v)) · ∫ gaussianPDFReal mid v ∂volume = exp(-Δ²/(8v)).
+  have h_anvil : ∀ x, Real.sqrt (ProbabilityTheory.gaussianPDFReal m₀ v x *
+      ProbabilityTheory.gaussianPDFReal m₁ v x) =
+        gaussianBhattacharyyaScalar (m₀ - m₁) (v : ℝ) *
+          ProbabilityTheory.gaussianPDFReal ((m₀ + m₁) / 2) v x :=
+    sqrt_gaussianPDFReal_mul_eq hv m₀ m₁
+  -- Pull the BH constant out of the integral.
+  simp_rw [h_anvil]
+  rw [MeasureTheory.integral_const_mul,
+    ProbabilityTheory.integral_gaussianPDFReal_eq_one ((m₀ + m₁) / 2) hv, mul_one]
 
 end LTFP.MathlibExt.Probability
