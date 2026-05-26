@@ -1020,4 +1020,111 @@ theorem fullTrainingKernel_apply_lipschitz
       rw [hCσ_def, hCσ'₁_def, hCσ'₂_def]
     linarith [h_total]
 
+/-! ### Operator-norm Lipschitz drift -/
+
+open scoped Matrix.Norms.L2Operator in
+/-- **Operator-norm Lipschitz drift bound for the dynamic training kernel.**
+
+Lifting the entrywise drift bound `fullTrainingKernel_apply_lipschitz`
+(Part E3c.2) through the Cauchy–Schwarz glue lemma
+`Matrix.l2_opNorm_le_card_mul_of_entry_le`, the `ℓ²` operator norm of
+the kernel drift is controlled by a linear function of the per-neuron
+parameter deviation `Δ`:
+
+  `‖fullTrainingKernel σ σ' b θ xs - fullTrainingKernel σ σ' b θ₀ xs‖`
+    `≤ n · C · Δ`,
+
+where the Lipschitz constant
+`C := 2·M·Lσ·X + 2·Aa·M'²·G + 2·Aa²·M'·Lσ'·X·G`
+matches the entrywise bound exactly and depends only on the data
+envelopes `(M, M', Lσ, Lσ', G, X, Aa)`, not on the particular
+parameters `(θ, θ₀)`.
+
+This is the operator-norm analogue of the entrywise drift bound
+(Part E3c.2) and is the form lazy-training arguments use when
+controlling the training-kernel trajectory under bounded parameter
+motion. Together with the static operator-norm bound
+`fullTrainingKernel_opNorm_le_of_bounded` (Part E3d), it gives the
+complete operator-norm regularity package for the dynamic training
+kernel. -/
+theorem fullTrainingKernel_opNorm_drift_le
+    {d n m : ℕ}
+    (σ σ' : ℝ → ℝ)
+    {Lσ Lσ' : NNReal}
+    (hσ_lip : LipschitzWith Lσ σ)
+    (hσ'_lip : LipschitzWith Lσ' σ')
+    {M M' : ℝ} (hM : 0 ≤ M) (hM' : 0 ≤ M')
+    (hσ_bdd : ∀ z, |σ z| ≤ M)
+    (hσ'_bdd : ∀ z, |σ' z| ≤ M')
+    (b : Fin m → ℝ)
+    (xs : Fin n → EuclideanSpace ℝ (Fin d))
+    {G X : ℝ} (hG_nn : 0 ≤ G) (hX_nn : 0 ≤ X)
+    (hG : ∀ a b, |inner ℝ (xs a) (xs b)| ≤ G)
+    (hX : ∀ a, ‖xs a‖ ≤ X)
+    {Aa : ℝ} (hAa : 0 ≤ Aa)
+    {θ θ₀ : Param d m}
+    (ha_bound : ∀ j, |θ.1 j| ≤ Aa) (ha₀_bound : ∀ j, |θ₀.1 j| ≤ Aa)
+    (Δ : ℝ) (hΔ_nn : 0 ≤ Δ)
+    (hΔ : ∀ j, dist (θ.1 j, θ.2 j) (θ₀.1 j, θ₀.2 j) ≤ Δ) :
+    ‖fullTrainingKernel σ σ' b θ xs -
+     fullTrainingKernel σ σ' b θ₀ xs‖ ≤
+      (n : ℝ) *
+        (2 * M * (Lσ : ℝ) * X + 2 * Aa * M' ^ 2 * G
+          + 2 * Aa ^ 2 * M' * (Lσ' : ℝ) * X * G) * Δ := by
+  classical
+  -- The entrywise Lipschitz constant.
+  set C : ℝ := 2 * M * (Lσ : ℝ) * X + 2 * Aa * M' ^ 2 * G
+                + 2 * Aa ^ 2 * M' * (Lσ' : ℝ) * X * G with hC_def
+  -- Each component of C is nonneg; therefore C ≥ 0.
+  have hLσ_nn : 0 ≤ (Lσ : ℝ) := NNReal.coe_nonneg Lσ
+  have hLσ'_nn : 0 ≤ (Lσ' : ℝ) := NNReal.coe_nonneg Lσ'
+  have hC1_nn : 0 ≤ 2 * M * (Lσ : ℝ) * X := by positivity
+  have hM'2_nn : 0 ≤ M' ^ 2 := sq_nonneg _
+  have hAa2_nn : 0 ≤ Aa ^ 2 := sq_nonneg _
+  have hC2_nn : 0 ≤ 2 * Aa * M' ^ 2 * G := by positivity
+  have hC3_nn : 0 ≤ 2 * Aa ^ 2 * M' * (Lσ' : ℝ) * X * G := by positivity
+  have hC_nn : 0 ≤ C := by
+    have : 0 ≤ 2 * M * (Lσ : ℝ) * X + 2 * Aa * M' ^ 2 * G
+              + 2 * Aa ^ 2 * M' * (Lσ' : ℝ) * X * G := by linarith
+    simpa [hC_def] using this
+  -- The entrywise drift envelope `s := C · Δ ≥ 0`.
+  set s : ℝ := C * Δ with hs_def
+  have hs_nn : 0 ≤ s := mul_nonneg hC_nn hΔ_nn
+  -- Entrywise bound on the difference matrix: ‖(K_θ - K_θ₀) i j‖ ≤ s.
+  have h_entry : ∀ i j : Fin n,
+      ‖(fullTrainingKernel σ σ' b θ xs
+          - fullTrainingKernel σ σ' b θ₀ xs) i j‖ ≤ s := by
+    intro i j
+    -- Matrix subtraction is entrywise.
+    have h_sub :
+        (fullTrainingKernel σ σ' b θ xs
+            - fullTrainingKernel σ σ' b θ₀ xs) i j
+          = fullTrainingKernel σ σ' b θ xs i j
+              - fullTrainingKernel σ σ' b θ₀ xs i j := by
+      simp [Matrix.sub_apply]
+    -- Apply E3c.2.
+    have h_drift :=
+      fullTrainingKernel_apply_lipschitz σ σ' hσ_lip hσ'_lip hM hM'
+        hG_nn hX_nn hAa hσ_bdd hσ'_bdd b xs hG hX
+        ha_bound ha₀_bound Δ hΔ_nn hΔ i j
+    -- Rewrite ‖·‖ = |·| and unfold the matrix subtraction.
+    rw [h_sub, Real.norm_eq_abs]
+    -- The entry-bound matches C · Δ = s.
+    have h_eq : (2 * M * (Lσ : ℝ) * X + 2 * Aa * M' ^ 2 * G
+                  + 2 * Aa ^ 2 * M' * (Lσ' : ℝ) * X * G) * Δ = s := by
+      simp [hC_def, hs_def]
+    linarith [h_drift]
+  -- Apply the Cauchy–Schwarz glue lemma to the difference matrix.
+  have h_op :=
+    Matrix.l2_opNorm_le_card_mul_of_entry_le
+      (fullTrainingKernel σ σ' b θ xs
+        - fullTrainingKernel σ σ' b θ₀ xs) hs_nn h_entry
+  -- Convert `Fintype.card (Fin n) = n` and unfold `s = C · Δ`.
+  rw [Fintype.card_fin] at h_op
+  -- Conclude n · s = n · C · Δ.
+  have h_arith : (n : ℝ) * s = (n : ℝ) * C * Δ := by
+    simp [hs_def, mul_assoc]
+  rw [h_arith] at h_op
+  simpa [hC_def] using h_op
+
 end ProbabilityTheory
