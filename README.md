@@ -25,10 +25,14 @@ Several of these modules are being upstreamed: see open draft PRs at
 
 ## Status
 
+- Latest release: [`v6.0.0-tierC-discharged`](https://github.com/allenhaozhu/LTFP-Lean/releases/tag/v6.0.0-tierC-discharged)
 - Lean toolchain: `leanprover/lean4:v4.27.0-rc1`
 - Mathlib: tracks `master` (pinned by `lake-manifest.json`)
 - `lake build` exits 0
-- No `sorry`, no `admit`
+- No `sorry`, no `admit` in the wired library
+- All 12 chapter-anchor theorems hold unconditionally
+  (no parametric escape hypotheses); axiom set is
+  `[propext, Classical.choice, Quot.sound]` only
 
 ## Layout
 
@@ -51,10 +55,17 @@ LTFP/
 ├── Ch14_Probabilistic/            §14 log-likelihoods, PAC-Bayes
 ├── Ch15_LowerBounds/              §15 statistical lower bounds, Le Cam
 └── MathlibExt/                    Mathlib-quality extension modules
-    ├── Probability/{TotalVariation,Distance/Pinsker,Adversary,LeCam,DonskerVaradhan,Moments/SubExponential}.lean
-    ├── Analysis/{Smoothness,Subgradient/L1,InnerProductSpace/RKHS}.lean
+    ├── Probability/
+    │   ├── {TotalVariation,Distance/Pinsker,Adversary,LeCam,DonskerVaradhan}.lean
+    │   ├── Distance/{Bhattacharyya,GaussianBhattacharyya,GaussianBhattacharyyaMultivariate}.lean
+    │   ├── Moments/SubExponential.lean
+    │   ├── Distributions/{MultivariateGaussianMeasure,MultivariateGaussianMSE,OLSSampleD1}.lean
+    │   ├── {RnDerivProd,RnDerivPi}.lean         RN derivative of (binary / Fintype) product measures
+    │   ├── LeCamSquaredLossReduction.lean        Tsybakov §2.4.2 two-point bound
+    │   └── NTK{CoercivityPreservation,BootstrapRadius,BootstrapClosure,LazyCarrier*}.lean
+    ├── Analysis/{Smoothness,Subgradient/L1,InnerProductSpace/RKHS,InnerProductSpace/AronszajnCompletion}.lean
     ├── Topology/UAT.lean
-    ├── MatrixAnalysis/Lieb.lean
+    ├── MatrixAnalysis/{Lieb,MatrixBernsteinFinal}.lean
     └── Calculus/GradientFlow.lean
 ```
 
