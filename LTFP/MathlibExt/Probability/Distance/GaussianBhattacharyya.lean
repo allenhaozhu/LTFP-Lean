@@ -480,4 +480,133 @@ theorem gaussianTwoPoint_one_sub_tv_ge
     1 - Real.sqrt (1 - Real.exp (-(Δ ^ 2) / (4 * v))) ≤ 1 - tv := by
   linarith
 
+/-! ### Multivariate diagonal-covariance lift (algebraic core)
+
+For two product-Gaussian measures
+`N(m₀, σ²·I_n)` and `N(m₁, σ²·I_n)` on `Fin n → ℝ`, the Bhattacharyya
+affinity factors into a product over coordinates:
+
+`BH(N(m₀, σ²·I_n), N(m₁, σ²·I_n))
+   = ∏ᵢ BH(N(m₀ᵢ, σ²), N(m₁ᵢ, σ²))
+   = ∏ᵢ exp(-(m₀ᵢ - m₁ᵢ)²/(8σ²))
+   = exp(-∑ᵢ (m₀ᵢ - m₁ᵢ)²/(8σ²))
+   = exp(-‖m₀ - m₁‖²/(8σ²))`,
+
+where `‖·‖²` is the Euclidean squared norm. We package the **algebraic
+value** here; the measure-theoretic factoring step
+`bhattacharyya_pi_eq_prod` is the remaining gap (a product-measure
+identity orthogonal to the scalar closed form).
+
+This lift is the form used in Bach (2024) §3.7 for the OLS
+fixed-design minimax lower bound, where `m_i := X βᵢ` is the
+deterministic-design mean vector and the Δ-rate is
+`‖X(β₀ - β₁)‖²/(8σ²) = (β₀ - β₁)ᵀ X^T X (β₀ - β₁)/(8σ²)`. -/
+
+/-- The scalar **multivariate Gaussian two-point Bhattacharyya affinity**
+for diagonal covariance `σ²·I`. Parametrized by the squared Euclidean
+norm `‖m₀ - m₁‖²` of the mean separation (`normSq`) and the common
+scalar variance `v = σ²`:
+
+`gaussianBhattacharyyaScalarMultivariate normSq v = exp(-normSq / (8 v))`.
+
+For the deterministic-design Gaussian observation model
+`y = X β + ε` with `ε ~ N(0, σ²·I)`, two parameter values `β₀, β₁`
+induce mean vectors `X β₀, X β₁` with squared separation
+`‖X(β₀ - β₁)‖² = (β₀ - β₁)ᵀ X^T X (β₀ - β₁)`. Substituting this for
+`normSq` yields the OLS minimax-relevant BH value at variance level
+`σ²`. -/
+noncomputable def gaussianBhattacharyyaScalarMultivariate
+    (normSq v : ℝ) : ℝ :=
+  Real.exp (-normSq / (8 * v))
+
+/-- The multivariate BH scalar reduces to the univariate `Δ = ‖·‖`
+form when `normSq = Δ²`. This is the natural compatibility lemma. -/
+theorem gaussianBhattacharyyaScalarMultivariate_eq_univariate_of_normSq_sq
+    {Δ v : ℝ} :
+    gaussianBhattacharyyaScalarMultivariate (Δ ^ 2) v =
+      gaussianBhattacharyyaScalar Δ v := by
+  unfold gaussianBhattacharyyaScalarMultivariate gaussianBhattacharyyaScalar
+  rfl
+
+/-- The multivariate BH scalar is strictly positive (exponential). -/
+theorem gaussianBhattacharyyaScalarMultivariate_pos (normSq v : ℝ) :
+    0 < gaussianBhattacharyyaScalarMultivariate normSq v := by
+  unfold gaussianBhattacharyyaScalarMultivariate
+  exact Real.exp_pos _
+
+/-- The multivariate BH scalar is nonneg. -/
+theorem gaussianBhattacharyyaScalarMultivariate_nonneg (normSq v : ℝ) :
+    0 ≤ gaussianBhattacharyyaScalarMultivariate normSq v :=
+  (gaussianBhattacharyyaScalarMultivariate_pos normSq v).le
+
+/-- The multivariate BH scalar is ≤ 1 when both the squared norm and
+the variance are nonneg (the squared norm always is, so the only
+real assumption is `v > 0`). -/
+theorem gaussianBhattacharyyaScalarMultivariate_le_one
+    {normSq v : ℝ} (h_normSq : 0 ≤ normSq) (hv : 0 < v) :
+    gaussianBhattacharyyaScalarMultivariate normSq v ≤ 1 := by
+  unfold gaussianBhattacharyyaScalarMultivariate
+  apply Real.exp_le_one_iff.mpr
+  have h8v : (0 : ℝ) < 8 * v := by linarith
+  have h_div : 0 ≤ normSq / (8 * v) := div_nonneg h_normSq h8v.le
+  have h_eq : -normSq / (8 * v) = -(normSq / (8 * v)) := by ring
+  rw [h_eq]
+  linarith
+
+/-- **Coordinate-product identity.** The multivariate BH value on
+`normSq = ∑ᵢ Δᵢ²` equals the product of the per-coordinate BH values.
+This is the algebraic identity behind the product-measure factoring
+`bhattacharyya_pi_eq_prod`: once that measure-theoretic step is
+discharged, this identity is the closed-form computation that does
+the rest of the work. -/
+theorem gaussianBhattacharyyaScalarMultivariate_eq_prod
+    {n : ℕ} (Δ : Fin n → ℝ) (v : ℝ) :
+    gaussianBhattacharyyaScalarMultivariate (∑ i, (Δ i) ^ 2) v =
+      ∏ i, gaussianBhattacharyyaScalar (Δ i) v := by
+  unfold gaussianBhattacharyyaScalarMultivariate gaussianBhattacharyyaScalar
+  -- ∏ᵢ exp(-Δᵢ²/(8v)) = exp(∑ᵢ -Δᵢ²/(8v)) = exp(-∑ᵢ Δᵢ²/(8v))
+  rw [← Real.exp_sum]
+  congr 1
+  -- Goal: -∑ Δᵢ² / (8v) = ∑ -Δᵢ²/(8v).
+  rw [neg_div, Finset.sum_div]
+  rw [← Finset.sum_neg_distrib]
+  refine Finset.sum_congr rfl (fun i _ => ?_)
+  ring
+
+/-- **Antitone in `normSq`.** Larger squared norm separation between
+the means ⇒ smaller BH affinity (the two distributions are easier to
+distinguish). -/
+theorem gaussianBhattacharyyaScalarMultivariate_antitone_normSq
+    {normSq₁ normSq₂ v : ℝ} (hv : 0 < v) (h : normSq₁ ≤ normSq₂) :
+    gaussianBhattacharyyaScalarMultivariate normSq₂ v ≤
+      gaussianBhattacharyyaScalarMultivariate normSq₁ v := by
+  unfold gaussianBhattacharyyaScalarMultivariate
+  apply Real.exp_le_exp.mpr
+  have h8v : (0 : ℝ) < 8 * v := by linarith
+  have h_div : normSq₁ / (8 * v) ≤ normSq₂ / (8 * v) :=
+    div_le_div_of_nonneg_right h h8v.le
+  have h1 : -normSq₁ / (8 * v) = -(normSq₁ / (8 * v)) := by ring
+  have h2 : -normSq₂ / (8 * v) = -(normSq₂ / (8 * v)) := by ring
+  rw [h1, h2]
+  linarith
+
+/-- **Monotone in `v`.** Larger variance ⇒ larger BH affinity (the
+two distributions are harder to distinguish through noisier
+observations). -/
+theorem gaussianBhattacharyyaScalarMultivariate_mono_var
+    {normSq v₁ v₂ : ℝ} (h_normSq : 0 ≤ normSq)
+    (hv₁ : 0 < v₁) (_hv₂ : 0 < v₂) (h : v₁ ≤ v₂) :
+    gaussianBhattacharyyaScalarMultivariate normSq v₁ ≤
+      gaussianBhattacharyyaScalarMultivariate normSq v₂ := by
+  unfold gaussianBhattacharyyaScalarMultivariate
+  apply Real.exp_le_exp.mpr
+  have h8v1 : (0 : ℝ) < 8 * v₁ := by linarith
+  have h8 : (8 * v₁ : ℝ) ≤ 8 * v₂ := by linarith
+  have h_div : normSq / (8 * v₂) ≤ normSq / (8 * v₁) :=
+    div_le_div_of_nonneg_left h_normSq h8v1 h8
+  have h1 : -normSq / (8 * v₁) = -(normSq / (8 * v₁)) := by ring
+  have h2 : -normSq / (8 * v₂) = -(normSq / (8 * v₂)) := by ring
+  rw [h1, h2]
+  linarith
+
 end LTFP.MathlibExt.Probability

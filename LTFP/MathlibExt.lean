@@ -26,6 +26,7 @@ import LTFP.MathlibExt.Calculus.TaylorRemainderRightSided
 import LTFP.MathlibExt.Probability.Adversary
 import LTFP.MathlibExt.Probability.TotalVariation
 import LTFP.MathlibExt.Probability.Distance.Bhattacharyya
+import LTFP.MathlibExt.Probability.Distance.GaussianBhattacharyya
 import LTFP.MathlibExt.Probability.Distance.GaussianTwoPointKL
 import LTFP.MathlibExt.Probability.Distance.Pinsker
 import LTFP.MathlibExt.Probability.Distributions.CovarianceBilinDualMultivariateGaussian
