@@ -80,6 +80,7 @@ import LTFP.MathlibExt.Probability.ResidualODE
 import LTFP.MathlibExt.Probability.NTKLazyTrainingEndToEnd
 import LTFP.MathlibExt.Probability.NTKBootstrapRadius
 import LTFP.MathlibExt.Probability.NTKCoercivityPreservation
+import LTFP.MathlibExt.Probability.NTKLazyCarrierNonParametric
 import LTFP.MathlibExt.Probability.CoveringNumberEuclidean
 import LTFP.MathlibExt.Probability.CoveringNumberReal
 import LTFP.MathlibExt.Probability.Symmetrization
