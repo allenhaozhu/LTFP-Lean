@@ -8,14 +8,18 @@ rate appears in §3.7.
 -/
 import LTFP.Ch03_LinearLeastSquares.OLS
 import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussian
+import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussianMSE
 import LTFP.MathlibExt.Probability.Distributions.OLSSampleD1
+import LTFP.MathlibExt.Probability.Distance.Bhattacharyya
 import LTFP.MathlibExt.Probability.Distance.GaussianBhattacharyya
+import LTFP.MathlibExt.Probability.Distance.GaussianBhattacharyyaMultivariate
 import LTFP.MathlibExt.Probability.Distance.GaussianTwoPointKL
 import LTFP.MathlibExt.Probability.LeCamSquaredLossReduction
 import LTFP.MathlibExt.Probability.TwoPointBayesRisk
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Analysis.SpecificLimits.Basic
 import Mathlib.LinearAlgebra.Matrix.Trace
+import Mathlib.MeasureTheory.Function.SpecialFunctions.Inner
 import Mathlib.Topology.Algebra.Order.Field
 
 namespace LTFP
@@ -1584,6 +1588,372 @@ theorem ols_minimax_lower_bound_d1_gaussian_concrete
 #check @LTFP.olsMinimaxRateScalarD1Concrete
 #check @LTFP.olsMinimaxRateScalarD1Concrete_nonneg
 #check @LTFP.ols_minimax_lower_bound_d1_gaussian_concrete
+
+/-! ## §3.7 general-`d` — Concrete OLS minimax lower bound
+
+The closure below generalises `ols_minimax_lower_bound_d1_gaussian_concrete`
+to estimators with vector-valued range
+`EuclideanSpace ℝ (Fin d) → EuclideanSpace ℝ (Fin d)`. It uses the
+**coordinate-projection reduction** to the scalar Le Cam estimate:
+
+* Pick the canonical first basis vector `e := EuclideanSpace.single ⟨0, hd⟩ 1`.
+* Reduce a vector estimator `A` to the scalar estimator `T y := ⟪A y, e⟫`.
+* Apply the existing scalar Le Cam squared-loss reduction at `θ₀ = 0`,
+  `θ₁ = σ` (so `‖0 - σ·e‖ = σ`).
+* The multivariate Bhattacharyya identity
+  `bhattacharyya_multivariateGaussian_diagonal_eq` collapses the
+  general-`d` TV² bound to `1 - exp(-1/4)`, identical to the d=1 case.
+* By Cauchy–Schwarz, `(⟪A y, e⟫ - θ_j)² ≤ ‖A y - θ_j·e‖²`, so the
+  scalar reduction also lower-bounds the vector MSE.
+
+The resulting rate `olsMinimaxRateScalarGeneralDConcrete σ` is independent
+of `d` and matches the d=1 rate at `n = 1`:
+`σ² · (1/8) · (1 - 2·√(1 - exp(-1/4)))`. -/
+
+/-- §3.7 general-`d` — Concrete minimax rate constant
+`σ² · (1/8) · (1 - 2·√(1 - exp(-1/4)))` ≈ `σ² · 0.00742`.
+
+This is the headline lower-bound rate for vector-valued OLS estimators
+with isotropic noise covariance `σ²·I`. It is independent of the
+ambient dimension `d` thanks to the **coordinate-projection reduction**
+in `ols_minimax_lower_bound_general_d_gaussian_concrete`: the lower
+bound is realised on a one-dimensional subspace and propagates to the
+full vector MSE via Cauchy–Schwarz.
+
+The factor `(1 - 2·√(1 - exp(-1/4)))` is positive
+(`≈ 0.0594 > 0`) but tiny; the factor of 2 inside the `(1 - 2·…)`
+expression is the looseness inherited from the asymmetric TV-set bound
+used in the Le Cam reduction. -/
+noncomputable def olsMinimaxRateGeneralDConcrete (σ : ℝ) : ℝ :=
+  σ^2 * (1 / 8) * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4)))
+
+/-- The concrete general-`d` minimax rate is nonneg. Uses the same
+numerical step as the d=1 rate: `2·√(1 - exp(-1/4)) ≤ 1`, i.e.
+`exp(-1/4) ≥ 3/4` (proven via `Real.add_one_le_exp (-1/4)`). -/
+theorem olsMinimaxRateGeneralDConcrete_nonneg (σ : ℝ) :
+    0 ≤ olsMinimaxRateGeneralDConcrete σ := by
+  unfold olsMinimaxRateGeneralDConcrete
+  -- 1 - 2·√(1 - exp(-1/4)) ≥ 0 reduces to exp(-1/4) ≥ 3/4.
+  have h_exp_ge : (3 / 4 : ℝ) ≤ Real.exp (-1 / 4) := by
+    have h_lin : (-1 / 4 : ℝ) + 1 ≤ Real.exp (-1 / 4) := Real.add_one_le_exp _
+    linarith
+  have h_one_sub_le : 1 - Real.exp (-1 / 4) ≤ 1 / 4 := by linarith
+  have h_one_sub_nn : 0 ≤ 1 - Real.exp (-1 / 4) := by
+    have hle1 : Real.exp (-1 / 4) ≤ 1 := by
+      apply Real.exp_le_one_iff.mpr; norm_num
+    linarith
+  have h_sqrt_le_half : Real.sqrt (1 - Real.exp (-1 / 4)) ≤ 1 / 2 := by
+    have h1 : Real.sqrt (1 - Real.exp (-1 / 4)) ≤ Real.sqrt (1 / 4) :=
+      Real.sqrt_le_sqrt h_one_sub_le
+    have h2 : Real.sqrt (1 / 4 : ℝ) = 1 / 2 := by
+      rw [show (1 / 4 : ℝ) = (1 / 2)^2 by norm_num, Real.sqrt_sq (by norm_num)]
+    linarith
+  have h_one_sub_two_sqrt_nn :
+      0 ≤ 1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4)) := by linarith
+  positivity
+
+/-- §3.7 general-`d` — **Fully discharged OLS minimax lower bound at
+general `d`**.
+
+For any measurable estimator
+`A : EuclideanSpace ℝ (Fin d) → EuclideanSpace ℝ (Fin d)` (with
+`0 < d`), and any `σ > 0`, with both squared-error integrands
+integrable, there exists a worst-case parameter
+`θ_star ∈ {0, σ · EuclideanSpace.single ⟨0, hd⟩ 1}` such that the
+*concrete* vector Gaussian MSE at `θ_star` is at least
+`olsMinimaxRateGeneralDConcrete σ = σ²·(1/8)·(1 - 2·√(1 - exp(-1/4)))`.
+
+The reduction to the scalar d=1 case is via Cauchy–Schwarz on the
+first coordinate of the difference: `(⟪A y - θ_j_vec, e⟫)² ≤
+‖A y - θ_j_vec‖² · ‖e‖² = ‖A y - θ_j_vec‖²`.
+
+The TV bound is `tvDist² ≤ 1 - bhattacharyya² = 1 - exp(-1/4)` via the
+**multivariate** Bhattacharyya identity
+`bhattacharyya_multivariateGaussian_diagonal_eq` (DS.3); the two means
+`0` and `σ·e` have squared distance `σ²·‖e‖² = σ²`, so `Δ²/(4σ²) = 1/4`,
+exactly the d=1 exponent. -/
+theorem ols_minimax_lower_bound_general_d_gaussian_concrete
+    {d : ℕ} (hd : 0 < d) {σ : ℝ} (hσ : 0 < σ)
+    (A : EuclideanSpace ℝ (Fin d) → EuclideanSpace ℝ (Fin d)) (hA : Measurable A)
+    (hint_zero : MeasureTheory.Integrable
+      (fun x => ‖A x - (0 : EuclideanSpace ℝ (Fin d))‖^2)
+      (ProbabilityTheory.multivariateGaussian
+        (0 : EuclideanSpace ℝ (Fin d))
+        ((σ^2) • (1 : Matrix (Fin d) (Fin d) ℝ))
+        (ProbabilityTheory.posSemidef_sq_smul_one (n := d) σ)))
+    (hint_delta : MeasureTheory.Integrable
+      (fun x => ‖A x - σ • EuclideanSpace.single (⟨0, hd⟩ : Fin d) (1 : ℝ)‖^2)
+      (ProbabilityTheory.multivariateGaussian
+        (σ • EuclideanSpace.single (⟨0, hd⟩ : Fin d) (1 : ℝ))
+        ((σ^2) • (1 : Matrix (Fin d) (Fin d) ℝ))
+        (ProbabilityTheory.posSemidef_sq_smul_one (n := d) σ))) :
+    ∃ θ_star : EuclideanSpace ℝ (Fin d),
+      olsMinimaxRateGeneralDConcrete σ ≤
+        LTFP.MathlibExt.Probability.gaussianMSEGeneralD A θ_star σ := by
+  -- Setup: e = e_0, the canonical first basis vector; θ₀ = 0, θ₁ = σ·e.
+  set e : EuclideanSpace ℝ (Fin d) :=
+    EuclideanSpace.single (⟨0, hd⟩ : Fin d) (1 : ℝ) with he_def
+  set θ₀ : EuclideanSpace ℝ (Fin d) := 0 with hθ₀_def
+  set θ₁ : EuclideanSpace ℝ (Fin d) := σ • e with hθ₁_def
+  -- Norm of e is 1.
+  have he_norm : ‖e‖ = 1 := by
+    rw [he_def, EuclideanSpace.norm_single]; simp
+  have he_norm_sq : ‖e‖^2 = 1 := by rw [he_norm]; norm_num
+  -- σ² ≠ 0.
+  have hσ_ne : σ ≠ 0 := ne_of_gt hσ
+  have hσ_sq_pos : 0 < σ^2 := by positivity
+  -- Distribution measures.
+  set P₀ : MeasureTheory.Measure (EuclideanSpace ℝ (Fin d)) :=
+    ProbabilityTheory.multivariateGaussian θ₀
+      ((σ^2) • (1 : Matrix (Fin d) (Fin d) ℝ))
+      (ProbabilityTheory.posSemidef_sq_smul_one (n := d) σ)
+    with hP₀_def
+  set P₁ : MeasureTheory.Measure (EuclideanSpace ℝ (Fin d)) :=
+    ProbabilityTheory.multivariateGaussian θ₁
+      ((σ^2) • (1 : Matrix (Fin d) (Fin d) ℝ))
+      (ProbabilityTheory.posSemidef_sq_smul_one (n := d) σ)
+    with hP₁_def
+  -- Scalar estimator T y := ⟪A y, e⟫.
+  set T : EuclideanSpace ℝ (Fin d) → ℝ := fun y => @inner ℝ _ _ (A y) e with hT_def
+  have hT_meas : Measurable T := by
+    refine Measurable.inner ?_ measurable_const
+    exact hA
+  -- Cauchy-Schwarz pointwise bound: (T y - σ·[j=1])² ≤ ‖A y - θ_j_vec‖².
+  -- Specifically (⟪A y, e⟫ - 0)² ≤ ‖A y - 0‖² · ‖e‖² = ‖A y - 0‖²
+  --        and  (⟪A y, e⟫ - σ)² = (⟪A y - σ·e, e⟫)² ≤ ‖A y - σ·e‖² · ‖e‖²
+  --                            = ‖A y - σ·e‖².
+  have h_inner_sub_zero : ∀ y, T y - 0 = @inner ℝ _ _ (A y - θ₀) e := by
+    intro y
+    rw [hT_def, hθ₀_def, sub_zero, sub_zero]
+  have h_inner_sub_sigma : ∀ y, T y - σ = @inner ℝ _ _ (A y - θ₁) e := by
+    intro y
+    rw [hT_def, hθ₁_def]
+    have h_inner_smul : @inner ℝ _ _ (σ • e) e = σ * ‖e‖^2 := by
+      rw [inner_smul_left, real_inner_self_eq_norm_sq]
+      simp
+    rw [inner_sub_left, h_inner_smul, he_norm_sq, mul_one]
+  -- Pointwise: (T y - 0)² ≤ ‖A y - θ₀‖².
+  have h_cs_zero : ∀ y, (T y - 0)^2 ≤ ‖A y - θ₀‖^2 := by
+    intro y
+    rw [h_inner_sub_zero y]
+    have h_cs : |@inner ℝ _ _ (A y - θ₀) e| ≤ ‖A y - θ₀‖ * ‖e‖ :=
+      abs_real_inner_le_norm _ _
+    have h_sq_le : (@inner ℝ _ _ (A y - θ₀) e)^2 ≤ (‖A y - θ₀‖ * ‖e‖)^2 := by
+      rw [← sq_abs]
+      exact pow_le_pow_left₀ (abs_nonneg _) h_cs 2
+    calc (@inner ℝ _ _ (A y - θ₀) e)^2
+        ≤ (‖A y - θ₀‖ * ‖e‖)^2 := h_sq_le
+      _ = ‖A y - θ₀‖^2 * ‖e‖^2 := by ring
+      _ = ‖A y - θ₀‖^2 * 1 := by rw [he_norm_sq]
+      _ = ‖A y - θ₀‖^2 := by ring
+  have h_cs_sigma : ∀ y, (T y - σ)^2 ≤ ‖A y - θ₁‖^2 := by
+    intro y
+    rw [h_inner_sub_sigma y]
+    have h_cs : |@inner ℝ _ _ (A y - θ₁) e| ≤ ‖A y - θ₁‖ * ‖e‖ :=
+      abs_real_inner_le_norm _ _
+    have h_sq_le : (@inner ℝ _ _ (A y - θ₁) e)^2 ≤ (‖A y - θ₁‖ * ‖e‖)^2 := by
+      rw [← sq_abs]
+      exact pow_le_pow_left₀ (abs_nonneg _) h_cs 2
+    calc (@inner ℝ _ _ (A y - θ₁) e)^2
+        ≤ (‖A y - θ₁‖ * ‖e‖)^2 := h_sq_le
+      _ = ‖A y - θ₁‖^2 * ‖e‖^2 := by ring
+      _ = ‖A y - θ₁‖^2 * 1 := by rw [he_norm_sq]
+      _ = ‖A y - θ₁‖^2 := by ring
+  -- Integrability of (T y - 0)² and (T y - σ)².
+  have hint_T_zero : MeasureTheory.Integrable (fun y => (T y - 0)^2) P₀ := by
+    refine MeasureTheory.Integrable.mono' hint_zero ?_ ?_
+    · exact ((hT_meas.sub measurable_const).pow_const 2).aestronglyMeasurable
+    · refine Filter.Eventually.of_forall (fun y => ?_)
+      rw [Real.norm_eq_abs, abs_of_nonneg (sq_nonneg _)]
+      exact h_cs_zero y
+  have hint_T_sigma : MeasureTheory.Integrable (fun y => (T y - σ)^2) P₁ := by
+    refine MeasureTheory.Integrable.mono' hint_delta ?_ ?_
+    · exact ((hT_meas.sub measurable_const).pow_const 2).aestronglyMeasurable
+    · refine Filter.Eventually.of_forall (fun y => ?_)
+      rw [Real.norm_eq_abs, abs_of_nonneg (sq_nonneg _)]
+      exact h_cs_sigma y
+  -- Scalar Le Cam reduction: (0-σ)²/4 · (1 - 2·tvDist) ≤ ∫(T-0)² dP₀ + ∫(T-σ)² dP₁.
+  have h_lecam :=
+    LTFP.MathlibExt.Probability.leCam_squared_loss_reduction_sum_form
+      (EuclideanSpace ℝ (Fin d)) P₀ P₁ T hT_meas 0 σ hint_T_zero hint_T_sigma
+  -- TV² bound via multivariate Bhattacharyya.
+  -- bhattacharyya(P₀, P₁) = exp(-‖θ₀ - θ₁‖²/(8σ²)).
+  -- ‖θ₀ - θ₁‖² = ‖σ·e‖² = σ²·‖e‖² = σ².
+  -- So bhattacharyya² = exp(-σ²/(4σ²)) = exp(-1/4).
+  -- And tvDist² ≤ 1 - bhattacharyya² = 1 - exp(-1/4).
+  have h_TV_sq :
+      ((LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal)^2 ≤
+        1 - Real.exp (-1 / 4) := by
+    -- Le Cam abstract estimate: TV² ≤ 1 - BH².
+    have h_lecam_abstract :
+        ((LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal)^2 ≤
+          1 - LTFP.MathlibExt.Probability.bhattacharyya P₀ P₁ ^ 2 :=
+      LTFP.MathlibExt.Probability.tvDist_sq_le_one_sub_bhattacharyya_sq P₀ P₁
+    -- BH identity.
+    have h_bh :
+        LTFP.MathlibExt.Probability.bhattacharyya P₀ P₁ =
+          Real.exp (-(∑ i : Fin d,
+            ((WithLp.ofLp (p := 2) (V := Fin d → ℝ) θ₀) i
+              - (WithLp.ofLp (p := 2) (V := Fin d → ℝ) θ₁) i) ^ 2) / (8 * σ^2)) := by
+      rw [hP₀_def, hP₁_def]
+      exact LTFP.MathlibExt.Probability.bhattacharyya_multivariateGaussian_diagonal_eq
+        θ₀ θ₁ hσ_ne
+    -- Compute the sum: only the 0-th coordinate is nonzero.
+    -- θ₀ = 0, θ₁ = σ·e where e is the 0-th basis vector. So
+    -- (ofLp θ₀) i - (ofLp θ₁) i = 0 - σ·(if i = 0 then 1 else 0).
+    -- For i ≠ 0: 0 - 0 = 0, square = 0.
+    -- For i = ⟨0, hd⟩: 0 - σ = -σ, square = σ².
+    have h_sum :
+        (∑ i : Fin d,
+          ((WithLp.ofLp (p := 2) (V := Fin d → ℝ) θ₀) i
+            - (WithLp.ofLp (p := 2) (V := Fin d → ℝ) θ₁) i) ^ 2) = σ^2 := by
+      have h_θ₀_apply : ∀ i : Fin d,
+          (WithLp.ofLp (p := 2) (V := Fin d → ℝ) θ₀) i = 0 := by
+        intro i
+        rw [hθ₀_def]
+        show (WithLp.ofLp (p := 2) (V := Fin d → ℝ) (0 : EuclideanSpace ℝ (Fin d))) i = 0
+        simp
+      have h_θ₁_apply : ∀ i : Fin d,
+          (WithLp.ofLp (p := 2) (V := Fin d → ℝ) θ₁) i =
+            if i = ⟨0, hd⟩ then σ else 0 := by
+        intro i
+        rw [hθ₁_def, he_def]
+        -- θ₁ = σ • EuclideanSpace.single ⟨0, hd⟩ 1
+        -- ofLp(σ•single i 1) j = σ * single i 1 j = σ * (if j = i then 1 else 0).
+        rw [WithLp.ofLp_smul]
+        show σ • (WithLp.ofLp (p := 2) (V := Fin d → ℝ)
+              (EuclideanSpace.single (⟨0, hd⟩ : Fin d) (1 : ℝ))) i = _
+        rw [EuclideanSpace.ofLp_single]
+        by_cases h : i = ⟨0, hd⟩
+        · subst h; simp
+        · rw [Pi.single_eq_of_ne h, smul_zero, if_neg h]
+      -- Now compute the sum.
+      have h_pointwise : ∀ i : Fin d,
+          ((WithLp.ofLp (p := 2) (V := Fin d → ℝ) θ₀) i
+            - (WithLp.ofLp (p := 2) (V := Fin d → ℝ) θ₁) i) ^ 2 =
+          if i = ⟨0, hd⟩ then σ^2 else 0 := by
+        intro i
+        rw [h_θ₀_apply i, h_θ₁_apply i, zero_sub]
+        by_cases h : i = ⟨0, hd⟩
+        · rw [if_pos h, if_pos h]; ring
+        · rw [if_neg h, if_neg h, neg_zero]; ring
+      rw [Finset.sum_congr rfl (fun i _ => h_pointwise i)]
+      rw [Finset.sum_ite_eq']
+      simp
+    rw [h_sum] at h_bh
+    -- Now bhattacharyya = exp(-σ²/(8σ²)) = exp(-1/8).
+    have h_bh_simp :
+        LTFP.MathlibExt.Probability.bhattacharyya P₀ P₁ =
+          Real.exp (-1 / 8) := by
+      rw [h_bh]
+      congr 1
+      field_simp
+    rw [h_bh_simp] at h_lecam_abstract
+    -- (exp(-1/8))² = exp(-1/4).
+    have h_sq_exp : Real.exp (-1 / 8) ^ 2 = Real.exp (-1 / 4) := by
+      rw [sq, ← Real.exp_add]
+      congr 1; ring
+    rw [h_sq_exp] at h_lecam_abstract
+    exact h_lecam_abstract
+  have h_TV_nn : 0 ≤ (LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal :=
+    LTFP.MathlibExt.Probability.tvDist_toReal_nonneg _ _
+  have h_TV_le :
+      (LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal ≤
+        Real.sqrt (1 - Real.exp (-1 / 4)) := by
+    have h_arg_nn : 0 ≤ 1 - Real.exp (-1 / 4) := by
+      have hle1 : Real.exp (-1 / 4) ≤ 1 := by
+        apply Real.exp_le_one_iff.mpr; norm_num
+      linarith
+    have h_sqrt_sq :
+        (LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal =
+          Real.sqrt (((LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal)^2) := by
+      rw [Real.sqrt_sq h_TV_nn]
+    rw [h_sqrt_sq]
+    exact Real.sqrt_le_sqrt h_TV_sq
+  -- (0-σ)²/4 · (1 - 2·√(...)) ≤ (0-σ)²/4 · (1 - 2·tvDist).
+  have h_one_sub_two_TV_ge :
+      1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4)) ≤
+        1 - 2 * (LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal := by
+    linarith
+  have hσ_sq_quart_nn : 0 ≤ (0 - σ)^2 / 4 := by
+    have : (0 - σ)^2 ≥ 0 := sq_nonneg _
+    linarith
+  have h_lecam_intermediate :
+      (0 - σ)^2 / 4 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+        (∫ y, (T y - 0)^2 ∂P₀) + ∫ y, (T y - σ)^2 ∂P₁ := by
+    have h_mul :
+        (0 - σ)^2 / 4 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+        (0 - σ)^2 / 4 *
+            (1 - 2 * (LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal) :=
+      mul_le_mul_of_nonneg_left h_one_sub_two_TV_ge hσ_sq_quart_nn
+    linarith
+  -- Cauchy-Schwarz reduces scalar integrals to vector MSE.
+  have h_int_T_le_zero :
+      ∫ y, (T y - 0)^2 ∂P₀ ≤ ∫ y, ‖A y - θ₀‖^2 ∂P₀ := by
+    refine MeasureTheory.integral_mono hint_T_zero hint_zero ?_
+    intro y
+    exact h_cs_zero y
+  have h_int_T_le_sigma :
+      ∫ y, (T y - σ)^2 ∂P₁ ≤ ∫ y, ‖A y - θ₁‖^2 ∂P₁ := by
+    refine MeasureTheory.integral_mono hint_T_sigma hint_delta ?_
+    intro y
+    exact h_cs_sigma y
+  -- Define vector MSEs.
+  set R₀ : ℝ := ∫ y, ‖A y - θ₀‖^2 ∂P₀ with hR₀_def
+  set R₁ : ℝ := ∫ y, ‖A y - θ₁‖^2 ∂P₁ with hR₁_def
+  -- Compose: rate ≤ R₀ + R₁.
+  have h_rate_le_sum :
+      (0 - σ)^2 / 4 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+        R₀ + R₁ := by
+    calc (0 - σ)^2 / 4 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4)))
+        ≤ (∫ y, (T y - 0)^2 ∂P₀) + ∫ y, (T y - σ)^2 ∂P₁ := h_lecam_intermediate
+      _ ≤ R₀ + R₁ := by
+          exact add_le_add h_int_T_le_zero h_int_T_le_sigma
+  -- (0 - σ)² = σ².
+  have h_diff_sq : (0 - σ)^2 = σ^2 := by ring
+  rw [h_diff_sq] at h_rate_le_sum
+  -- max(R₀, R₁) ≥ (R₀ + R₁)/2 ≥ σ²/8 · (1 - 2·√(...)).
+  have h_max_ge_avg :
+      (R₀ + R₁) / 2 ≤ max R₀ R₁ :=
+    LTFP.MathlibExt.Probability.average_le_max_of_pair R₀ R₁
+  have h_avg_bound :
+      σ^2 / 8 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+        (R₀ + R₁) / 2 := by
+    have : σ^2 / 4 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+        R₀ + R₁ := h_rate_le_sum
+    linarith
+  have h_final :
+      σ^2 / 8 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+        max R₀ R₁ := h_avg_bound.trans h_max_ge_avg
+  -- Extract witness.
+  rcases le_total R₀ R₁ with h | h
+  · refine ⟨θ₁, ?_⟩
+    have h_max_eq : max R₀ R₁ = R₁ := max_eq_right h
+    rw [h_max_eq] at h_final
+    unfold olsMinimaxRateGeneralDConcrete
+    show σ^2 * (1 / 8) * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+      LTFP.MathlibExt.Probability.gaussianMSEGeneralD A θ₁ σ
+    have h_eq : σ^2 * (1 / 8) = σ^2 / 8 := by ring
+    rw [h_eq]
+    -- gaussianMSEGeneralD A θ₁ σ = R₁ by definition.
+    show σ^2 / 8 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+      ∫ y, ‖A y - θ₁‖^2 ∂P₁
+    exact h_final
+  · refine ⟨θ₀, ?_⟩
+    have h_max_eq : max R₀ R₁ = R₀ := max_eq_left h
+    rw [h_max_eq] at h_final
+    unfold olsMinimaxRateGeneralDConcrete
+    show σ^2 * (1 / 8) * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+      LTFP.MathlibExt.Probability.gaussianMSEGeneralD A θ₀ σ
+    have h_eq : σ^2 * (1 / 8) = σ^2 / 8 := by ring
+    rw [h_eq]
+    show σ^2 / 8 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+      ∫ y, ‖A y - θ₀‖^2 ∂P₀
+    exact h_final
+
+#check @LTFP.olsMinimaxRateGeneralDConcrete
+#check @LTFP.olsMinimaxRateGeneralDConcrete_nonneg
+#check @LTFP.ols_minimax_lower_bound_general_d_gaussian_concrete
 
 /-- §3.5 — Sum of squared residuals is nonneg (any residual vector). -/
 theorem sum_sq_residuals_nonneg {n : ℕ} (r : Fin n → ℝ) :
