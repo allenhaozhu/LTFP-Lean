@@ -71,6 +71,7 @@ import LTFP.MathlibExt.Probability.FullNTKConcentration
 import LTFP.MathlibExt.Probability.FullNTKLazyCarrier
 import LTFP.MathlibExt.Probability.FullNetwork
 import LTFP.MathlibExt.Probability.FullNetworkGradient
+import LTFP.MathlibExt.Probability.FullNetworkFrechet
 import LTFP.MathlibExt.Probability.RandomFeatureDynamics
 import LTFP.MathlibExt.Probability.RandomFeatureCarrier
 import LTFP.MathlibExt.Probability.MovementFromResidualDecay
