@@ -226,30 +226,30 @@ theorem pinsker_inequality (x : ℝ) :
 
 /-! ### §15.1 — Measure-theoretic Bretagnolle–Huber / Pinsker
 
-With `LTFP.MathlibExt.Probability.tvDist` now available locally
-(PR #39164 upstreams it to Mathlib), the algebraic anchors above can
-be lifted to honest theorems on actual measures. Mathlib provides
-`klDiv : Measure α → Measure α → ℝ≥0∞`, but the standard textbook
-proof of Bretagnolle–Huber goes through the *Hellinger affinity*
+With `LTFP.MathlibExt.Probability.tvDist` and the Bhattacharyya /
+Hellinger machinery available locally (`LTFP/MathlibExt/Probability/
+Distance/Bhattacharyya.lean`; PR #39164 upstreams `tvDist` and PR #39542
+upstreams the BH bridge), the algebraic anchors above lift to honest
+theorems on actual measures. The standard textbook proof of
+Bretagnolle–Huber goes through the *Hellinger affinity*
 `ρ(μ,ν) := ∫ √(dμ/dν) dν` (or equivalently the Bhattacharyya
 coefficient), with the chain
 
   tvDist²(μ,ν)  ≤  1 - ρ(μ,ν)²  ≤  1 - exp(-KL(μ‖ν)),
 
 the second inequality being the Cauchy–Schwarz / Jensen step. Both
-of those measure-theoretic identities are out of reach of the current
-local infrastructure (no `Hellinger`, no usable `klDiv` ↔
-`tvDist` bridge), so we parametrize the result by an *abstract*
-divergence value: any real number `D` for which the "BH bridge"
-`tvDist² ≤ 1 - exp(-D)` holds yields, via the algebraic chain
-below, the Bretagnolle–Huber bound `tvDist ≤ √(1 - exp(-D))`.
+pieces are now formalized in `Bhattacharyya.lean`
+(`tvDist_sq_le_one_sub_bhattacharyya_sq` for the Le Cam step,
+`bhattacharyya_ge_exp_neg_half_klDiv` for the Jensen step), so the
+end-to-end carrier `tvDist_le_sqrt_one_sub_exp_neg_klDiv` below
+takes only `μ ≪ ν` and `klDiv μ ν ≠ ∞` as hypotheses — no
+parametric BH bridge.
 
-This pattern matches how `klDiv` is used in PAC-Bayes: the user
-discharges the bridge hypothesis once (typically from the
-Donsker–Varadhan variational formula and Cauchy–Schwarz), and the
-algebraic chain below promotes it to the standard TV bound. When
-Mathlib lands the Hellinger/Bhattacharyya machinery, the bridge
-hypothesis becomes a one-line `klDiv`-only corollary. -/
+The abstract carrier `tvDist_le_sqrt_one_sub_exp_neg` (taking the
+bridge `tvDist² ≤ 1 - exp(-D)` as a hypothesis) is preserved as a
+B-class entry point for callers who already have the bridge in their
+own form (e.g., from a Donsker–Varadhan / Cauchy–Schwarz argument on
+a non-`klDiv` divergence). -/
 
 section MeasureBretagnolleHuber
 

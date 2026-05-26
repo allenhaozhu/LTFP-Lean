@@ -72,18 +72,23 @@ For an L-smooth `f : E → ℝ`,
 and at the canonical step `η = 1/L`,
 `f(x⁺) ≤ f(x) − 1/(2L) · ‖∇f(x)‖²`.
 
-Mathlib gap: a fully general L-smoothness descent chain
-(`LipschitzWith L (gradient f) → quadratic upper bound → descent`) is
-not yet a single named lemma. We register here:
+The full L-smoothness descent chain
+(`LipschitzWith L (gradient f) → quadratic upper bound → descent`)
+is formalized end-to-end in this file:
 
 * the **algebraic core** (descent-ratio nonnegativity) on `ℝ`;
-* the **canonical step corollary** (η = 1/L collapses the prefactor); and
+* the **canonical step corollary** (η = 1/L collapses the prefactor);
 * a **concrete instance** on `f(x) = x² / 2` with `L = 1`, `η = 1`,
-  where the descent inequality holds with equality and is proved by `ring`.
+  where the descent inequality holds with equality and is proved by `ring`;
+* the **quadratic upper bound from `LipschitzWith ∇f`**, via the
+  auxiliary-function Taylor argument (Bach 2024 §5.1), formalized in
+  `lSmooth_quadratic_upper_bound` below; and
+* the **end-to-end descent lemma** taking only `LipschitzWith L (gradient f)`
+  + a differentiability witness, formalized in
+  `gd_descent_lemma_of_lipschitz_gradient_diff` below.
 
-When Mathlib lands the L-smoothness ⇒ quadratic upper bound chain,
-the abstract version `f(x − η g) ≤ f(x) − η (1 − Lη/2) ‖g‖²` will be
-re-proved against `LipschitzWith L (gradient f)` directly. -/
+No parametric `hTaylor` hypothesis is needed in the end-to-end form;
+the chain is closed against Mathlib at the pin. -/
 
 /-- §5.1 — Algebraic descent-ratio nonnegativity.
 
@@ -159,12 +164,22 @@ Substituting `y = x − η · ∇f(x)` and unfolding `‖−η • ∇f(x)‖² 
 `f(x − η ∇f(x)) ≤ f(x) − η (1 − L η / 2) · ‖∇f(x)‖²`,
 which is the **L-smoothness descent lemma**.
 
-The Mathlib gap noted on the algebraic anchor above is the **first**
-step of the chain (`LipschitzWith L (gradient f)` ⇒ the quadratic
-upper bound), which requires a Taylor-with-Lagrange-remainder argument
-not yet packaged in Mathlib. The **second** step of the chain — from
-the quadratic upper bound to the descent lemma — is fully formalized
-here, parametrized by the L-smooth upper bound as hypothesis. -/
+Both steps of the chain are now fully formalized in this file:
+
+* **First step** (`LipschitzWith L (gradient f)` ⇒ the quadratic upper
+  bound) is discharged in `lSmooth_quadratic_upper_bound` below, via an
+  auxiliary one-variable function `g(t)` whose derivative is shown to
+  be ≤ 0 on `[0, 1]` by Cauchy–Schwarz + the Lipschitz bound, then
+  `antitoneOn_of_hasDerivWithinAt_nonpos` collapses `g(1) ≤ g(0) = 0`.
+  This is the textbook "auxiliary function" Taylor-remainder argument
+  (Bach 2024 §5.1) ported directly to Lean, no Mathlib gap remains.
+* **Second step** (quadratic upper bound ⇒ descent lemma) is
+  formalized in `gd_descent_lemma_of_quadratic_bound` below.
+
+The one-hypothesis end-to-end form is
+`gd_descent_lemma_of_lipschitz_gradient_diff`, which composes both
+steps and takes only `LipschitzWith L (gradient f)` plus a
+differentiability witness `HasGradientAt`. -/
 
 /-- §5.1 — Abstract L-smoothness descent lemma (intermediate form).
 

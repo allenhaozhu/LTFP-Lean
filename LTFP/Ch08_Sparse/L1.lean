@@ -190,9 +190,10 @@ theorem softThreshold_le_self_of_nonneg {lam z : ℝ}
     `b⋆ = sign(c)·max(|c|−λ, 0)`.
 
     The vector form `Xᵀ(Xβ⋆ − y) ∈ −λ ∂‖β⋆‖₁` reduces to the scalar
-    statement coordinate-wise when `XᵀX = I`; the general subdifferential
-    calculus for ℓ₁ is currently a Mathlib gap (see project notes for
-    `lasso-kkt`). -/
+    statement coordinate-wise when `XᵀX = I`; the multidim form is
+    captured unconditionally by `lasso_kkt_multidim` below via the
+    `IsL1SubgradientFin` predicate from
+    `LTFP.MathlibExt.Analysis.Subgradient.L1`. -/
 theorem lasso_kkt_scalar (c lam : ℝ) (hlam : 0 ≤ lam) :
     IsMinOn (fun b => (b - c) ^ 2 / 2 + lam * |b|) Set.univ
       (softThreshold lam c) := by
