@@ -76,6 +76,7 @@ import LTFP.MathlibExt.Probability.RandomFeatureDynamics
 import LTFP.MathlibExt.Probability.RandomFeatureCarrier
 import LTFP.MathlibExt.Probability.MovementFromResidualDecay
 import LTFP.MathlibExt.Probability.ResidualGronwallDecay
+import LTFP.MathlibExt.Probability.ResidualODE
 import LTFP.MathlibExt.Probability.CoveringNumberEuclidean
 import LTFP.MathlibExt.Probability.CoveringNumberReal
 import LTFP.MathlibExt.Probability.Symmetrization
