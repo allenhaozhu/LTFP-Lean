@@ -1128,12 +1128,7 @@ exp(-(m₀-m₁)²/(8·σ²/n))`
 combined with the Le Cam estimate `tv² ≤ 1 - BH²` from
 `LTFP.MathlibExt.Probability.Distance.Bhattacharyya`.
 
-The single remaining measure-theoretic gap at d=1 is the identity
-`bhattacharyya (gaussianReal _ _) (gaussianReal _ _) =
-gaussianBhattacharyyaScalar` (closed-form Gaussian Bhattacharyya
-affinity, a small follow-up PR — see file docstring at
-`GaussianBhattacharyya.lean`). Both other ingredients are already
-discharged:
+The BH-route ingredients are now **all discharged**:
 
 * The Le Cam estimate `tvDist² ≤ 1 - BH²` (in
   `Bhattacharyya.lean`).
@@ -1141,12 +1136,27 @@ discharged:
   `TwoPointBayesRisk.lean`).
 * The Bhattacharyya algebraic chain
   `1 - BH² = 1 - exp(-Δ²/(4v))` (in `GaussianBhattacharyya.lean`).
+* **NEW (2026-05-26)**: the measure-theoretic BH identity
+  `bhattacharyya (gaussianReal m₀ v) (gaussianReal m₁ v) =
+  exp(-(m₀-m₁)²/(8v))` (`bhattacharyya_gaussianReal_scalar_eq` in
+  `GaussianBhattacharyya.lean`). This was previously the single
+  remaining measure-theoretic gap and is now closed.
+* **NEW (2026-05-26)**: the unconditional testing-side TV bound
+  `tvDist (gaussianReal 0 v) (gaussianReal Δ v) ≤ √(1 - exp(-1/4))`
+  at the canonical d=1 setting `v = Δ² = σ²/n` is now provable
+  unconditionally — see `tvDist_gaussianReal_d1_le_sqrt_one_sub_exp_neg_quarter`
+  below.
 
-We expose the *single missing piece* as the named hypothesis
-`h_bh_lecam`, which packages "the Le Cam average bound at the d=1
-Gaussian setting". Once Mathlib lands the measure-theoretic BH
-identity for `gaussianReal`, `h_bh_lecam` is derivable from the chain
-above and the present theorem becomes fully unconditional.
+The **remaining content** of the parametric `h_bh_lecam` hypothesis is
+the **Le Cam squared-loss reduction** — the textbook step (Tsybakov §2.4.2)
+that connects abstract `excessRisk θ̂ θ` to TV distance between the
+sampling distributions. This is *not* the BH identity gap; it is a
+separate measure-theoretic argument that requires giving concrete
+semantics to `excessRisk` and `sample` (e.g., `excessRisk θ̂ θ :=
+𝔼_{Y ~ N(θ, σ²/n)^n} ‖θ̂(Y) - θ‖²`). Until those abstract carriers are
+instantiated, the Le Cam reduction must be supplied as a hypothesis;
+once instantiated, it follows from the standard squared-loss reduction
+plus this file's testing-side BH discharge.
 
 **Why d=1 instead of general d**: the general-d carrier
 `ols_minimax_lower_bound_for_all_estimators` requires both
@@ -1198,6 +1208,98 @@ theorem ols_minimax_lower_bound_d1_gaussian
     rw [h_max_eq] at h_max
     exact h_max
 
+/-- §3.7 d=1 — **Testing-side Bhattacharyya TV bound** at the d=1 setting,
+specialized to the canonical sample-mean Gaussians used in
+`ols_minimax_lower_bound_d1_gaussian`.
+
+With `v = σ²/n` and `Δ = σ/√n` (so `Δ² = σ²/n = v` and the exponent
+`-Δ²/(4v)` simplifies to `-1/4`), this corollary discharges the
+testing-side Le Cam estimate
+
+  `tvDist (gaussianReal 0 v) (gaussianReal Δ v) ≤ √(1 - exp(-1/4))`,
+
+unconditionally — no parametric hypothesis is needed. The proof composes
+the measure-theoretic BH identity `bhattacharyya_gaussianReal_scalar_eq`
+(landed in `LTFP.MathlibExt.Probability.GaussianBhattacharyya`) with the
+abstract Le Cam estimate `tvDist² ≤ 1 - BH²` from
+`LTFP.MathlibExt.Probability.Bhattacharyya.tvDist_sq_le_one_sub_bhattacharyya_sq`.
+
+This is the **discharge of the testing-side gap** that was previously
+parametric in `ols_minimax_lower_bound_d1_gaussian`'s `h_bh_lecam`
+hypothesis. The remaining content of `h_bh_lecam` is the **Le Cam
+squared-loss reduction**, which connects abstract `excessRisk` to TV
+distance and is a separate textbook step (Tsybakov §2.4.2; not part of
+the BH identity discharge). -/
+theorem tvDist_gaussianReal_d1_le_sqrt_one_sub_exp_neg_quarter
+    {sigmaSq : ℝ} (hσ : 0 < sigmaSq) {n : ℕ} (hn : 0 < n) :
+    ((LTFP.MathlibExt.Probability.tvDist
+        (ProbabilityTheory.gaussianReal 0
+          ⟨sigmaSq / (n : ℝ), div_nonneg hσ.le (by exact_mod_cast hn.le)⟩)
+        (ProbabilityTheory.gaussianReal (Real.sqrt (sigmaSq / (n : ℝ)))
+          ⟨sigmaSq / (n : ℝ),
+            div_nonneg hσ.le (by exact_mod_cast hn.le)⟩))).toReal ^ 2 ≤
+      1 - Real.exp (-1 / 4) := by
+  -- Setup: v := σ²/n as an NNReal, Δ := σ/√n.
+  have hn' : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have h_quot_pos : 0 < sigmaSq / (n : ℝ) := div_pos hσ hn'
+  set v : NNReal :=
+    ⟨sigmaSq / (n : ℝ), div_nonneg hσ.le (by exact_mod_cast hn.le)⟩ with hv_def
+  have hv_pos_nn : 0 < v := by
+    rw [hv_def, ← NNReal.coe_lt_coe]
+    exact h_quot_pos
+  have hv_ne : v ≠ 0 := ne_of_gt hv_pos_nn
+  set Δ : ℝ := Real.sqrt (sigmaSq / (n : ℝ)) with hΔ_def
+  -- Le Cam: TV² ≤ 1 - BH².
+  have h_lecam :
+      ((LTFP.MathlibExt.Probability.tvDist (ProbabilityTheory.gaussianReal 0 v)
+          (ProbabilityTheory.gaussianReal Δ v))).toReal ^ 2 ≤
+        1 - LTFP.MathlibExt.Probability.bhattacharyya
+            (ProbabilityTheory.gaussianReal 0 v)
+            (ProbabilityTheory.gaussianReal Δ v) ^ 2 :=
+    LTFP.MathlibExt.Probability.tvDist_sq_le_one_sub_bhattacharyya_sq
+      (ProbabilityTheory.gaussianReal 0 v)
+      (ProbabilityTheory.gaussianReal Δ v)
+  -- BH identity: bhattacharyya = exp(-(0-Δ)² / (8v)) = exp(-Δ²/(8v)).
+  have h_bh :
+      LTFP.MathlibExt.Probability.bhattacharyya
+        (ProbabilityTheory.gaussianReal 0 v)
+        (ProbabilityTheory.gaussianReal Δ v) =
+      LTFP.MathlibExt.Probability.gaussianBhattacharyyaScalar (0 - Δ) (v : ℝ) :=
+    LTFP.MathlibExt.Probability.bhattacharyya_gaussianReal_scalar_eq 0 Δ hv_ne
+  rw [h_bh] at h_lecam
+  -- Unfold gaussianBhattacharyyaScalar: it's exp(-(0-Δ)² / (8v)).
+  unfold LTFP.MathlibExt.Probability.gaussianBhattacharyyaScalar at h_lecam
+  -- (0 - Δ)² = Δ²
+  have h_diff_sq : (0 - Δ) ^ 2 = Δ ^ 2 := by ring
+  -- Compute Δ² = σ²/n = (v : ℝ).
+  have hΔ_sq : Δ ^ 2 = sigmaSq / (n : ℝ) := by
+    rw [hΔ_def]; exact Real.sq_sqrt h_quot_pos.le
+  have hv_real : (v : ℝ) = sigmaSq / (n : ℝ) := rfl
+  -- Now compute the exponent: -(Δ²) / (8 · v) = -1/8 · (σ²/n)/(σ²/n) is too much;
+  -- we want exp(2·exponent) = exp(-Δ²/(4v)) = exp(-(σ²/n)/(4·σ²/n)) = exp(-1/4).
+  -- Strategy: show 1 - exp(-Δ²/(8v))² = 1 - exp(-Δ²/(4v)) = 1 - exp(-1/4).
+  -- We have h_lecam : TV² ≤ 1 - exp(-(0-Δ)²/(8v))².
+  -- Rewrite (0-Δ)² = Δ² in h_lecam.
+  rw [h_diff_sq] at h_lecam
+  -- Now h_lecam : TV² ≤ 1 - (exp(-(Δ²)/(8v)))².
+  -- Use exp(a)² = exp(2a): (exp(-Δ²/(8v)))² = exp(-Δ²/(4v)).
+  have h_sq_exp : Real.exp (-(Δ ^ 2) / (8 * (v : ℝ))) ^ 2 =
+      Real.exp (-(Δ ^ 2) / (4 * (v : ℝ))) := by
+    rw [sq, ← Real.exp_add]
+    congr 1
+    have hv_pos_real : (0 : ℝ) < (v : ℝ) := by rw [hv_real]; exact h_quot_pos
+    have hv_ne_real : (v : ℝ) ≠ 0 := ne_of_gt hv_pos_real
+    field_simp
+    ring
+  rw [h_sq_exp] at h_lecam
+  -- Now reduce -(Δ²)/(4v) to -1/4.
+  have h_exp_arg : -(Δ ^ 2) / (4 * (v : ℝ)) = -1 / 4 := by
+    rw [hΔ_sq, hv_real]
+    have h_quot_ne : sigmaSq / (n : ℝ) ≠ 0 := ne_of_gt h_quot_pos
+    field_simp
+  rw [h_exp_arg] at h_lecam
+  exact h_lecam
+
 /-- §3.7 d=1 — **Algebraic identity** showing that the d=1 minimax rate
 in `ols_minimax_lower_bound_d1_gaussian` matches the closed-form
 Bhattacharyya two-point Bayes-risk expression at `Δ² = σ²/n`,
@@ -1235,6 +1337,7 @@ theorem olsMinimaxRateScalarD1_eq_bh_form
 #check @LTFP.olsMinimaxRateScalarD1_nonneg
 #check @LTFP.olsMinimaxRateScalarD1_pos
 #check @LTFP.ols_minimax_lower_bound_d1_gaussian
+#check @LTFP.tvDist_gaussianReal_d1_le_sqrt_one_sub_exp_neg_quarter
 #check @LTFP.olsMinimaxRateScalarD1_eq_bh_form
 
 /-- §3.5 — Sum of squared residuals is nonneg (any residual vector). -/
