@@ -55,6 +55,7 @@ import LTFP.MathlibExt.Probability.KullbackLeibler
 import LTFP.MathlibExt.Probability.Moments.CovarianceBilinProdPi
 import LTFP.MathlibExt.Probability.Moments.SubExponential
 import LTFP.MathlibExt.Probability.LeCam
+import LTFP.MathlibExt.Probability.TwoPointBayesRisk
 import LTFP.MathlibExt.Probability.LinearClassClosedBallCover
 import LTFP.MathlibExt.Probability.LinearClassCoveringFinite
 import LTFP.MathlibExt.Probability.LinearClassSampleCover
