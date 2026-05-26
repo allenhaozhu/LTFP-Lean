@@ -8,8 +8,10 @@ rate appears in §3.7.
 -/
 import LTFP.Ch03_LinearLeastSquares.OLS
 import LTFP.MathlibExt.Probability.Distributions.MultivariateGaussian
+import LTFP.MathlibExt.Probability.Distributions.OLSSampleD1
 import LTFP.MathlibExt.Probability.Distance.GaussianBhattacharyya
 import LTFP.MathlibExt.Probability.Distance.GaussianTwoPointKL
+import LTFP.MathlibExt.Probability.LeCamSquaredLossReduction
 import LTFP.MathlibExt.Probability.TwoPointBayesRisk
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Analysis.SpecificLimits.Basic
@@ -1339,6 +1341,249 @@ theorem olsMinimaxRateScalarD1_eq_bh_form
 #check @LTFP.ols_minimax_lower_bound_d1_gaussian
 #check @LTFP.tvDist_gaussianReal_d1_le_sqrt_one_sub_exp_neg_quarter
 #check @LTFP.olsMinimaxRateScalarD1_eq_bh_form
+
+/-! ### Concrete d=1 OLS minimax lower bound — fully discharged
+
+The theorems above wire the abstract parametric carrier
+`ols_minimax_lower_bound_d1_gaussian` against an explicit
+`h_bh_lecam` hypothesis. We now ship the **fully discharged**
+concrete d=1 OLS minimax lower bound by:
+
+(1) replacing the abstract `excessRisk` with the concrete Gaussian
+MSE `gaussianMSED1 A θ σ² n := ∫ y, (A y - θ)² ∂(N(θ, σ²/n))`,
+(2) replacing the abstract `sample` with the identity (d=1 OLS uses
+the scalar sample mean `Ȳ ~ N(θ, σ²/n)` directly as its sufficient
+statistic),
+(3) applying the **Le Cam two-point squared-loss reduction**
+(Tsybakov 2009, §2.4.2) from
+`LTFP.MathlibExt.Probability.LeCamSquaredLossReduction` to discharge
+the `h_bh_lecam` average-risk hypothesis,
+(4) composing with the testing-side TV bound from
+`tvDist_gaussianReal_d1_le_sqrt_one_sub_exp_neg_quarter`.
+
+The Le Cam reduction in this library carries a **factor-of-2
+looseness** (from the asymmetric TV-set bound; see the docstring of
+`measureReal_sub_le_two_tvDist_toReal`); the published concrete rate
+reflects this honestly via the constant `(1 - 2·tv_bound)` rather
+than the textbook-tight `(1 - tv_bound)`.
+
+### Concrete rate
+
+`olsMinimaxRateScalarD1Concrete σ² n := (σ²/n) · (1/8) · (1 - 2·√(1 - exp(-1/4)))`.
+
+Numerically this is `≈ 0.0074 · σ²/n` — a positive constant times
+`σ²/n`, matching the textbook scaling `σ²·d/n` at `d=1` up to
+a constant.
+
+To upgrade to the tight constant (and recover the original
+`olsMinimaxRateScalarD1`), the Hahn-decomposition route in
+`LeCamSquaredLossReduction.measureReal_sub_le_two_tvDist_toReal`
+would need to be tightened (see the docstring there). This is a
+clean algebraic improvement and does not depend on the rest of the
+discharge chain. -/
+
+/-- §3.7 d=1 — **Concrete OLS minimax rate** at the scalar
+Gaussian sample-mean setting, with the *honest* factor-2-loose
+constant from the Le Cam reduction:
+
+`olsMinimaxRateScalarD1Concrete σ² n = (σ²/n) · (1/8) · (1 - 2·√(1 - exp(-1/4)))`.
+
+The factor `(1 - 2·√(1 - exp(-1/4)))` is positive
+(`≈ 0.0594 > 0`) but tiny; the factor of 2 inside the `(1 - 2·…)`
+expression is the looseness inherited from the asymmetric TV-set
+bound used in the Le Cam reduction. -/
+noncomputable def olsMinimaxRateScalarD1Concrete (sigmaSq : ℝ) (n : ℕ) : ℝ :=
+  (sigmaSq / n) * (1 / 8) * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4)))
+
+/-- The concrete d=1 minimax rate is nonneg for `0 ≤ σ²` and `n > 0`.
+Uses `2·√(1 - exp(-1/4)) < 1`, i.e. `√(1 - exp(-1/4)) < 1/2`, i.e.
+`1 - exp(-1/4) < 1/4`, i.e. `exp(-1/4) > 3/4`. Numerically
+`exp(-1/4) ≈ 0.779 > 0.75`. -/
+theorem olsMinimaxRateScalarD1Concrete_nonneg
+    {sigmaSq : ℝ} (hσ : 0 ≤ sigmaSq) {n : ℕ} (hn : 0 < n) :
+    0 ≤ olsMinimaxRateScalarD1Concrete sigmaSq n := by
+  unfold olsMinimaxRateScalarD1Concrete
+  have hn' : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have h_quot_nn : 0 ≤ sigmaSq / (n : ℝ) := div_nonneg hσ hn'.le
+  have h_eighth_nn : (0 : ℝ) ≤ 1 / 8 := by norm_num
+  -- Goal: 2·√(1 - exp(-1/4)) ≤ 1, i.e. √(1 - exp(-1/4)) ≤ 1/2.
+  -- Equivalent: 1 - exp(-1/4) ≤ 1/4, i.e. exp(-1/4) ≥ 3/4.
+  -- We use Real.exp_neg_one_quarter_lower_estimate via Real.add_one_le_exp.
+  -- Real.add_one_le_exp : 1 + x ≤ exp(x); apply at x = -1/4 ⇒ exp(-1/4) ≥ 3/4.
+  have h_exp_ge : (3 / 4 : ℝ) ≤ Real.exp (-1 / 4) := by
+    have h_lin : (-1/4 : ℝ) + 1 ≤ Real.exp (-1/4) := Real.add_one_le_exp _
+    linarith
+  have h_one_sub_le : 1 - Real.exp (-1 / 4) ≤ 1 / 4 := by linarith
+  have h_one_sub_nn : 0 ≤ 1 - Real.exp (-1 / 4) := by
+    have hle1 : Real.exp (-1 / 4) ≤ 1 := by
+      apply Real.exp_le_one_iff.mpr; norm_num
+    linarith
+  have h_sqrt_le_half : Real.sqrt (1 - Real.exp (-1 / 4)) ≤ 1 / 2 := by
+    have h1 : Real.sqrt (1 - Real.exp (-1 / 4)) ≤ Real.sqrt (1 / 4) :=
+      Real.sqrt_le_sqrt h_one_sub_le
+    have h2 : Real.sqrt (1 / 4 : ℝ) = 1 / 2 := by
+      rw [show (1 / 4 : ℝ) = (1 / 2)^2 by norm_num, Real.sqrt_sq (by norm_num)]
+    linarith
+  have h_one_sub_two_sqrt_nn :
+      0 ≤ 1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4)) := by linarith
+  positivity
+
+/-- §3.7 d=1 — **Fully discharged OLS minimax lower bound at d=1**.
+
+For any *measurable* estimator `A : ℝ → ℝ` taking the sample mean
+`Ȳ ~ N(θ, σ²/n)` and returning a scalar estimate, with both
+squared-error integrands integrable, there exists a worst-case
+parameter `θ_star ∈ {0, σ/√n}` such that the *concrete* Gaussian MSE
+at `θ_star` is at least
+
+`(σ²/n) · (1/8) · (1 - 2·√(1 - exp(-1/4)))`.
+
+**No parametric hypothesis** — the abstract `excessRisk` is replaced
+by `gaussianMSED1 A θ σ² n := ∫ y, (A y - θ)² ∂(N(θ, σ²/n))`, and
+the Le Cam squared-loss reduction is supplied unconditionally from
+`LTFP.MathlibExt.Probability.LeCamSquaredLossReduction`.
+
+This closes the residual `h_bh_lecam` hypothesis of
+`ols_minimax_lower_bound_d1_gaussian` for the concrete Gaussian
+sample-mean instantiation. -/
+theorem ols_minimax_lower_bound_d1_gaussian_concrete
+    {sigmaSq : ℝ} (hσ : 0 < sigmaSq) {n : ℕ} (hn : 0 < n)
+    (A : ℝ → ℝ) (hA : Measurable A)
+    (hint_zero : MeasureTheory.Integrable
+      (fun y => (A y - 0)^2)
+      (LTFP.MathlibExt.Probability.olsGaussianSampleD1
+        0 sigmaSq n hσ.le hn))
+    (hint_delta : MeasureTheory.Integrable
+      (fun y => (A y - Real.sqrt (sigmaSq / n))^2)
+      (LTFP.MathlibExt.Probability.olsGaussianSampleD1
+        (Real.sqrt (sigmaSq / n)) sigmaSq n hσ.le hn)) :
+    ∃ θ_star : ℝ,
+      olsMinimaxRateScalarD1Concrete sigmaSq n ≤
+        LTFP.MathlibExt.Probability.gaussianMSED1 A θ_star sigmaSq n hσ.le hn := by
+  -- Setup: Δ = σ/√n, v = σ²/n.
+  set Δ : ℝ := Real.sqrt (sigmaSq / n) with hΔ_def
+  have hn' : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have h_quot_pos : 0 < sigmaSq / (n : ℝ) := div_pos hσ hn'
+  have h_quot_nn : 0 ≤ sigmaSq / (n : ℝ) := h_quot_pos.le
+  have hΔ_pos : 0 < Δ := Real.sqrt_pos.mpr h_quot_pos
+  have hΔ_sq : Δ^2 = sigmaSq / (n : ℝ) := by
+    rw [hΔ_def]; exact Real.sq_sqrt h_quot_pos.le
+  set P₀ : MeasureTheory.Measure ℝ :=
+    LTFP.MathlibExt.Probability.olsGaussianSampleD1 0 sigmaSq n hσ.le hn
+    with hP₀_def
+  set P₁ : MeasureTheory.Measure ℝ :=
+    LTFP.MathlibExt.Probability.olsGaussianSampleD1 Δ sigmaSq n hσ.le hn
+    with hP₁_def
+  -- Apply Le Cam squared-loss reduction at θ₀ = 0, θ₁ = Δ.
+  have h_lecam :=
+    LTFP.MathlibExt.Probability.leCam_squared_loss_reduction_sum_form
+      ℝ P₀ P₁ A hA 0 Δ hint_zero hint_delta
+  -- L.C gives: (Δ²/4) · (1 - 2·tvDist) ≤ R₀ + R₁
+  -- where R₀ = gaussianMSED1 A 0 σ² n, R₁ = gaussianMSED1 A Δ σ² n.
+  have h_R0_eq :
+      LTFP.MathlibExt.Probability.gaussianMSED1 A 0 sigmaSq n hσ.le hn =
+        ∫ y, (A y - 0)^2 ∂P₀ := rfl
+  have h_R1_eq :
+      LTFP.MathlibExt.Probability.gaussianMSED1 A Δ sigmaSq n hσ.le hn =
+        ∫ y, (A y - Δ)^2 ∂P₁ := rfl
+  -- The TV bound: tvDist(P₀, P₁) ≤ √(1 - exp(-1/4)).
+  -- The existing `tvDist_gaussianReal_d1_le_sqrt_one_sub_exp_neg_quarter`
+  -- gives tvDist² ≤ 1 - exp(-1/4), so tvDist ≤ √(1 - exp(-1/4)).
+  have h_TV_sq :
+      ((LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal)^2 ≤
+        1 - Real.exp (-1 / 4) := by
+    -- Unfold P₀, P₁ to gaussianReal form.
+    show ((LTFP.MathlibExt.Probability.tvDist
+            (LTFP.MathlibExt.Probability.olsGaussianSampleD1 0 sigmaSq n hσ.le hn)
+            (LTFP.MathlibExt.Probability.olsGaussianSampleD1 Δ sigmaSq n hσ.le hn))).toReal^2 ≤
+              1 - Real.exp (-1 / 4)
+    have := tvDist_gaussianReal_d1_le_sqrt_one_sub_exp_neg_quarter (sigmaSq := sigmaSq) hσ hn
+    -- This gives the bound in terms of `gaussianReal 0 v` and `gaussianReal Δ v`.
+    -- `olsGaussianSampleD1 θ σ² n` unfolds to `gaussianReal θ ⟨σ²/n, _⟩` by `rfl`.
+    convert this using 4
+  have h_TV_nn : 0 ≤ (LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal :=
+    LTFP.MathlibExt.Probability.tvDist_toReal_nonneg _ _
+  have h_TV_le :
+      (LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal ≤
+        Real.sqrt (1 - Real.exp (-1 / 4)) := by
+    have h_arg_nn : 0 ≤ 1 - Real.exp (-1 / 4) := by
+      have hle1 : Real.exp (-1 / 4) ≤ 1 := by
+        apply Real.exp_le_one_iff.mpr; norm_num
+      linarith
+    have h_sqrt_sq :
+        (LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal =
+          Real.sqrt (((LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal)^2) := by
+      rw [Real.sqrt_sq h_TV_nn]
+    rw [h_sqrt_sq]
+    exact Real.sqrt_le_sqrt h_TV_sq
+  -- Bound: 1 - 2·tvDist ≥ 1 - 2·√(1 - exp(-1/4)).
+  have h_one_sub_two_TV_ge :
+      1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4)) ≤
+        1 - 2 * (LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal := by
+    linarith
+  -- Combine: (Δ²/4)·(1 - 2·√...) ≤ (Δ²/4)·(1 - 2·tvDist) ≤ R₀ + R₁.
+  have hΔ_sq_quart_nn : 0 ≤ (0 - Δ)^2 / 4 := by
+    have : (0 - Δ)^2 ≥ 0 := sq_nonneg _
+    linarith
+  have h_lecam_intermediate :
+      (0 - Δ)^2 / 4 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+        (∫ y, (A y - 0)^2 ∂P₀) + ∫ y, (A y - Δ)^2 ∂P₁ := by
+    have h_mul :
+        (0 - Δ)^2 / 4 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+        (0 - Δ)^2 / 4 *
+            (1 - 2 * (LTFP.MathlibExt.Probability.tvDist P₀ P₁).toReal) :=
+      mul_le_mul_of_nonneg_left h_one_sub_two_TV_ge hΔ_sq_quart_nn
+    linarith
+  -- Rewrite (0-Δ)² = Δ² and Δ² = σ²/n. So (0-Δ)²/4 = (σ²/n)/4.
+  have h_diff_sq : (0 - Δ)^2 = Δ^2 := by ring
+  rw [h_diff_sq, hΔ_sq] at h_lecam_intermediate
+  -- Now we have (σ²/n)/4 · (1 - 2·√...) ≤ R₀ + R₁.
+  -- Goal: (σ²/n)/8 · (1 - 2·√...) ≤ max(R₀, R₁).
+  -- Use max ≥ (R₀+R₁)/2.
+  set R₀_real := ∫ y, (A y - 0)^2 ∂P₀ with hR0_def
+  set R₁_real := ∫ y, (A y - Δ)^2 ∂P₁ with hR1_def
+  have h_max_ge_avg :
+      (R₀_real + R₁_real) / 2 ≤ max R₀_real R₁_real :=
+    LTFP.MathlibExt.Probability.average_le_max_of_pair R₀_real R₁_real
+  -- Divide by 2: (σ²/n)/8 · (1 - 2·√...) ≤ (R₀+R₁)/2.
+  have h_avg_bound :
+      sigmaSq / (n : ℝ) / 8 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+        (R₀_real + R₁_real) / 2 := by
+    have : sigmaSq / (n : ℝ) / 4 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+        R₀_real + R₁_real := h_lecam_intermediate
+    linarith
+  -- Compose.
+  have h_final :
+      sigmaSq / (n : ℝ) / 8 * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+        max R₀_real R₁_real := h_avg_bound.trans h_max_ge_avg
+  -- Extract a witness.
+  rcases le_total R₀_real R₁_real with h | h
+  · refine ⟨Δ, ?_⟩
+    have h_max_eq : max R₀_real R₁_real = R₁_real := max_eq_right h
+    rw [h_max_eq] at h_final
+    unfold olsMinimaxRateScalarD1Concrete
+    show sigmaSq / ↑n * (1 / 8) * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+      LTFP.MathlibExt.Probability.gaussianMSED1 A Δ sigmaSq n hσ.le hn
+    rw [h_R1_eq]
+    have h_eq : sigmaSq / ↑n * (1 / 8) =
+        sigmaSq / (n : ℝ) / 8 := by ring
+    rw [h_eq]
+    exact h_final
+  · refine ⟨0, ?_⟩
+    have h_max_eq : max R₀_real R₁_real = R₀_real := max_eq_left h
+    rw [h_max_eq] at h_final
+    unfold olsMinimaxRateScalarD1Concrete
+    show sigmaSq / ↑n * (1 / 8) * (1 - 2 * Real.sqrt (1 - Real.exp (-1 / 4))) ≤
+      LTFP.MathlibExt.Probability.gaussianMSED1 A 0 sigmaSq n hσ.le hn
+    rw [h_R0_eq]
+    have h_eq : sigmaSq / ↑n * (1 / 8) =
+        sigmaSq / (n : ℝ) / 8 := by ring
+    rw [h_eq]
+    exact h_final
+
+#check @LTFP.olsMinimaxRateScalarD1Concrete
+#check @LTFP.olsMinimaxRateScalarD1Concrete_nonneg
+#check @LTFP.ols_minimax_lower_bound_d1_gaussian_concrete
 
 /-- §3.5 — Sum of squared residuals is nonneg (any residual vector). -/
 theorem sum_sq_residuals_nonneg {n : ℕ} (r : Fin n → ℝ) :
