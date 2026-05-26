@@ -610,4 +610,119 @@ theorem bach_bernstein_tail_one_sided
           (2 * ((n : ℝ) * sigma2 + c * ε / 3))) := by
         rw [h_collapse]
 
+/-! ### Two-sided Bernstein tail
+
+Bach (2024) §1.2.3 also states the **two-sided** Bernstein tail bound,
+obtained from the one-sided form `bach_bernstein_tail_one_sided` by
+applying the one-sided result to both `Z` and `-Z`, then combining via
+a union bound. The hypotheses (iid, bounded, centered, common variance)
+are stable under negation: `(-Z)` is iid (composition of independent
+families with `Neg.neg`), has the same `c` bound (since `|-Z| = |Z|`),
+is centered (linearity of integral), and has the same variance
+(`(-Z)² = Z²`).
+-/
+
+/-- **Bach Bernstein tail (two-sided).**
+
+For iid `Z₁, …, Zₙ` satisfying Bach's hypotheses (centered, bounded
+`|Zᵢ| ≤ c`, common variance `σ²`), every `ε > 0` admits the two-sided
+Bernstein tail bound
+
+  `μ(|∑ᵢ Zᵢ| ≥ ε) ≤ 2 · exp(- ε² / (2 (n σ² + c ε / 3)))`.
+
+This is obtained by applying `bach_bernstein_tail_one_sided` to both
+`Z` and `(-Z)` (whose hypotheses match `Z`'s under negation) and then
+a union bound on `{ω | ε ≤ |S(ω)|} ⊆ {ω | ε ≤ S(ω)} ∪ {ω | ε ≤ -S(ω)}`. -/
+theorem bach_bernstein_tail_two_sided
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {n : ℕ} (hn : 0 < n) (Z : Fin n → Ω → ℝ)
+    (h_indep : iIndepFun Z μ)
+    (h_meas : ∀ i, Measurable (Z i))
+    (c : ℝ) (hc : 0 ≤ c)
+    (h_bdd : ∀ i, ∀ᵐ ω ∂μ, |Z i ω| ≤ c)
+    (h_centered : ∀ i, ∫ ω, Z i ω ∂μ = 0)
+    (sigma2 : ℝ) (hsigma2_pos : 0 < sigma2)
+    (h_ident : ∀ i, sigma2 = ∫ ω, (Z i ω) ^ 2 ∂μ)
+    (ε : ℝ) (hε : 0 < ε) :
+    μ.real {ω | (ε : ℝ) ≤ |∑ i : Fin n, Z i ω|} ≤
+      2 * Real.exp (-ε ^ 2 /
+        (2 * ((n : ℝ) * sigma2 + c * ε / 3))) := by
+  -- Set up the negated family `Z' i ω := -(Z i ω)`.
+  set Z' : Fin n → Ω → ℝ := fun i ω => -(Z i ω) with hZ'_def
+  -- (a) Z' is iid: apply `iIndepFun.comp` with `g i = Neg.neg`.
+  have h_indep' : iIndepFun Z' μ := by
+    have := h_indep.comp (fun _ : Fin n => fun x : ℝ => -x)
+      (fun _ => measurable_neg)
+    -- `(fun i => (fun x => -x) ∘ Z i) = Z'`.
+    simpa [Z', Function.comp] using this
+  -- (b) Z' is measurable.
+  have h_meas' : ∀ i, Measurable (Z' i) := fun i => (h_meas i).neg
+  -- (c) Z' is bounded by c almost surely: |-x| = |x|.
+  have h_bdd' : ∀ i, ∀ᵐ ω ∂μ, |Z' i ω| ≤ c := by
+    intro i
+    filter_upwards [h_bdd i] with ω hω
+    simpa [Z', abs_neg] using hω
+  -- (d) Z' is centered: ∫ -(Z i ω) ∂μ = -∫ Z i ω ∂μ = 0.
+  have h_centered' : ∀ i, ∫ ω, Z' i ω ∂μ = 0 := by
+    intro i
+    simp [Z', integral_neg, h_centered i]
+  -- (e) Z' has the same variance: (-(Z i ω))² = (Z i ω)².
+  have h_ident' : ∀ i, sigma2 = ∫ ω, (Z' i ω) ^ 2 ∂μ := by
+    intro i
+    have : ∀ ω, (Z' i ω) ^ 2 = (Z i ω) ^ 2 := fun ω => by simp [Z']
+    simp only [this]
+    exact h_ident i
+  -- One-sided tail for Z.
+  have h_pos := bach_bernstein_tail_one_sided
+    hn Z h_indep h_meas c hc h_bdd h_centered sigma2 hsigma2_pos h_ident ε hε
+  -- One-sided tail for Z'.
+  have h_neg := bach_bernstein_tail_one_sided
+    hn Z' h_indep' h_meas' c hc h_bdd' h_centered' sigma2 hsigma2_pos h_ident' ε hε
+  -- Rewrite the Z' sum: ∑ i, Z' i ω = -(∑ i, Z i ω).
+  have h_sum_neg : ∀ ω, ∑ i : Fin n, Z' i ω = -(∑ i : Fin n, Z i ω) := by
+    intro ω
+    simp [Z', Finset.sum_neg_distrib]
+  -- Set inclusion: {ω | ε ≤ |S|} ⊆ {ω | ε ≤ S} ∪ {ω | ε ≤ -S}.
+  set S : Ω → ℝ := fun ω => ∑ i : Fin n, Z i ω with hS_def
+  have h_subset :
+      {ω | (ε : ℝ) ≤ |S ω|} ⊆ {ω | ε ≤ S ω} ∪ {ω | ε ≤ -(S ω)} := by
+    intro ω hω
+    simp only [Set.mem_setOf_eq, Set.mem_union] at *
+    -- |S ω| = max (S ω) (-(S ω)) ≥ ε ⇒ S ω ≥ ε ∨ -(S ω) ≥ ε.
+    rcases le_or_gt 0 (S ω) with hS_nn | hS_neg
+    · left
+      have : |S ω| = S ω := abs_of_nonneg hS_nn
+      linarith
+    · right
+      have : |S ω| = -(S ω) := abs_of_neg hS_neg
+      linarith
+  -- Rewrite h_neg in terms of -S.
+  have h_neg_rewritten :
+      μ.real {ω | ε ≤ -(S ω)} ≤
+        Real.exp (-ε ^ 2 /
+          (2 * ((n : ℝ) * sigma2 + c * ε / 3))) := by
+    -- {ω | ε ≤ -(S ω)} = {ω | ε ≤ ∑ i, Z' i ω} via h_sum_neg.
+    have h_eq : {ω | (ε : ℝ) ≤ -(S ω)} = {ω | (ε : ℝ) ≤ ∑ i : Fin n, Z' i ω} := by
+      ext ω
+      simp [h_sum_neg ω, S]
+    rw [h_eq]
+    exact h_neg
+  -- Union bound: μ {|S| ≥ ε} ≤ μ {S ≥ ε} + μ {-S ≥ ε} ≤ 2 · exp(...).
+  calc μ.real {ω | (ε : ℝ) ≤ |∑ i : Fin n, Z i ω|}
+      = μ.real {ω | (ε : ℝ) ≤ |S ω|} := by rfl
+    _ ≤ μ.real ({ω | ε ≤ S ω} ∪ {ω | ε ≤ -(S ω)}) :=
+          measureReal_mono h_subset
+    _ ≤ μ.real {ω | ε ≤ S ω} + μ.real {ω | ε ≤ -(S ω)} :=
+          measureReal_union_le _ _
+    _ ≤ Real.exp (-ε ^ 2 /
+            (2 * ((n : ℝ) * sigma2 + c * ε / 3))) +
+        Real.exp (-ε ^ 2 /
+            (2 * ((n : ℝ) * sigma2 + c * ε / 3))) := by
+          have h_pos' : μ.real {ω | ε ≤ S ω} ≤
+              Real.exp (-ε ^ 2 /
+                (2 * ((n : ℝ) * sigma2 + c * ε / 3))) := h_pos
+          linarith
+    _ = 2 * Real.exp (-ε ^ 2 /
+            (2 * ((n : ℝ) * sigma2 + c * ε / 3))) := by ring
+
 end ProbabilityTheory
