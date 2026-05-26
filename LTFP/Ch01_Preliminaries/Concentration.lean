@@ -14,7 +14,9 @@ import LTFP.Foundations.McDiarmid
 import LTFP.Foundations.MaximalInequality
 import LTFP.MathlibExt.Probability.Moments.SubExponential
 import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import Mathlib.LinearAlgebra.Matrix.Defs
+import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 import Mathlib.Probability.Moments.Basic
 import Mathlib.Probability.Moments.Variance
 
@@ -296,6 +298,95 @@ theorem abstract_lipschitz_riemann_sum_error
     _ = L * (b - a) ^ 2 / (2 * n)                           := h_alg
     _ = quadratureErrorBound L a b n                        := rfl
 
+/-- §1.2.5 — Per-subinterval Lipschitz Riemann-sum error bound (♦♦),
+the analytic Part Q.A of the unconditional discharge.
+
+For a function `g : ℝ → ℝ` that is `L`-Lipschitz on `[x₀, x₀+h]` against
+the left endpoint (`|g x − g x₀| ≤ L (x − x₀)` on the right-hand
+subinterval), the left-endpoint Riemann error on the single subinterval
+of width `h ≥ 0` satisfies the textbook bound
+
+  `|∫_{x₀}^{x₀+h} g(x) dx − h · g(x₀)| ≤ L · h² / 2`.
+
+This is the standard L¹-comparison argument applied to `g(x) − g(x₀)`:
+the Lipschitz hypothesis bounds the integrand pointwise by `L · (x − x₀)`,
+whose integral on `[x₀, x₀+h]` is `L · h² / 2` by an elementary
+antiderivative computation. The right-endpoint version of this bound is
+what discharges the per-subinterval hypothesis `h_each` of
+`abstract_lipschitz_riemann_sum_error`. -/
+theorem lipschitz_riemann_subinterval_error
+    (g : ℝ → ℝ) (x₀ h L : ℝ)
+    (hh : 0 ≤ h) (_hL : 0 ≤ L)
+    (hg_lip : ∀ x ∈ Set.Icc x₀ (x₀ + h), |g x - g x₀| ≤ L * (x - x₀))
+    (hg_int : IntervalIntegrable g MeasureTheory.volume x₀ (x₀ + h)) :
+    |(∫ x in x₀..x₀ + h, g x) - h * g x₀| ≤ L * h ^ 2 / 2 := by
+  -- a ≤ b: the canonical orientation on `[x₀, x₀+h]`.
+  have hab : x₀ ≤ x₀ + h := by linarith
+  -- The constant `g x₀` is integrable on `[x₀, x₀+h]` (it is continuous).
+  have hconst_int :
+      IntervalIntegrable (fun _ : ℝ => g x₀) MeasureTheory.volume x₀ (x₀ + h) :=
+    intervalIntegrable_const
+  -- Step 1: collapse `h · g x₀` to `∫ x in x₀..x₀+h, g x₀`.
+  have h_const_integral :
+      (∫ _ in x₀..x₀ + h, g x₀) = h * g x₀ := by
+    have hint : (∫ _ in x₀..x₀ + h, g x₀) = ((x₀ + h) - x₀) • g x₀ :=
+      intervalIntegral.integral_const (g x₀)
+    have hsub : (x₀ + h) - x₀ = h := by ring
+    simp [hint, hsub, smul_eq_mul]
+  -- Step 2: rewrite the difference as a single integral of `g x - g x₀`.
+  have h_rewrite :
+      (∫ x in x₀..x₀ + h, g x) - h * g x₀
+        = ∫ x in x₀..x₀ + h, (g x - g x₀) := by
+    rw [← h_const_integral, ← intervalIntegral.integral_sub hg_int hconst_int]
+  -- Step 3: the linear function `fun x => L * (x - x₀)` is `IntervalIntegrable`.
+  have hlin_int :
+      IntervalIntegrable (fun x => L * (x - x₀)) MeasureTheory.volume
+        x₀ (x₀ + h) := by
+    have hcont : Continuous (fun x : ℝ => L * (x - x₀)) := by
+      fun_prop
+    exact hcont.intervalIntegrable _ _
+  -- Step 4: pointwise bound `|g x − g x₀| ≤ L · (x − x₀)` on `Ioc x₀ (x₀+h)`.
+  have hpt : ∀ᵐ t ∂MeasureTheory.volume, t ∈ Set.Ioc x₀ (x₀ + h) →
+      ‖g t - g x₀‖ ≤ L * (t - x₀) := by
+    refine Filter.Eventually.of_forall (fun t ht => ?_)
+    have ht_mem : t ∈ Set.Icc x₀ (x₀ + h) := ⟨le_of_lt ht.1, ht.2⟩
+    have := hg_lip t ht_mem
+    simpa [Real.norm_eq_abs] using this
+  -- Step 5: apply norm-integral comparison to bound `|∫ (g x - g x₀)|`.
+  have h_norm_le :
+      ‖∫ x in x₀..x₀ + h, (g x - g x₀)‖
+        ≤ ∫ x in x₀..x₀ + h, L * (x - x₀) :=
+    intervalIntegral.norm_integral_le_of_norm_le (g := fun x => L * (x - x₀))
+      hab hpt hlin_int
+  -- Step 6: compute `∫ x in x₀..x₀+h, L · (x - x₀) = L · h² / 2`.
+  have hL_integral :
+      (∫ x in x₀..x₀ + h, L * (x - x₀)) = L * h ^ 2 / 2 := by
+    -- Pull `L` out, then evaluate the integral of `(x - x₀)`.
+    have h_pull :
+        (∫ x in x₀..x₀ + h, L * (x - x₀))
+          = L * ∫ x in x₀..x₀ + h, (x - x₀) :=
+      intervalIntegral.integral_const_mul L (fun x => x - x₀)
+    -- `∫ x in x₀..x₀+h, (x - x₀) = ∫ x in 0..h, x` via shift.
+    have h_shift :
+        (∫ x in x₀..x₀ + h, (x - x₀)) = ∫ x in 0..h, x := by
+      have := intervalIntegral.integral_comp_sub_right
+        (f := fun x => x) (a := x₀) (b := x₀ + h) x₀
+      -- The statement is: `(∫ x in x₀..x₀+h, (x - x₀)) = ∫ x in x₀-x₀..(x₀+h)-x₀, x`
+      simpa [sub_self, add_sub_cancel_left] using this
+    -- `∫ x in 0..h, x = (h^2 - 0^2)/2 = h^2/2`.
+    have h_id : (∫ x in (0 : ℝ)..h, x) = h ^ 2 / 2 := by
+      rw [integral_id]; ring
+    rw [h_pull, h_shift, h_id]
+    ring
+  -- Combine the rewrite, norm-integral bound, and integral computation.
+  rw [h_rewrite]
+  have : ‖∫ x in x₀..x₀ + h, (g x - g x₀)‖ ≤ L * h ^ 2 / 2 := by
+    calc
+      ‖∫ x in x₀..x₀ + h, (g x - g x₀)‖
+          ≤ ∫ x in x₀..x₀ + h, L * (x - x₀) := h_norm_le
+      _ = L * h ^ 2 / 2 := hL_integral
+  simpa [Real.norm_eq_abs] using this
+
 /-- §1.2.5 — Quadrature expectation (♦♦), elementary preservation core.
 
 Backwards-compatibility shim: the two-point trapezoidal rule preserves
@@ -566,6 +657,21 @@ example :
     (fun _ => by
       have : (0 : ℝ) ≤ 1 * ((1 - 0) / (4 : ℕ)) ^ 2 / 2 := by positivity
       simpa using this)
+
+#check @LTFP.lipschitz_riemann_subinterval_error
+
+/-- Smoke test for the per-subinterval Lipschitz Riemann-sum bound: the
+constant function `g(x) = c` is `0`-Lipschitz against any base point,
+so the left-endpoint error vanishes and the bound `0 ≤ 0 · h² / 2 = 0`
+holds. This exercises the unconditional analytic discharge of the
+per-subinterval hypothesis used in `abstract_lipschitz_riemann_sum_error`. -/
+example (c : ℝ) :
+    |(∫ _ in (0 : ℝ)..1, c) - 1 * c| ≤ 0 * (1 : ℝ) ^ 2 / 2 := by
+  have := LTFP.lipschitz_riemann_subinterval_error
+    (fun _ => c) 0 1 0 zero_le_one (le_refl 0)
+    (fun x _ => by simp)
+    (intervalIntegrable_const)
+  simpa using this
 
 #check @LTFP.matrix_bernstein
 
