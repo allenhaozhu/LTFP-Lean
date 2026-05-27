@@ -1,0 +1,1626 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Machine-checked Learning Theory from First Principles">
+      
+      
+      
+        <link rel="canonical" href="https://allenhaozhu.github.io/LTFP-Lean/teaching/walkthrough-pacbayes/">
+      
+      
+        <link rel="prev" href="../walkthrough-bernstein/">
+      
+      
+        <link rel="next" href="../problem-sets/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>PAC-Bayes (Bach §14.4.2) - LTlib — Lean 4 Companion to Bach (2024)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="deep-purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#walkthrough-bach-1442-mcallester-pac-bayes-textbook-strict" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="LTlib — Lean 4 Companion to Bach (2024)" class="md-header__button md-logo" aria-label="LTlib — Lean 4 Companion to Bach (2024)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            LTlib — Lean 4 Companion to Bach (2024)
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              PAC-Bayes (Bach §14.4.2)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="deep-purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="deep-purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/allenhaozhu/LTFP-Lean" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    allenhaozhu/LTFP-Lean
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../TEACHING/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  For Students & Teachers
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../wiki/" class="md-tabs__link">
+          
+  
+  
+  Wiki
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../walkthrough-bernstein/" class="md-tabs__link">
+          
+  
+  
+  Walkthroughs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../ERRATA/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Errata
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="https://allenhaozhu.github.io/LTFP-Lean/api/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API docs
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="LTlib — Lean 4 Companion to Bach (2024)" class="md-nav__button md-logo" aria-label="LTlib — Lean 4 Companion to Bach (2024)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    LTlib — Lean 4 Companion to Bach (2024)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/allenhaozhu/LTFP-Lean" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    allenhaozhu/LTFP-Lean
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../TEACHING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For Students & Teachers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wiki
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Wiki
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../wiki/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../wiki/indexes/by-chapter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    By chapter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../wiki/indexes/by-tier/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    By tier (difficulty)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../wiki/indexes/by-status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    By status (audit)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../wiki/indexes/by-topic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    By topic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../wiki/indexes/by-mathlib-dep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    By Mathlib dependency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../wiki/BUILD_LOG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build log
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../graphify/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    📈 Interactive graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Walkthroughs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Walkthroughs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../walkthrough-bernstein/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bernstein (Bach §1.2.3)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PAC-Bayes (Bach §14.4.2)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PAC-Bayes (Bach §14.4.2)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-pac-bayes-is-and-why-this-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What PAC-Bayes is, and why this matters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-four-step-proof-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The four-step proof structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-1-per-hoeffding-mgf-bach-eq-144" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 --- Per-θ Hoeffding MGF (Bach Eq. 14.4)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-2-integrate-the-per-bound-over-the-prior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 --- Integrate the per-θ bound over the prior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-1-step-2-composed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 + Step 2 composed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-3-donsker-varadhan-variational-inequality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 --- Donsker-Varadhan variational inequality
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-4-chernoff-optimization-and-averaging-over-s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4 --- Chernoff optimization and averaging over S
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-full-a-class-carrier" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The full A-class carrier
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-students-should-take-away" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What students should take away
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-example-does-not-cover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this example does NOT cover
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../problem-sets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Problem set guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ERRATA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://allenhaozhu.github.io/LTFP-Lean/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API docs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-pac-bayes-is-and-why-this-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What PAC-Bayes is, and why this matters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-four-step-proof-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The four-step proof structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-1-per-hoeffding-mgf-bach-eq-144" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 --- Per-θ Hoeffding MGF (Bach Eq. 14.4)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-2-integrate-the-per-bound-over-the-prior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 --- Integrate the per-θ bound over the prior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-1-step-2-composed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 + Step 2 composed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-3-donsker-varadhan-variational-inequality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 --- Donsker-Varadhan variational inequality
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-4-chernoff-optimization-and-averaging-over-s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4 --- Chernoff optimization and averaging over S
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-full-a-class-carrier" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The full A-class carrier
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-students-should-take-away" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What students should take away
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-example-does-not-cover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this example does NOT cover
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="walkthrough-bach-1442-mcallester-pac-bayes-textbook-strict">Walkthrough: Bach §14.4.2 McAllester PAC-Bayes (textbook-strict)</h1>
+<p>This walkthrough re-tells the proof carried by
+<a href="https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/LTFP/Examples/PACBayesMcAllester.lean"><code>LTFP/Examples/PACBayesMcAllester.lean</code></a>
+in prose, with Lean code snippets interspersed. It is meant to be read
+<strong>alongside</strong> the Lean file: open the file in VS Code with the Lean 4
+extension and step through with the infoview while reading this
+narrative.</p>
+<p>Reference: Francis Bach (2024), <em>Learning Theory from First Principles</em>
+(MIT Press), §14.4.2, pp. 423-426.</p>
+<h2 id="what-pac-bayes-is-and-why-this-matters">What PAC-Bayes is, and why this matters</h2>
+<p>Classical PAC bounds control the generalization gap of a <em>single</em>
+hypothesis. PAC-Bayes bounds the <strong>expected gap under a distribution
+over hypotheses</strong> --- a <em>posterior</em> <code>ρ</code> selected after seeing the data,
+relative to a <em>prior</em> <code>q</code> fixed before. The first such bound is due to
+McAllester (1998-1999); Bach (§14.4.2) presents the modern derivation
+via four steps: per-θ Hoeffding MGF, integrate over the prior,
+Donsker-Varadhan variational inequality, and Chernoff optimization.</p>
+<p>PAC-Bayes is the deepest of the three flagship examples in
+<code>LTFP/Examples/</code> because each of the four steps is a non-trivial
+probability-theoretic statement, and the composition requires careful
+Fubini accounting. The textbook handles this in a few paragraphs; the
+Lean port surfaces every measurability and integrability hypothesis
+explicitly, which is what makes it a useful pedagogical reading.</p>
+<h2 id="notation">Notation</h2>
+<p>Throughout this walkthrough and the corresponding Lean file:</p>
+<ul>
+<li><code>D</code> --- the data distribution on input space <code>𝒳</code>;</li>
+<li><code>Θ</code> --- the hypothesis-index space;</li>
+<li><code>q : Measure Θ</code> --- the fixed <em>prior</em> on Θ;</li>
+<li><code>ρ : Measure Θ</code> --- the chosen <em>posterior</em> on Θ, with <code>ρ ≪ q</code>;</li>
+<li><code>ℓ : Θ → 𝒳 → ℝ</code> --- the bounded loss family, with <code>ℓ(θ, x) ∈ [0, ℓ∞]</code>
+  a.s. under <code>D</code>;</li>
+<li><code>R(θ) := ∫ ℓ(θ, x) dD(x)</code> --- the population risk of hypothesis θ;</li>
+<li><code>R̂ₙ(θ, S) := (1/n) Σᵢ ℓ(θ, Sᵢ)</code> --- the empirical risk on sample
+  <code>S = (S₁, …, Sₙ)</code>;</li>
+<li><code>gap(θ, S) := R(θ) − R̂ₙ(θ, S)</code> --- the centered generalization gap.</li>
+</ul>
+<p>The goal: prove</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>E_{S ∼ Dⁿ} [ ∫ gap(θ, S) dρ(θ) ]  ≤  KL(ρ ‖ q) / s  +  s · ℓ∞² / (8n)
+</span></code></pre></div>
+<p>for every <code>s &gt; 0</code> (Bach Eq. 14.6). Optimizing in <code>s</code> recovers the
+standard McAllester form <code>2√( KL(ρ ‖ q) · ℓ∞² / (8n) )</code>, but the
+non-optimized form above is the one the carrier proves.</p>
+<h2 id="the-four-step-proof-structure">The four-step proof structure</h2>
+<p>Each step is formalized as its own named carrier. The full bound is
+the composition.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Name</th>
+<th>What it says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>pac_bayes_bach_step1_hoeffding_per_theta</code></td>
+<td>Per-θ Hoeffding MGF</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>pac_bayes_bach_step2_integrate_prior</code></td>
+<td>Integrate Step 1 over q</td>
+</tr>
+<tr>
+<td>3</td>
+<td>(Donsker-Varadhan, in carrier)</td>
+<td>Variational dual for KL</td>
+</tr>
+<tr>
+<td>4</td>
+<td>(Chernoff, in carrier)</td>
+<td>Optimize the MGF exponent</td>
+</tr>
+<tr>
+<td>1+2+3+4</td>
+<td><code>pac_bayes_mcallester_bach_path_a_class</code></td>
+<td>A-class composite</td>
+</tr>
+</tbody>
+</table>
+<h2 id="step-1-per-hoeffding-mgf-bach-eq-144">Step 1 --- Per-θ Hoeffding MGF (Bach Eq. 14.4)</h2>
+<p><strong>Claim.</strong> Fix a hypothesis θ. The centered gap <code>gap(θ, ·)</code> is an
+average of <code>n</code> iid <code>[−ℓ∞, ℓ∞]</code>-bounded random variables (each
+<code>ℓ(θ, Sᵢ) - R(θ)</code>), so Hoeffding's MGF lemma applies:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>E_{S ∼ Dⁿ} [ exp(s · gap(θ, S)) ]  ≤  exp( s² · ℓ∞² / (8n) ).
+</span></code></pre></div>
+<p>The <code>ℓ∞² / (8n)</code> is the <strong>Hoeffding sub-Gaussian variance proxy</strong> for a
+<code>[0, ℓ∞]</code>-bounded random variable averaged over <code>n</code> samples: the <code>8</code>
+comes from the standard Hoeffding lemma <code>Var ≤ (b-a)²/4</code> combined with
+the <code>1/(2n)</code> from averaging.</p>
+<p><strong>Lean signature.</strong></p>
+<div class="language-lean highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">example</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="o">(</span><span class="n">D</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Measure</span><span class="w"> </span><span class="n">𝒳</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="n">IsProbabilityMeasure</span><span class="w"> </span><span class="n">D</span><span class="o">]</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="o">(</span><span class="n">ℓ</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">𝒳</span><span class="w"> </span><span class="bp">→</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="n">hℓ_meas</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Measurable</span><span class="w"> </span><span class="n">ℓ</span><span class="o">)</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="o">(</span><span class="n">linf</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="o">(</span><span class="n">hbdd</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="bp">∀ᵐ</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="bp">∂</span><span class="n">D</span><span class="o">,</span><span class="w"> </span><span class="n">ℓ</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="bp">∈</span><span class="w"> </span><span class="n">Set.Icc</span><span class="w"> </span><span class="o">(</span><span class="mi">0</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span><span class="w"> </span><span class="n">linf</span><span class="o">)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="o">{</span><span class="n">n</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℕ</span><span class="o">}</span><span class="w"> </span><span class="o">(</span><span class="n">hn</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="bp">&lt;</span><span class="w"> </span><span class="n">n</span><span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="n">s</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span><span class="w"> </span><span class="o">:</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="bp">∫</span><span class="w"> </span><span class="n">S</span><span class="o">,</span><span class="w"> </span><span class="n">Real.exp</span><span class="w"> </span><span class="o">(</span><span class="n">s</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="o">((</span><span class="bp">∫</span><span class="w"> </span><span class="n">x</span><span class="o">,</span><span class="w"> </span><span class="n">ℓ</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="bp">∂</span><span class="n">D</span><span class="o">)</span><span class="w"> </span><span class="bp">-</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">            </span><span class="o">(</span><span class="mi">1</span><span class="w"> </span><span class="bp">/</span><span class="w"> </span><span class="o">(</span><span class="n">n</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">))</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="bp">∑</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Fin</span><span class="w"> </span><span class="n">n</span><span class="o">,</span><span class="w"> </span><span class="n">ℓ</span><span class="w"> </span><span class="o">(</span><span class="n">S</span><span class="w"> </span><span class="n">i</span><span class="o">)))</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">          </span><span class="bp">∂</span><span class="o">(</span><span class="n">Measure.pi</span><span class="w"> </span><span class="o">(</span><span class="k">fun</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Fin</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="bp">=&gt;</span><span class="w"> </span><span class="n">D</span><span class="o">))</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">      </span><span class="bp">≤</span><span class="w"> </span><span class="n">Real.exp</span><span class="w"> </span><span class="o">(</span><span class="n">s</span><span class="w"> </span><span class="bp">^</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="o">(</span><span class="n">linf</span><span class="w"> </span><span class="bp">^</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="bp">/</span><span class="w"> </span><span class="o">(</span><span class="mi">8</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="o">(</span><span class="n">n</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">))))</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="kd">by</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="n">exact</span><span class="w"> </span><span class="n">LTFP.pac_bayes_bach_step1_hoeffding_per_theta</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="n">ℓ</span><span class="w"> </span><span class="n">hℓ_meas</span><span class="w"> </span><span class="n">linf</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="n">hbdd</span><span class="w"> </span><span class="n">hn</span><span class="w"> </span><span class="n">s</span>
+</span></code></pre></div>
+<p><strong>Proof idea.</strong> The carrier internally invokes Mathlib's generic
+sub-Gaussian summation machinery
+(<code>HasSubgaussianMGF.sum_of_iIndepFun</code>) on the centered summands
+<code>Yᵢ(S) := R(θ) - ℓ(θ, Sᵢ)</code>. Each <code>Yᵢ</code> is bounded by <code>ℓ∞</code>, has zero
+mean (by definition of <code>R(θ)</code>), and is independent of the others under
+the product measure <code>Dⁿ</code>. The sub-Gaussian variance proxy of the
+average is the per-summand proxy divided by <code>n</code> --- yielding
+<code>ℓ∞² / (8n)</code>.</p>
+<p><strong>Why we name this step.</strong> The mathematical content is "Hoeffding's
+MGF, instantiated at our specific shape <code>R(θ) - R̂ₙ(θ, S)</code>". The naming
+exists so downstream callers who want to replace Hoeffding with a
+different MGF (e.g., the Bernstein MGF from
+<code>LTFP/Examples/Bernstein.lean</code>) can swap Step 1 alone, leaving Steps
+2-4 untouched.</p>
+<h2 id="step-2-integrate-the-per-bound-over-the-prior">Step 2 --- Integrate the per-θ bound over the prior</h2>
+<p><strong>Claim.</strong> Step 1's bound is uniform in θ. Integrating against a
+probability measure <code>q</code> on Θ therefore preserves the bound:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>∫_θ E_{S ∼ Dⁿ} [ exp(s · gap(θ, S)) ] dq(θ)  ≤  exp( s² · ℓ∞² / (8n) ).
+</span></code></pre></div>
+<p><strong>Lean signature.</strong></p>
+<div class="language-lean highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">example</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="o">{</span><span class="n">S</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="kt">Type</span><span class="w"> </span><span class="n">v</span><span class="o">}</span><span class="w"> </span><span class="o">[</span><span class="n">MeasurableSpace</span><span class="w"> </span><span class="n">S</span><span class="o">]</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="o">(</span><span class="n">q</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Measure</span><span class="w"> </span><span class="n">Θ</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="n">IsProbabilityMeasure</span><span class="w"> </span><span class="n">q</span><span class="o">]</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="o">(</span><span class="n">P_S</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Measure</span><span class="w"> </span><span class="n">S</span><span class="o">)</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="o">(</span><span class="n">gap</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Θ</span><span class="w"> </span><span class="bp">→</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="bp">→</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="n">s</span><span class="w"> </span><span class="n">K</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="o">(</span><span class="n">h_per_θ</span><span class="w"> </span><span class="o">:</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">      </span><span class="bp">∀</span><span class="w"> </span><span class="n">θ</span><span class="o">,</span><span class="w"> </span><span class="bp">∫</span><span class="w"> </span><span class="n">x</span><span class="o">,</span><span class="w"> </span><span class="n">Real.exp</span><span class="w"> </span><span class="o">(</span><span class="n">s</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="n">gap</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="n">x</span><span class="o">)</span><span class="w"> </span><span class="bp">∂</span><span class="n">P_S</span><span class="w"> </span><span class="bp">≤</span><span class="w"> </span><span class="n">Real.exp</span><span class="w"> </span><span class="o">(</span><span class="n">s</span><span class="w"> </span><span class="bp">^</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="n">K</span><span class="o">))</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="o">(</span><span class="n">h_inner_int</span><span class="w"> </span><span class="o">:</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">      </span><span class="n">Integrable</span><span class="w"> </span><span class="o">(</span><span class="k">fun</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="bp">=&gt;</span><span class="w"> </span><span class="bp">∫</span><span class="w"> </span><span class="n">x</span><span class="o">,</span><span class="w"> </span><span class="n">Real.exp</span><span class="w"> </span><span class="o">(</span><span class="n">s</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="n">gap</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="n">x</span><span class="o">)</span><span class="w"> </span><span class="bp">∂</span><span class="n">P_S</span><span class="o">)</span><span class="w"> </span><span class="n">q</span><span class="o">)</span><span class="w"> </span><span class="o">:</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="bp">∫</span><span class="w"> </span><span class="n">θ</span><span class="o">,</span><span class="w"> </span><span class="o">(</span><span class="bp">∫</span><span class="w"> </span><span class="n">x</span><span class="o">,</span><span class="w"> </span><span class="n">Real.exp</span><span class="w"> </span><span class="o">(</span><span class="n">s</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="n">gap</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="n">x</span><span class="o">)</span><span class="w"> </span><span class="bp">∂</span><span class="n">P_S</span><span class="o">)</span><span class="w"> </span><span class="bp">∂</span><span class="n">q</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">      </span><span class="bp">≤</span><span class="w"> </span><span class="n">Real.exp</span><span class="w"> </span><span class="o">(</span><span class="n">s</span><span class="w"> </span><span class="bp">^</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="n">K</span><span class="o">)</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="kd">by</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">  </span><span class="n">exact</span><span class="w"> </span><span class="n">LTFP.pac_bayes_bach_step2_integrate_prior</span><span class="w"> </span><span class="n">q</span><span class="w"> </span><span class="n">P_S</span><span class="w"> </span><span class="n">gap</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="n">K</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="n">h_per_θ</span><span class="w"> </span><span class="n">h_inner_int</span>
+</span></code></pre></div>
+<p><strong>Proof idea.</strong> The carrier's proof is <code>integral_mono_ae</code> against the
+constant <code>exp(s²K)</code>, then <code>integral_const</code> collapses the outer integral
+against <code>q</code> (a probability measure) back to the constant. The
+integrability hypothesis <code>h_inner_int</code> is needed to apply
+<code>integral_mono_ae</code>; in practice it follows from the boundedness
+hypothesis on <code>ℓ</code>, but we expose it explicitly because nothing in the
+abstract <code>gap : Θ → S → ℝ</code> signature constrains it.</p>
+<p><strong>Why we name this step.</strong> The mathematical content is zero new
+probability --- it is purely a "for-each-θ ↦ expectation-over-θ"
+lifting. We name it because it is a textbook step in Bach's chain
+(Bach §14.4.2 line 2 of the proof: "integrating against <code>q</code>...") and
+because abstracting it lets us state the per-sample bound that feeds
+Step 3.</p>
+<h2 id="step-1-step-2-composed">Step 1 + Step 2 composed</h2>
+<p>The composition gives a joint MGF bound integrated over both θ and S:</p>
+<div class="language-lean highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">example</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="o">(</span><span class="n">D</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Measure</span><span class="w"> </span><span class="n">𝒳</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="n">IsProbabilityMeasure</span><span class="w"> </span><span class="n">D</span><span class="o">]</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="o">(</span><span class="n">q</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Measure</span><span class="w"> </span><span class="n">Θ</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="n">IsProbabilityMeasure</span><span class="w"> </span><span class="n">q</span><span class="o">]</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="o">(</span><span class="n">ℓ</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Θ</span><span class="w"> </span><span class="bp">→</span><span class="w"> </span><span class="n">𝒳</span><span class="w"> </span><span class="bp">→</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="n">hℓ_meas</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="bp">∀</span><span class="w"> </span><span class="n">θ</span><span class="o">,</span><span class="w"> </span><span class="n">Measurable</span><span class="w"> </span><span class="o">(</span><span class="n">ℓ</span><span class="w"> </span><span class="n">θ</span><span class="o">))</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="o">(</span><span class="n">linf</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="o">(</span><span class="n">hbdd</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="bp">∀</span><span class="w"> </span><span class="n">θ</span><span class="o">,</span><span class="w"> </span><span class="bp">∀ᵐ</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="bp">∂</span><span class="n">D</span><span class="o">,</span><span class="w"> </span><span class="n">ℓ</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="bp">∈</span><span class="w"> </span><span class="n">Set.Icc</span><span class="w"> </span><span class="o">(</span><span class="mi">0</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span><span class="w"> </span><span class="n">linf</span><span class="o">)</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="o">{</span><span class="n">n</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℕ</span><span class="o">}</span><span class="w"> </span><span class="o">(</span><span class="n">hn</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="bp">&lt;</span><span class="w"> </span><span class="n">n</span><span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="n">s</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="o">(</span><span class="n">h_inner_int</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Integrable</span><span class="w"> </span><span class="o">(</span><span class="k">fun</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="bp">=&gt;</span><span class="w"> </span><span class="bp">...</span><span class="o">)</span><span class="w"> </span><span class="n">q</span><span class="o">)</span><span class="w"> </span><span class="o">:</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="bp">∫</span><span class="w"> </span><span class="n">θ</span><span class="o">,</span><span class="w"> </span><span class="o">(</span><span class="bp">∫</span><span class="w"> </span><span class="n">S</span><span class="o">,</span><span class="w"> </span><span class="n">Real.exp</span><span class="w"> </span><span class="o">(</span><span class="n">s</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="o">((</span><span class="bp">∫</span><span class="w"> </span><span class="n">x</span><span class="o">,</span><span class="w"> </span><span class="n">ℓ</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="bp">∂</span><span class="n">D</span><span class="o">)</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">            </span><span class="bp">-</span><span class="w"> </span><span class="o">(</span><span class="mi">1</span><span class="w"> </span><span class="bp">/</span><span class="w"> </span><span class="o">(</span><span class="n">n</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">))</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="bp">∑</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Fin</span><span class="w"> </span><span class="n">n</span><span class="o">,</span><span class="w"> </span><span class="n">ℓ</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="o">(</span><span class="n">S</span><span class="w"> </span><span class="n">i</span><span class="o">)))</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">          </span><span class="bp">∂</span><span class="o">(</span><span class="n">Measure.pi</span><span class="w"> </span><span class="o">(</span><span class="k">fun</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Fin</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="bp">=&gt;</span><span class="w"> </span><span class="n">D</span><span class="o">)))</span><span class="w"> </span><span class="bp">∂</span><span class="n">q</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">      </span><span class="bp">≤</span><span class="w"> </span><span class="n">Real.exp</span><span class="w"> </span><span class="o">(</span><span class="n">s</span><span class="w"> </span><span class="bp">^</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="o">(</span><span class="n">linf</span><span class="w"> </span><span class="bp">^</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="bp">/</span><span class="w"> </span><span class="o">(</span><span class="mi">8</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="o">(</span><span class="n">n</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">))))</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="kd">by</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">  </span><span class="n">refine</span><span class="w"> </span><span class="n">LTFP.pac_bayes_bach_step2_integrate_prior</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="o">(</span><span class="n">gap</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">fun</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="bp">=&gt;</span><span class="w"> </span><span class="o">(</span><span class="bp">∫</span><span class="w"> </span><span class="n">x</span><span class="o">,</span><span class="w"> </span><span class="n">ℓ</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="bp">∂</span><span class="n">D</span><span class="o">)</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">            </span><span class="bp">-</span><span class="w"> </span><span class="o">(</span><span class="mi">1</span><span class="w"> </span><span class="bp">/</span><span class="w"> </span><span class="o">(</span><span class="n">n</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">))</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="bp">∑</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Fin</span><span class="w"> </span><span class="n">n</span><span class="o">,</span><span class="w"> </span><span class="n">ℓ</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="o">(</span><span class="n">S</span><span class="w"> </span><span class="n">i</span><span class="o">))</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">    </span><span class="o">(</span><span class="n">K</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="n">linf</span><span class="w"> </span><span class="bp">^</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="bp">/</span><span class="w"> </span><span class="o">(</span><span class="mi">8</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="o">(</span><span class="n">n</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)))</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">    </span><span class="n">q</span><span class="w"> </span><span class="o">(</span><span class="n">Measure.pi</span><span class="w"> </span><span class="o">(</span><span class="k">fun</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Fin</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="bp">=&gt;</span><span class="w"> </span><span class="n">D</span><span class="o">))</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="bp">?</span><span class="n">_</span><span class="w"> </span><span class="n">h_inner_int</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">  </span><span class="n">intro</span><span class="w"> </span><span class="n">θ</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">  </span><span class="n">exact</span><span class="w"> </span><span class="n">LTFP.pac_bayes_bach_step1_hoeffding_per_theta</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">(</span><span class="n">ℓ</span><span class="w"> </span><span class="n">θ</span><span class="o">)</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">    </span><span class="o">(</span><span class="n">hℓ_meas</span><span class="w"> </span><span class="n">θ</span><span class="o">)</span><span class="w"> </span><span class="n">linf</span><span class="w"> </span><span class="o">(</span><span class="n">hbdd</span><span class="w"> </span><span class="n">θ</span><span class="o">)</span><span class="w"> </span><span class="n">hn</span><span class="w"> </span><span class="n">s</span>
+</span></code></pre></div>
+<p>Note the shape: Step 2's "per-θ" hypothesis is discharged by feeding
+Step 1 at each θ. This is the textbook "Step 1 ↦ Step 2" composition.
+The Lean version makes the discharge explicit; the textbook glosses
+over it with "since the bound is uniform in θ...".</p>
+<p>A <strong>Fubini swap</strong> happens between this <code>∫_θ ∫_S</code> form and the
+<code>∫_S ∫_θ</code> form that feeds Step 3. The swap is absorbed inside the
+A-class carrier <code>pac_bayes_mcallester_bach_path_a_class</code>; the example
+above shows the inner pre-swap form for pedagogy. Fubini requires the
+joint integrability hypothesis <code>h_exp_joint_int</code> exposed in the
+A-class signature below.</p>
+<h2 id="step-3-donsker-varadhan-variational-inequality">Step 3 --- Donsker-Varadhan variational inequality</h2>
+<p><strong>Claim.</strong> The Donsker-Varadhan inequality states that for any
+measurable <code>f : Θ → ℝ</code> and any probability measures <code>ρ ≪ q</code> on Θ,</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>∫ f dρ  ≤  KL(ρ ‖ q)  +  log ( ∫ exp(f) dq ).
+</span></code></pre></div>
+<p>This is the <strong>dual representation</strong> of KL divergence and the load-
+bearing tool that lifts a bound on <code>q</code> to a bound on the posterior <code>ρ</code>.</p>
+<p>Applied to <code>f := s · gap(θ, S)</code> for fixed S, with the post-Fubini form
+of the Step 1 + 2 bound <code>∫_θ exp(s·gap(θ,S)) dq ≤ exp(s²K)</code>, we get
+(taking <code>log</code> of both sides on the RHS):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>s · ∫_θ gap(θ, S) dρ(θ)  ≤  KL(ρ ‖ q)  +  log( ∫_θ exp(s·gap(θ,S)) dq )
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>                          ≤  KL(ρ ‖ q)  +  s² · K   (where K := ℓ∞²/(8n)).
+</span></code></pre></div>
+<p><strong>Why the <code>log</code> step matters.</strong> Donsker-Varadhan introduces a <code>log</code> ---
+this is what couples the MGF bound (Step 1 + 2) to the bound on the
+<em>posterior</em> expectation. Without it, we would have a bound on
+<code>∫ ρ · exp(s·gap) dq</code>, which is <em>not</em> what PAC-Bayes wants.</p>
+<p>The Lean carrier inside <code>pac_bayes_mcallester_bach_path_a_class</code>
+invokes Mathlib's <code>MeasureTheory.integral_log_exp_le_klDiv_add_log</code>
+(the Donsker-Varadhan form for KL), which is itself a non-trivial
+information-theoretic lemma. Its hypotheses (<code>ρ ≪ q</code>, <code>hllr_int</code>,
+<code>hMGF_int_PS</code>) are exposed in the A-class signature below.</p>
+<h2 id="step-4-chernoff-optimization-and-averaging-over-s">Step 4 --- Chernoff optimization and averaging over S</h2>
+<p><strong>Claim.</strong> Dividing the Step 3 bound by <code>s</code> (positive) gives:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>∫_θ gap(θ, S) dρ(θ)  ≤  KL(ρ ‖ q) / s  +  s · K.
+</span></code></pre></div>
+<p>Averaging over <code>S ∼ Dⁿ</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>E_{S ∼ Dⁿ} [ ∫_θ gap(θ, S) dρ(θ) ]  ≤  E_{S} [ KL(ρ ‖ q) / s  +  s · K ]
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>                                    =  KL(ρ ‖ q) / s  +  s · K,
+</span></code></pre></div>
+<p>since <code>KL(ρ ‖ q)</code> does not depend on S.</p>
+<p><strong>Why the averaging is on the outside.</strong> McAllester's bound is "in
+expectation over S". The high-probability form requires a separate
+Markov step; the carrier above is the in-expectation form.</p>
+<h2 id="the-full-a-class-carrier">The full A-class carrier</h2>
+<div class="language-lean highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">example</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="o">(</span><span class="n">D</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Measure</span><span class="w"> </span><span class="n">𝒳</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="n">IsProbabilityMeasure</span><span class="w"> </span><span class="n">D</span><span class="o">]</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="o">(</span><span class="n">q</span><span class="w"> </span><span class="n">ρ</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Measure</span><span class="w"> </span><span class="n">Θ</span><span class="o">)</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="o">[</span><span class="n">IsProbabilityMeasure</span><span class="w"> </span><span class="n">q</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">IsProbabilityMeasure</span><span class="w"> </span><span class="n">ρ</span><span class="o">]</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="o">(</span><span class="n">hρq</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ρ.AbsolutelyContinuous</span><span class="w"> </span><span class="n">q</span><span class="o">)</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="o">(</span><span class="n">ℓ</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Θ</span><span class="w"> </span><span class="bp">→</span><span class="w"> </span><span class="n">𝒳</span><span class="w"> </span><span class="bp">→</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="n">hℓ_meas</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="bp">∀</span><span class="w"> </span><span class="n">θ</span><span class="o">,</span><span class="w"> </span><span class="n">Measurable</span><span class="w"> </span><span class="o">(</span><span class="n">ℓ</span><span class="w"> </span><span class="n">θ</span><span class="o">))</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="o">(</span><span class="n">linf</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="o">(</span><span class="n">hbdd</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="bp">∀</span><span class="w"> </span><span class="n">θ</span><span class="o">,</span><span class="w"> </span><span class="bp">∀ᵐ</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="bp">∂</span><span class="n">D</span><span class="o">,</span><span class="w"> </span><span class="n">ℓ</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="bp">∈</span><span class="w"> </span><span class="n">Set.Icc</span><span class="w"> </span><span class="o">(</span><span class="mi">0</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)</span><span class="w"> </span><span class="n">linf</span><span class="o">)</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">    </span><span class="o">{</span><span class="n">n</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℕ</span><span class="o">}</span><span class="w"> </span><span class="o">(</span><span class="n">hn</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="bp">&lt;</span><span class="w"> </span><span class="n">n</span><span class="o">)</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">    </span><span class="o">{</span><span class="n">s</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">}</span><span class="w"> </span><span class="o">(</span><span class="n">hs_pos</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="bp">&lt;</span><span class="w"> </span><span class="n">s</span><span class="o">)</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">    </span><span class="o">(</span><span class="n">h_exp_joint_int</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Integrable</span><span class="w"> </span><span class="bp">...</span><span class="w"> </span><span class="o">(</span><span class="n">q.prod</span><span class="w"> </span><span class="o">(</span><span class="n">Measure.pi</span><span class="w"> </span><span class="bp">...</span><span class="o">)))</span>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">    </span><span class="o">(</span><span class="n">h_gap_joint_int</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Integrable</span><span class="w"> </span><span class="bp">...</span><span class="w"> </span><span class="o">(</span><span class="n">ρ.prod</span><span class="w"> </span><span class="o">(</span><span class="n">Measure.pi</span><span class="w"> </span><span class="bp">...</span><span class="o">)))</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="o">(</span><span class="n">hllr_int</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Integrable</span><span class="w"> </span><span class="o">(</span><span class="n">MeasureTheory.llr</span><span class="w"> </span><span class="n">ρ</span><span class="w"> </span><span class="n">q</span><span class="o">)</span><span class="w"> </span><span class="n">ρ</span><span class="o">)</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">    </span><span class="o">(</span><span class="n">hMGF_int_PS</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Integrable</span><span class="w"> </span><span class="bp">...</span><span class="w"> </span><span class="o">(</span><span class="n">Measure.pi</span><span class="w"> </span><span class="bp">...</span><span class="o">))</span><span class="w"> </span><span class="o">:</span>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">    </span><span class="bp">∫</span><span class="w"> </span><span class="n">S</span><span class="o">,</span><span class="w"> </span><span class="o">(</span><span class="bp">∫</span><span class="w"> </span><span class="n">θ</span><span class="o">,</span><span class="w"> </span><span class="o">((</span><span class="bp">∫</span><span class="w"> </span><span class="n">x</span><span class="o">,</span><span class="w"> </span><span class="n">ℓ</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="bp">∂</span><span class="n">D</span><span class="o">)</span>
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="w">          </span><span class="bp">-</span><span class="w"> </span><span class="o">(</span><span class="mi">1</span><span class="w"> </span><span class="bp">/</span><span class="w"> </span><span class="o">(</span><span class="n">n</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">))</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="bp">∑</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Fin</span><span class="w"> </span><span class="n">n</span><span class="o">,</span><span class="w"> </span><span class="n">ℓ</span><span class="w"> </span><span class="n">θ</span><span class="w"> </span><span class="o">(</span><span class="n">S</span><span class="w"> </span><span class="n">i</span><span class="o">))</span><span class="w"> </span><span class="bp">∂</span><span class="n">ρ</span><span class="o">)</span>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="w">        </span><span class="bp">∂</span><span class="o">(</span><span class="n">Measure.pi</span><span class="w"> </span><span class="o">(</span><span class="k">fun</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Fin</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="bp">=&gt;</span><span class="w"> </span><span class="n">D</span><span class="o">))</span>
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="w">      </span><span class="bp">≤</span><span class="w"> </span><span class="o">(</span><span class="n">klDiv</span><span class="w"> </span><span class="n">ρ</span><span class="w"> </span><span class="n">q</span><span class="o">)</span><span class="bp">.</span><span class="n">toReal</span><span class="w"> </span><span class="bp">/</span><span class="w"> </span><span class="n">s</span>
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="w">          </span><span class="bp">+</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="o">(</span><span class="n">linf</span><span class="w"> </span><span class="bp">^</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="bp">/</span><span class="w"> </span><span class="o">(</span><span class="mi">8</span><span class="w"> </span><span class="bp">*</span><span class="w"> </span><span class="o">(</span><span class="n">n</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ℝ</span><span class="o">)))</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="kd">by</span>
+</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="w">  </span><span class="n">exact</span><span class="w"> </span><span class="n">LTFP.pac_bayes_mcallester_bach_path_a_class</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="n">q</span><span class="w"> </span><span class="n">ρ</span><span class="w"> </span><span class="n">hρq</span><span class="w"> </span><span class="n">ℓ</span>
+</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="w">    </span><span class="n">hℓ_meas</span><span class="w"> </span><span class="n">linf</span><span class="w"> </span><span class="n">hbdd</span><span class="w"> </span><span class="n">hn</span><span class="w"> </span><span class="n">hs_pos</span><span class="w"> </span><span class="n">h_exp_joint_int</span><span class="w"> </span><span class="n">h_gap_joint_int</span>
+</span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a><span class="w">    </span><span class="n">hllr_int</span><span class="w"> </span><span class="n">hMGF_int_PS</span>
+</span></code></pre></div>
+<p>The 13-hypothesis signature looks intimidating. Breaking it down:</p>
+<ul>
+<li><strong>Probability hypotheses</strong> (<code>[IsProbabilityMeasure D/q/ρ]</code>,
+  <code>hρq : ρ ≪ q</code>): the modeling setup.</li>
+<li><strong>Loss-family hypotheses</strong> (<code>ℓ</code>, <code>hℓ_meas</code>, <code>linf</code>, <code>hbdd</code>): the
+  bounded loss assumption.</li>
+<li><strong>Sample-size hypothesis</strong> (<code>hn : 0 &lt; n</code>): trivially needed for the
+  <code>1/n</code> average.</li>
+<li><strong>Optimization scalar</strong> (<code>hs_pos : 0 &lt; s</code>): we need to divide by <code>s</code>
+  in Step 4.</li>
+<li><strong>Joint integrability</strong> (<code>h_exp_joint_int</code>, <code>h_gap_joint_int</code>,
+  <code>hMGF_int_PS</code>): Fubini and Donsker-Varadhan both need these.</li>
+<li><strong>Log-likelihood integrability</strong> (<code>hllr_int</code>): Donsker-Varadhan's
+  KL representation needs <code>log(dρ/dq)</code> to be ρ-integrable.</li>
+</ul>
+<p>The textbook glosses these integrability conditions ("under suitable
+regularity..."); the formalization surfaces each one. In practice, for
+bounded loss and absolutely continuous ρ ≪ q, all four integrability
+conditions follow from boundedness of <code>ℓ</code> and finiteness of
+<code>KL(ρ ‖ q)</code>.</p>
+<h2 id="what-students-should-take-away">What students should take away</h2>
+<ul>
+<li><strong>PAC-Bayes is just four ingredients.</strong> Per-θ MGF, integrate over
+  prior, Donsker-Varadhan, Chernoff. Each is a textbook tool; the
+  novelty is in their composition.</li>
+<li><strong>Donsker-Varadhan is the lifting step.</strong> Without it, you only have
+  a bound on the prior expectation. DV is what makes the posterior
+  bound possible --- and DV is exactly the dual representation of KL.</li>
+<li><strong>Hoeffding gives <code>ℓ∞² / (8n)</code>.</strong> If your loss is small-variance,
+  switch Step 1 to a Bernstein MGF and you get a tighter bound. The
+  modular naming in LTlib supports this swap.</li>
+<li><strong>Integrability hypotheses matter.</strong> The Lean signature surfaces
+  four integrability conditions that the textbook elides. Each
+  corresponds to a real measure-theoretic check (Fubini × 2, DV × 1,
+  Bochner × 1).</li>
+<li><strong>The bound is uniform in <code>s</code>.</strong> Bach's Eq. 14.6 includes the <code>s</code>
+  freely. Optimizing in <code>s</code> is a separate calculation
+  <code>s* = √( 8n · KL(ρ ‖ q) / ℓ∞² )</code>, which collapses the bound to
+  <code>2√( KL · ℓ∞² / (8n) )</code>; this is McAllester's classical statement.</li>
+</ul>
+<h2 id="what-this-example-does-not-cover">What this example does NOT cover</h2>
+<ul>
+<li><strong>Catoni's PAC-Bayes form.</strong> Catoni (2007) gives a tighter bound for
+  bounded loss using a different optimization. Not in LTlib yet.</li>
+<li><strong>High-probability vs in-expectation.</strong> This carrier is the
+  in-expectation form. The high-probability version (Bach Eq. 14.7)
+  requires Markov on top.</li>
+<li><strong>Data-dependent posteriors.</strong> Bach §14.4.3 covers the case where ρ
+  depends on the sample; the carrier above treats ρ as a fixed (data-
+  independent) measure, with the data-dependent extension addressed
+  by a separate lemma.</li>
+</ul>
+<p>For a different worked example showing the Taylor-expansion MGF tool
+in isolation, see <a href="../walkthrough-bernstein/"><code>walkthrough-bernstein.md</code></a>.
+For the curriculum guide listing all problem sets including the
+PAC-Bayes Step-1-only exercise, see
+<a href="../problem-sets/"><code>problem-sets.md</code></a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

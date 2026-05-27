@@ -1,0 +1,2457 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Machine-checked Learning Theory from First Principles">
+      
+      
+      
+        <link rel="canonical" href="https://allenhaozhu.github.io/LTFP-Lean/ERRATA/">
+      
+      
+        <link rel="prev" href="../teaching/problem-sets/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Errata - LTlib — Lean 4 Companion to Bach (2024)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="deep-purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#errata-and-formalization-notes-for-bach-2024-learning-theory-from-first-principles" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="LTlib — Lean 4 Companion to Bach (2024)" class="md-header__button md-logo" aria-label="LTlib — Lean 4 Companion to Bach (2024)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            LTlib — Lean 4 Companion to Bach (2024)
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Errata
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="deep-purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="deep-purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/allenhaozhu/LTFP-Lean" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    allenhaozhu/LTFP-Lean
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../TEACHING/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  For Students & Teachers
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../wiki/" class="md-tabs__link">
+          
+  
+  
+  Wiki
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../teaching/walkthrough-bernstein/" class="md-tabs__link">
+          
+  
+  
+  Walkthroughs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Errata
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="https://allenhaozhu.github.io/LTFP-Lean/api/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API docs
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="LTlib — Lean 4 Companion to Bach (2024)" class="md-nav__button md-logo" aria-label="LTlib — Lean 4 Companion to Bach (2024)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    LTlib — Lean 4 Companion to Bach (2024)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/allenhaozhu/LTFP-Lean" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    allenhaozhu/LTFP-Lean
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TEACHING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For Students & Teachers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wiki
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Wiki
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wiki/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wiki/indexes/by-chapter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    By chapter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wiki/indexes/by-tier/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    By tier (difficulty)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wiki/indexes/by-status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    By status (audit)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wiki/indexes/by-topic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    By topic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wiki/indexes/by-mathlib-dep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    By Mathlib dependency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wiki/BUILD_LOG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build log
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../graphify/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    📈 Interactive graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Walkthroughs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Walkthroughs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../teaching/walkthrough-bernstein/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bernstein (Bach §1.2.3)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../teaching/walkthrough-pacbayes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PAC-Bayes (Bach §14.4.2)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../teaching/problem-sets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Problem set guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errata
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#entry-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-1-preliminaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 1 — Preliminaries
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 1 — Preliminaries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#123-proposition-17-matrix-bernstein-which-tropp-variant-the-hypothesis-matches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Proposition 1.7 matrix Bernstein: which Tropp variant the hypothesis matches
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-proposition-16-matrix-hoeffding-c_i-symmetry-left-implicit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Proposition 1.6 matrix Hoeffding: C_i symmetry left implicit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-two-2-conventions-across-proposition-14-and-its-key-lemma" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Two σ² conventions across Proposition 1.4 and its key lemma
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-integrability-of-exps-z-in-lemma-a-not-justified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Integrability of exp(s · Z) in lemma (a) not justified
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-term-by-term-expectation-in-the-series-expansion-of-esz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Term-by-term expectation in the series expansion of e^{sZ}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-lemma-123a-is-the-substantive-mgf-bound-but-not-labelled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Lemma 1.2.3(a) is the substantive MGF bound but not labelled
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-proposition-17-matrix-bernstein-cited-to-tropp-2012-without-proof-sketch-pointer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Proposition 1.7 matrix Bernstein cited to Tropp 2012 without proof-sketch pointer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#125-quadrature-two-distinct-theorems-share-the-section-without-separate-labels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.5 — Quadrature: two distinct theorems share the section without separate labels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-2-supervised-learning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 2 — Supervised Learning
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 2 — Supervised Learning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#25-proposition-22-no-free-lunch-class-of-algorithms-a-left-implicit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §2.5 — Proposition 2.2 (No Free Lunch): class of algorithms A left implicit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-sup-12-is-asymptotic-in-k-never-attained-at-finite-k" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §2.5 — sup = 1/2 is asymptotic in k, never attained at finite k
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-r_p-0-uses-an-unrestricted-predictor-class-implicitly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §2.5 — R*_p = 0 uses an unrestricted predictor class implicitly
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-3-linear-least-squares" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 3 — Linear Least Squares
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 3 — Linear Least Squares">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#37-class-of-estimators-in-the-minimax-inf_a-is-not-specified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §3.7 — Class of estimators in the minimax inf_A is not specified
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#37-vs-35-noise-model-asymmetry-between-matching-upper-and-lower-bounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §3.7 vs §3.5 — Noise model asymmetry between matching upper and lower bounds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#37-constant-in-the-displayed-bound-is-an-invertible-idealization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §3.7 — Constant in the displayed bound is an Σ̂-invertible idealization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#37-mourtada-2022-bayes-prior-route-uses-an-unstated-gaussian-kl-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §3.7 — Mourtada-2022 Bayes-prior route uses an unstated Gaussian-KL identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-4-empirical-risk-minimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 4 — Empirical Risk Minimization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-5-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 5 — Optimization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-6-local-averaging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 6 — Local Averaging
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-7-kernels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 7 — Kernels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-8-sparse-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 8 — Sparse Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-9-neural-networks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 9 — Neural Networks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 9 — Neural Networks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#93-universal-approximation-two-proof-routes-share-the-section-without-distinction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §9.3 — Universal approximation: two proof routes share the section without distinction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-10-ensemble-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 10 — Ensemble Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-11-online-learning-and-bandits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 11 — Online Learning and Bandits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-12-overparameterized-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 12 — Overparameterized Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 12 — Overparameterized Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#124-ntk-lazy-training-regime-informal-exposition-no-in-book-formal-proof" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §12.4 — NTK lazy-training regime: informal exposition, no in-book formal proof
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-13-structured-prediction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 13 — Structured Prediction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-14-probabilistic-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 14 — Probabilistic Methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 14 — Probabilistic Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1442-mcallester-pac-bayes-bound-post-chernoff-inequality-is-unnumbered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §14.4.2 — McAllester PAC-Bayes bound: post-Chernoff inequality is unnumbered
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-15-lower-bounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 15 — Lower Bounds
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 15 — Lower Bounds">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#151-pinsker-and-bretagnolle-huber-inequalities-used-but-never-named" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §15.1 — Pinsker and Bretagnolle-Huber inequalities used but never named
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contributing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contributing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://allenhaozhu.github.io/LTFP-Lean/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API docs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#entry-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-1-preliminaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 1 — Preliminaries
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 1 — Preliminaries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#123-proposition-17-matrix-bernstein-which-tropp-variant-the-hypothesis-matches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Proposition 1.7 matrix Bernstein: which Tropp variant the hypothesis matches
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-proposition-16-matrix-hoeffding-c_i-symmetry-left-implicit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Proposition 1.6 matrix Hoeffding: C_i symmetry left implicit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-two-2-conventions-across-proposition-14-and-its-key-lemma" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Two σ² conventions across Proposition 1.4 and its key lemma
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-integrability-of-exps-z-in-lemma-a-not-justified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Integrability of exp(s · Z) in lemma (a) not justified
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-term-by-term-expectation-in-the-series-expansion-of-esz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Term-by-term expectation in the series expansion of e^{sZ}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-lemma-123a-is-the-substantive-mgf-bound-but-not-labelled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Lemma 1.2.3(a) is the substantive MGF bound but not labelled
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-proposition-17-matrix-bernstein-cited-to-tropp-2012-without-proof-sketch-pointer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.3 — Proposition 1.7 matrix Bernstein cited to Tropp 2012 without proof-sketch pointer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#125-quadrature-two-distinct-theorems-share-the-section-without-separate-labels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1.2.5 — Quadrature: two distinct theorems share the section without separate labels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-2-supervised-learning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 2 — Supervised Learning
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 2 — Supervised Learning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#25-proposition-22-no-free-lunch-class-of-algorithms-a-left-implicit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §2.5 — Proposition 2.2 (No Free Lunch): class of algorithms A left implicit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-sup-12-is-asymptotic-in-k-never-attained-at-finite-k" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §2.5 — sup = 1/2 is asymptotic in k, never attained at finite k
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-r_p-0-uses-an-unrestricted-predictor-class-implicitly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §2.5 — R*_p = 0 uses an unrestricted predictor class implicitly
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-3-linear-least-squares" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 3 — Linear Least Squares
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 3 — Linear Least Squares">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#37-class-of-estimators-in-the-minimax-inf_a-is-not-specified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §3.7 — Class of estimators in the minimax inf_A is not specified
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#37-vs-35-noise-model-asymmetry-between-matching-upper-and-lower-bounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §3.7 vs §3.5 — Noise model asymmetry between matching upper and lower bounds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#37-constant-in-the-displayed-bound-is-an-invertible-idealization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §3.7 — Constant in the displayed bound is an Σ̂-invertible idealization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#37-mourtada-2022-bayes-prior-route-uses-an-unstated-gaussian-kl-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §3.7 — Mourtada-2022 Bayes-prior route uses an unstated Gaussian-KL identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-4-empirical-risk-minimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 4 — Empirical Risk Minimization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-5-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 5 — Optimization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-6-local-averaging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 6 — Local Averaging
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-7-kernels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 7 — Kernels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-8-sparse-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 8 — Sparse Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-9-neural-networks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 9 — Neural Networks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 9 — Neural Networks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#93-universal-approximation-two-proof-routes-share-the-section-without-distinction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §9.3 — Universal approximation: two proof routes share the section without distinction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-10-ensemble-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 10 — Ensemble Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-11-online-learning-and-bandits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 11 — Online Learning and Bandits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-12-overparameterized-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 12 — Overparameterized Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 12 — Overparameterized Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#124-ntk-lazy-training-regime-informal-exposition-no-in-book-formal-proof" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §12.4 — NTK lazy-training regime: informal exposition, no in-book formal proof
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-13-structured-prediction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 13 — Structured Prediction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-14-probabilistic-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 14 — Probabilistic Methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 14 — Probabilistic Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1442-mcallester-pac-bayes-bound-post-chernoff-inequality-is-unnumbered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §14.4.2 — McAllester PAC-Bayes bound: post-Chernoff inequality is unnumbered
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chapter-15-lower-bounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chapter 15 — Lower Bounds
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chapter 15 — Lower Bounds">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#151-pinsker-and-bretagnolle-huber-inequalities-used-but-never-named" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §15.1 — Pinsker and Bretagnolle-Huber inequalities used but never named
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contributing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contributing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="errata-and-formalization-notes-for-bach-2024-learning-theory-from-first-principles">Errata and formalization notes for Bach (2024), <em>Learning Theory from First Principles</em></h1>
+<p>This file collects discrepancies, ambiguities, and clarifications
+surfaced while formalizing the textbook in Lean 4. The intent is
+strictly constructive — most entries are not "the book is wrong" but
+rather "the proof assistant made an implicit assumption explicit, or a
+named lemma got a label, or the formalization had to traverse a
+slightly different proof route." Entries fall into three categories:</p>
+<ol>
+<li><strong>Mathematical clarifications</strong> — the stated theorem or proof needs
+   a tightening for a formal version to go through (e.g., a hypothesis
+   that was load-bearing but not written, a subtle measurability
+   assumption).</li>
+<li><strong>Formalization-required assumptions</strong> — standardly implicit in
+   mathematical prose, but must be made explicit in Lean (e.g.,
+   integrability, symmetry of matrices, well-definedness of an
+   argmin).</li>
+<li><strong>Pedagogical and citation improvements</strong> — unnamed lemmas that get
+   reused later and would benefit from a label, missing pointers to a
+   cited paper's proof structure, notational disambiguations.</li>
+</ol>
+<p>Entries are grouped by chapter. Each entry follows the format below.
+Contributions are welcome via pull request.</p>
+<hr />
+<h2 id="entry-format">Entry format</h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>### §X.Y[.Z] — &lt;short title&gt;
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>- **Textbook:** &lt;what the book states&gt;
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>- **Observation:** &lt;what the formalization made explicit&gt;
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>- **Suggested clarification:** &lt;one-sentence fix&gt;
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>- **Lean reference:** `LTFP/Ch&lt;NN&gt;_&lt;Topic&gt;/&lt;File&gt;.lean` (optional)
+</span></code></pre></div>
+<p>Each entry should be specific (cite a section or page), constructive
+(propose a clarification rather than just flag an issue), and brief.
+The audience is the textbook author and future readers; keep the tone
+neutral and technical.</p>
+<hr />
+<h2 id="chapter-1-preliminaries">Chapter 1 — Preliminaries</h2>
+<h3 id="123-proposition-17-matrix-bernstein-which-tropp-variant-the-hypothesis-matches">§1.2.3 — Proposition 1.7 matrix Bernstein: which Tropp variant the hypothesis matches</h3>
+<ul>
+<li><strong>Textbook:</strong> "<code>M_i</code> symmetric, <code>E[M_i] = 0</code>, <code>λ_max(M_i) ≤ c</code> a.s.,
+  <code>σ² = λ_max((1/n) ∑ E[M_i²])</code>"; concludes a tail bound on
+  <code>λ_max((1/n) ∑ M_i)</code>.</li>
+<li><strong>Observation:</strong> There are two standard Tropp variants. The
+  one-sided <strong>maximum-eigenvalue</strong> Bernstein tail bound (Tropp 2011,
+  <em>User-Friendly Tail Bounds for Sums of Random Matrices</em>,
+  Theorem 6.1) is stated under exactly the textbook's hypothesis
+  <code>λ_max(M_i) ≤ c</code>. The two-sided <strong>operator-norm</strong> Bernstein
+  (Tropp 2015 monograph, Theorem 6.1.1) requires <code>‖M_i‖_op ≤ c</code>,
+  equivalently <code>−c·I ≼ M_i ≼ c·I</code>. The LTFP-Lean formalization went
+  through the two-sided variant — chosen because Mathlib's matrix MGF
+  infrastructure was easier to compose with operator-norm bounds —
+  and so its statement reads <code>‖M_i‖_op ≤ c</code>. The textbook's
+  <code>λ_max(M_i) ≤ c</code> hypothesis is correct for the one-sided
+  λ_max-tail conclusion as stated.</li>
+<li><strong>Suggested clarification:</strong> none required if the intent is the
+  one-sided λ_max-tail bound; the textbook is consistent. If a future
+  edition wants to state both the one-sided and two-sided variants,
+  pairing each with its own hypothesis (one-sided <code>λ_max ≤ c</code> for the
+  λ_max-tail, <code>‖·‖_op ≤ c</code> for the spectral-norm tail) would help
+  formalization readers know which to port.</li>
+<li><strong>Lean reference:</strong> <code>LTFP/Ch01_Preliminaries/Concentration.lean</code>
+  (<code>matrix_bernstein_bound</code>, docstring documents the variant chosen).</li>
+</ul>
+<h3 id="123-proposition-16-matrix-hoeffding-c_i-symmetry-left-implicit">§1.2.3 — Proposition 1.6 matrix Hoeffding: <code>C_i</code> symmetry left implicit</h3>
+<ul>
+<li><strong>Textbook:</strong> "<code>M_i² ≼ C_i²</code> a.s., <code>σ² = λ_max((1/n) ∑ C_i²)</code>".</li>
+<li><strong>Observation:</strong> For <code>M_i² ≼ C_i²</code> to be a well-posed PSD-order
+  statement, and for <code>(1/n) ∑ C_i²</code> to have a real largest eigenvalue,
+  the matrices <code>C_i</code> must be symmetric (equivalently, Hermitian).
+  Otherwise <code>C_i² = C_i · C_i</code> and <code>C_iᵀ · C_i</code> are distinct objects,
+  and <code>M_i² ≼ C_i²</code> is ambiguous. The book writes <code>C_i²</code> as if <code>C_i</code>
+  were a scalar; Tropp's theorem requires <code>C_i</code> Hermitian.</li>
+<li><strong>Suggested clarification:</strong> Add "where the <code>C_i ∈ ℝ^{d×d}</code> are
+  symmetric (equivalently, <code>C_i²</code> is positive semidefinite)" to the
+  hypothesis list.</li>
+<li><strong>Lean reference:</strong> <code>LTFP/Ch01_Preliminaries/Concentration.lean</code>
+  (matrix-Bernstein doc paragraph).</li>
+</ul>
+<h3 id="123-two-2-conventions-across-proposition-14-and-its-key-lemma">§1.2.3 — Two <code>σ²</code> conventions across Proposition 1.4 and its key lemma</h3>
+<ul>
+<li><strong>Textbook:</strong> Proposition 1.4 defines <code>σ² = (1/n) ∑ᵢ var(Zᵢ)</code> — an
+  <em>average</em> over the sample. The key lemma (a) used in its proof
+  writes <code>σ² = E[Z²]</code> — a <em>single-variable</em> second moment. The same
+  symbol is reused without comment.</li>
+<li><strong>Observation:</strong> A formal proof must apply the key lemma per-variable
+  with <code>sᵢ² = var(Zᵢ) = E[Zᵢ²]</code> and then sum, recovering <code>n · σ²</code> in
+  the exponent only because of the averaging convention. This dual
+  usage is invisible in the prose and forces a renaming during
+  formalization.</li>
+<li><strong>Suggested clarification:</strong> Either rename the lemma-(a) quantity
+  (e.g. <code>s² = E[Z²]</code>), or add a sentence noting that applying lemma
+  (a) to each <code>Zᵢ</code> with <code>sᵢ² = var(Zᵢ)</code> and summing yields <code>n σ²</code>
+  under the average convention.</li>
+<li><strong>Lean reference:</strong> <code>LTFP/Ch01_Preliminaries/Concentration.lean</code>
+  (<code>bernstein_inequality</code>; the algebraic core uses a single <code>σ²</code>
+  parameter, masking the per-variable vs. averaged distinction).</li>
+</ul>
+<h3 id="123-integrability-of-exps-z-in-lemma-a-not-justified">§1.2.3 — Integrability of <code>exp(s · Z)</code> in lemma (a) not justified</h3>
+<ul>
+<li><strong>Textbook:</strong> Proposition 1.4's key lemma writes
+  <code>E[exp(s · Z)] ≤ exp((σ²/c²)(exp(s c) − 1 − s c))</code> without
+  justifying that <code>exp(s · Z)</code> is integrable.</li>
+<li><strong>Observation:</strong> The Lean conditional form requires the integrability
+  hypothesis <code>MeasureTheory.Integrable (fun ω =&gt; exp(t · X ω)) μ</code> to
+  be supplied explicitly; the Chernoff machinery cannot be invoked
+  otherwise. Integrability follows from <code>|Z| ≤ c</code> a.s. (so
+  <code>exp(s · Z) ≤ exp(s · c)</code> a.s.) but the book never says so.</li>
+<li><strong>Suggested clarification:</strong> Add a one-line remark that
+  <code>exp(s · Z) ≤ exp(s · c)</code> a.s. under the bounded hypothesis, so the
+  MGF is finite.</li>
+<li><strong>Lean reference:</strong> <code>LTFP/Ch01_Preliminaries/Concentration.lean</code>
+  (<code>bernstein_inequality_of_mgf</code>, hypothesis <code>h_int</code>).</li>
+</ul>
+<h3 id="123-term-by-term-expectation-in-the-series-expansion-of-esz">§1.2.3 — Term-by-term expectation in the series expansion of <code>e^{sZ}</code></h3>
+<ul>
+<li><strong>Textbook:</strong> The proof of the key lemma writes "expands
+  <code>e^{s Z} = ∑_k (s Z)^k / k!</code>" and takes expectation term-by-term,
+  without invoking dominated or monotone convergence.</li>
+<li><strong>Observation:</strong> Interchange of expectation and infinite series is a
+  non-trivial step. The bounded hypothesis <code>|Z| ≤ c</code> does provide the
+  uniform dominator <code>exp(s · c)</code>, but the book does not say so. The
+  Lean route sidesteps the series argument entirely by taking the MGF
+  bound as a hypothesis — precisely because the series-expectation
+  interchange is not free.</li>
+<li><strong>Suggested clarification:</strong> Insert a one-sentence appeal to
+  dominated convergence, with dominator <code>exp(s · c)</code> (under the
+  bounded hypothesis), when moving <code>E[·]</code> inside the sum.</li>
+<li><strong>Lean reference:</strong> <code>LTFP/Ch01_Preliminaries/Concentration.lean</code>
+  (<code>bernstein_inequality_of_mgf</code>).</li>
+</ul>
+<h3 id="123-lemma-123a-is-the-substantive-mgf-bound-but-not-labelled">§1.2.3 — Lemma 1.2.3(a) is the substantive MGF bound but not labelled</h3>
+<ul>
+<li><strong>Textbook:</strong> §1.2.3 (pp. 14-15) presents the scalar Bernstein
+  derivation as one continuous proof. The substantive MGF inequality
+  <code>E[exp(s · Z)] ≤ exp((σ² / c²)(exp(s · c) − 1 − s · c))</code> (for
+  <code>|Z| ≤ c</code> a.s., <code>E[Z] = 0</code>) — and the Bach-specific Taylor-remainder
+  form <code>≤ exp(s² σ² / (2(1 − |s|c/3)))</code> derived from it — are presented
+  inline as steps inside the Bernstein proof, never assigned a separate
+  lemma number.</li>
+<li><strong>Observation:</strong> When formalizing the textbook-strict variant, this
+  per-summand MGF bound has to be extracted as a standalone Lean
+  theorem (<code>bach_taylor_mgf</code>) so that downstream callers (Bernstein
+  tail; PAC-Bayes; matrix Bernstein per-summand) can reuse it without
+  re-deriving the Taylor expansion. Readers who follow §1.2.3
+  line-by-line lose track of which step is the load-bearing inequality
+  reused elsewhere.</li>
+<li><strong>Suggested clarification:</strong> Label the per-summand Taylor-MGF bound
+  as a distinct displayed lemma (e.g., "Lemma 1.2.3(a)") in the text,
+  so it can be cited independently from the overall Bernstein tail
+  bound that follows from it.</li>
+<li><strong>Lean reference:</strong>
+  <code>LTFP/MathlibExt/Probability/Moments/BernsteinTextbook.lean</code>
+  (<code>bach_taylor_mgf</code>).</li>
+</ul>
+<h3 id="123-proposition-17-matrix-bernstein-cited-to-tropp-2012-without-proof-sketch-pointer">§1.2.3 — Proposition 1.7 matrix Bernstein cited to Tropp 2012 without proof-sketch pointer</h3>
+<ul>
+<li><strong>Textbook:</strong> Proposition 1.7 states the matrix Bernstein bound and
+  cites Tropp 2012, Theorem 1.4. No proof sketch is given in §1.2.3.</li>
+<li><strong>Observation:</strong> The full formal derivation requires three load-
+  bearing pieces well beyond the scalar §1.2.3 development:
+  (i) Lieb 1973 joint concavity of the trace-exp functional (or the
+  Tropp 2012 unnormalized variational reformulation thereof);
+  (ii) the matrix MGF chain <code>tr exp(∑ Mᵢ) ≤ tr exp(∑ Eᵢ[Mᵢ])</code> derived
+  from it via Bochner integration; (iii) a per-summand
+  Bennett-Bernstein remainder lifted to Hermitian matrices via the
+  continuous functional calculus. Formalizing Proposition 1.7
+  end-to-end in LTFP required ~7,000 lines of MathlibExt
+  infrastructure. The "cite Tropp" approach is appropriate for a
+  textbook but leaves a substantial verification gap that the reader
+  cannot recover from the in-book exposition alone.</li>
+<li><strong>Suggested clarification:</strong> Add a one-paragraph proof sketch in
+  §1.2.3 listing the three load-bearing pieces (Lieb-1973 concavity →
+  matrix MGF subadditivity chain → per-summand Bennett-Bernstein
+  remainder), so a serious reader knows what the citation entails and
+  where to look in Tropp 2012 for each piece.</li>
+<li><strong>Lean reference:</strong>
+  <code>LTFP/MathlibExt/MatrixAnalysis/MatrixBernsteinFinal.lean</code>
+  (<code>Matrix.bernstein_full</code>).</li>
+</ul>
+<h3 id="125-quadrature-two-distinct-theorems-share-the-section-without-separate-labels">§1.2.5 — Quadrature: two distinct theorems share the section without separate labels</h3>
+<ul>
+<li><strong>Textbook:</strong> §1.2.5 discusses both the left-endpoint Riemann-sum
+  bound <code>L(b − a)² / (2n)</code> for <code>L</code>-Lipschitz integrands and the
+  trapezoidal-rule bound <code>L / (12 n²)</code> for <code>C²</code> integrands with
+  <code>|f''| ≤ L</code>. These are distinct theorems with different smoothness
+  hypotheses, presented in close prose.</li>
+<li><strong>Observation:</strong> When formalizing, only one variant gets the section's
+  identifier. LTFP's carrier <code>lipschitz_riemann_sum_error</code> proves the
+  left-endpoint Lipschitz variant; the trapezoidal-<code>C²</code> variant is a
+  different theorem with a faster rate and is not currently formalized.
+  Readers may conflate the two when citing "§1.2.5".</li>
+<li><strong>Suggested clarification:</strong> Label the two variants explicitly (e.g.,
+  "Proposition 1.10(a) — left-endpoint, Lipschitz" and
+  "Proposition 1.10(b) — trapezoidal, <code>C²</code>") so citations are
+  unambiguous and the rate-vs-smoothness tradeoff is visible.</li>
+<li><strong>Lean reference:</strong> <code>LTFP/Ch01_Preliminaries/Concentration.lean</code>
+  (<code>lipschitz_riemann_sum_error</code>).</li>
+</ul>
+<h2 id="chapter-2-supervised-learning">Chapter 2 — Supervised Learning</h2>
+<h3 id="25-proposition-22-no-free-lunch-class-of-algorithms-a-left-implicit">§2.5 — Proposition 2.2 (No Free Lunch): class of algorithms <code>A</code> left implicit</h3>
+<ul>
+<li><strong>Textbook:</strong> "For any <code>n &gt; 0</code> and any learning algorithm <code>A</code>,
+  <code>sup_p { E[R_p(A(D_n))] − R*_p } ≥ 1/2</code>."</li>
+<li><strong>Observation:</strong> The textbook statement does not say whether <code>A</code>
+  ranges over deterministic learning rules or also includes randomized
+  algorithms, nor what the expectation <code>E[·]</code> averages over (the
+  sample <code>D_n(p)</code> alone, or also the algorithm's internal randomness).
+  The Lean anchor proves the adversary bound for <em>deterministic</em>
+  predictors <code>f : Bool → Bool</code>; lifting to "any algorithm" requires
+  either restricting <code>A</code> to deterministic maps
+  <code>(𝒳 × {0,1})^n → (𝒳 → {0,1})</code> or letting <code>E[·]</code> average over
+  internal randomness as well.</li>
+<li><strong>Suggested clarification:</strong> State the quantifier explicitly: "for
+  any (possibly randomized) algorithm <code>A</code>, with <code>E[·]</code> taken over both
+  the sample <code>D_n</code> and the internal randomness of <code>A</code>".</li>
+<li><strong>Lean reference:</strong> <code>LTFP/Ch02_SupervisedLearning/Consistency.lean</code>
+  (<code>nfl_two_distributions</code>).</li>
+</ul>
+<h3 id="25-sup-12-is-asymptotic-in-k-never-attained-at-finite-k">§2.5 — <code>sup = 1/2</code> is asymptotic in <code>k</code>, never attained at finite <code>k</code></h3>
+<ul>
+<li><strong>Textbook:</strong> "the expected risk … evaluates to
+  <code>(1/2)(1 − 1/k)^n</code>, which can be made arbitrarily close to <code>1/2</code>
+  by letting <code>k → ∞</code>," concluding <code>sup_p {…} ≥ 1/2</code>.</li>
+<li><strong>Observation:</strong> For every finite <code>k</code>, the constructed family gives a
+  value strictly below <code>1/2</code>; the bound <code>1/2</code> is the <em>supremum over
+  <code>k</code></em>, never a maximum. The conclusion <code>sup ≥ 1/2</code> therefore requires
+  <code>𝒳</code> to be infinite (so <code>k</code> is unbounded) and the passage to the
+  supremum. The Lean core deliberately formalizes only the per-<code>k</code>
+  nonnegativity, sidestepping the limit and highlighting the
+  asymptotic nature of the bound.</li>
+<li><strong>Suggested clarification:</strong> Add one sentence — e.g. "since <code>𝒳</code> is
+  infinite, <code>k</code> can be taken arbitrarily large, so the supremum (not
+  maximum) reaches <code>1/2</code>" — making explicit that the <code>1/2</code> bound is
+  asymptotic in <code>k</code> and uses the infinite-<code>𝒳</code> hypothesis essentially.</li>
+<li><strong>Lean reference:</strong> <code>LTFP/Ch02_SupervisedLearning/Consistency.lean</code>
+  (<code>no_free_lunch</code>).</li>
+</ul>
+<h3 id="25-r_p-0-uses-an-unrestricted-predictor-class-implicitly">§2.5 — <code>R*_p = 0</code> uses an unrestricted predictor class implicitly</h3>
+<ul>
+<li><strong>Textbook:</strong> "Build a uniform distribution on <code>ℕ × {0,1}</code>
+  parametrized by <code>r ∈ {0,1}^k</code>: let <code>x</code> be uniform on the first <code>k</code>
+  elements and <code>y = r_x</code>. Then <code>R*_p = 0</code>."</li>
+<li><strong>Observation:</strong> The conclusion <code>R*_p = 0</code> requires the Bayes
+  infimum to be taken over <em>all</em> measurable classifiers
+  <code>𝒳 → {0,1}</code> — the labelling function <code>x ↦ r_x</code> on the finite set
+  must itself be admissible. The Lean adversaries place a Dirac mass
+  at a mislabelled point, which only works because the "ground-truth
+  classifier" class is unrestricted; this is an implicit hypothesis
+  the book leaves to the reader.</li>
+<li><strong>Suggested clarification:</strong> State that <code>R*_p</code> is the infimum over
+  all measurable <code>𝒳 → {0,1}</code> classifiers (not over some restricted
+  hypothesis class <code>ℱ</code>), so that the Bayes risk on the adversarial
+  distribution is indeed <code>0</code>.</li>
+<li><strong>Lean reference:</strong> <code>LTFP/Ch02_SupervisedLearning/Consistency.lean</code>
+  (<code>adversaryOne</code>).</li>
+</ul>
+<h2 id="chapter-3-linear-least-squares">Chapter 3 — Linear Least Squares</h2>
+<h3 id="37-class-of-estimators-in-the-minimax-inf_a-is-not-specified">§3.7 — Class of estimators in the minimax <code>inf_A</code> is not specified</h3>
+<ul>
+<li><strong>Textbook:</strong> Writes
+  <code>inf_A sup_{θ_* ∈ ℝᵈ} E[R_{θ_*}(A(Φ θ_* + ε))] − R* ≥ σ² d / n</code>
+  without saying which class <code>A</code> ranges over.</li>
+<li><strong>Observation:</strong> The result is much stronger under "all measurable
+  estimators" than under "all linear estimators", but the textbook
+  prose does not commit. The Bayesian-prior proof technique in the
+  section only justifies the bound when <code>A</code> ranges over all measurable
+  estimators, so this should be stated. The Lean docstring inherits
+  the ambiguity.</li>
+<li><strong>Suggested clarification:</strong> Insert "where the infimum is over all
+  measurable estimators <code>A : ℝⁿ → ℝᵈ</code>" immediately after the
+  displayed minimax inequality.</li>
+<li><strong>Lean reference:</strong>
+  <code>LTFP/Ch03_LinearLeastSquares/FixedDesign.lean</code>
+  (<code>mourtada_lower_bound</code>, docstring).</li>
+</ul>
+<h3 id="37-vs-35-noise-model-asymmetry-between-matching-upper-and-lower-bounds">§3.7 vs §3.5 — Noise model asymmetry between matching upper and lower bounds</h3>
+<ul>
+<li><strong>Textbook:</strong> The §3.7 lower bound assumes <code>ε ∼ N(0, σ² I)</code>
+  (Gaussian noise; the proof uses the Gaussian posterior-mean /
+  posterior-mode identity). The matching §3.5 upper bound <code>σ² d / n</code>
+  is proved under sub-Gaussian noise. The book presents the two
+  bounds as a matched rate without flagging the noise-model
+  asymmetry.</li>
+<li><strong>Observation:</strong> Whether the lower bound extends to sub-Gaussian or
+  only to bounded variance is left unsaid; the "matched rate" claim
+  in the prose is therefore qualified in a way the formal statements
+  do not reveal.</li>
+<li><strong>Suggested clarification:</strong> Add a remark that the lower bound as
+  proved is Gaussian-noise-specific; extension to sub-Gaussian or
+  bounded-variance noise requires a separate argument, and the
+  matched-rate phrasing should be qualified accordingly.</li>
+<li><strong>Lean reference:</strong>
+  <code>LTFP/Ch03_LinearLeastSquares/FixedDesign.lean</code>
+  (file docstring and <code>mourtada_lower_bound</code>).</li>
+</ul>
+<h3 id="37-constant-in-the-displayed-bound-is-an-invertible-idealization">§3.7 — Constant in the displayed bound is an <code>Σ̂</code>-invertible idealization</h3>
+<ul>
+<li><strong>Textbook:</strong> Displays the lower bound as <code>≥ σ² d / n</code> (constant 1).</li>
+<li><strong>Observation:</strong> The proof shown delivers this constant only in the
+  limit <code>λ → 0</code> and when <code>Σ̂</code> has full rank. For finite <code>λ</code> or a
+  rank-deficient design, the actual constant is
+  <code>(1/n) · tr((Σ̂ + λ I)⁻¹ Σ̂)</code>, which is strictly less than <code>d / n</code>.
+  The Lean formalization implicitly acknowledges this by weakening
+  the docstring to "<code>≥ c · σ² d / n</code> for some <code>c &gt; 0</code>".</li>
+<li><strong>Suggested clarification:</strong> Either restrict the displayed bound to
+  "when <code>Σ̂</code> is invertible", or state it as
+  <code>≥ σ² · tr((Σ̂ + λ I)⁻¹ Σ̂) / n</code> with the <code>→ σ² d / n</code> limit
+  annotated separately.</li>
+<li><strong>Lean reference:</strong>
+  <code>LTFP/Ch03_LinearLeastSquares/FixedDesign.lean</code>
+  (<code>mourtada_lower_bound</code>).</li>
+</ul>
+<h3 id="37-mourtada-2022-bayes-prior-route-uses-an-unstated-gaussian-kl-identity">§3.7 — Mourtada-2022 Bayes-prior route uses an unstated Gaussian-KL identity</h3>
+<ul>
+<li><strong>Textbook:</strong> §3.7 cites Mourtada (2022) for the OLS minimax lower
+  bound via a Bayesian-prior argument with <code>θ* ∼ N(0, (σ²/(λn)) · I)</code>,
+  the posterior identified with ridge regression, and the limit
+  <code>λ → 0</code> recovering the <code>σ² d / n</code> rate for invertible <code>Σ̂</code>.</li>
+<li><strong>Observation:</strong> The Mourtada-2022 derivation as cited implicitly
+  uses the closed-form Kullback-Leibler divergence between two
+  univariate Gaussians of equal variance,
+  <code>KL(N(μ₀, v) ‖ N(μ₁, v)) = (μ₀ − μ₁)² / (2v)</code>. This identity is
+  folklore but not stated in §3.7 nor in §15.1 — the formalization
+  could not invoke a named Mathlib lemma for it at the time of
+  writing, and LTFP's general-<code>d</code> carrier consequently routes through
+  a looser Le-Cam two-point estimate. A reader trying to reconstruct
+  the Mourtada-2022 proof will hit this gap.</li>
+<li><strong>Suggested clarification:</strong> Either state the Gaussian-vs-Gaussian
+  KL identity inline in §3.7 (one displayed equation), or add a
+  footnote citing the standard reference, so the Mourtada-2022 route
+  is self-contained within the textbook.</li>
+<li><strong>Lean reference:</strong>
+  <code>LTFP/Ch03_LinearLeastSquares/FixedDesign.lean</code>
+  (<code>ols_minimax_two_point_discharge_multivariate_via_bhattacharyya</code>).</li>
+</ul>
+<h2 id="chapter-4-empirical-risk-minimization">Chapter 4 — Empirical Risk Minimization</h2>
+<p><em>No entries yet.</em></p>
+<h2 id="chapter-5-optimization">Chapter 5 — Optimization</h2>
+<p><em>No entries yet.</em></p>
+<h2 id="chapter-6-local-averaging">Chapter 6 — Local Averaging</h2>
+<p><em>No entries yet.</em></p>
+<h2 id="chapter-7-kernels">Chapter 7 — Kernels</h2>
+<p><em>No entries yet.</em></p>
+<h2 id="chapter-8-sparse-methods">Chapter 8 — Sparse Methods</h2>
+<p><em>No entries yet.</em></p>
+<h2 id="chapter-9-neural-networks">Chapter 9 — Neural Networks</h2>
+<h3 id="93-universal-approximation-two-proof-routes-share-the-section-without-distinction">§9.3 — Universal approximation: two proof routes share the section without distinction</h3>
+<ul>
+<li><strong>Textbook:</strong> §9.3 (with §9.3.1 + §9.3.4) develops universal
+  approximation for single-hidden-layer ReLU networks via the
+  constructive route: (a) exact CPA representation by ReLU using the
+  partition-of-unity identity <code>(1/(2R))(x + R)₊ + (1/(2R))(−x + R)₊ = 1</code>
+  on <code>[−R, R]</code>; (b) CPA dense in <code>C([−R, R])</code> (citing Rudin 1987);
+  (c) lift to ℝ^d via Fourier inversion plus a Barron-norm bound. The
+  chapter also notes in passing that "universal approximation results
+  exist as soon as the activation function is not a polynomial
+  (Leshno et al. 1993)" — which is a different, Stone-Weierstrass-style
+  / Hahn-Banach argument, not the constructive CPA route.</li>
+<li><strong>Observation:</strong> These are two distinct proof techniques for the
+  same theorem name, with different smoothness/regularity requirements
+  on the activation and different teaching trajectories. When
+  formalizing, LTFP's <code>cybenko_uat_ramp_unconditional</code> uses the
+  Stone-Weierstrass route (qualitative density), while a separate
+  carrier following the constructive CPA-by-ReLU route would have a
+  different signature (quantitative + Barron norm). A reader citing
+  "§9.3 universal approximation" cannot tell which proof technique is
+  being invoked.</li>
+<li><strong>Suggested clarification:</strong> Distinguish the two routes explicitly
+  in §9.3 (e.g., "Theorem 9.X — universal approximation via
+  Stone-Weierstrass / non-polynomial activation" vs "Theorem 9.Y —
+  constructive CPA-by-ReLU + Rudin density"), and note the different
+  smoothness hypotheses each requires.</li>
+<li><strong>Lean reference:</strong> <code>LTFP/MathlibExt/Topology/UAT.lean</code>
+  (<code>cybenko_uat_ramp_unconditional</code>).</li>
+</ul>
+<h2 id="chapter-10-ensemble-methods">Chapter 10 — Ensemble Methods</h2>
+<p><em>No entries yet.</em></p>
+<h2 id="chapter-11-online-learning-and-bandits">Chapter 11 — Online Learning and Bandits</h2>
+<p><em>No entries yet.</em></p>
+<h2 id="chapter-12-overparameterized-models">Chapter 12 — Overparameterized Models</h2>
+<h3 id="124-ntk-lazy-training-regime-informal-exposition-no-in-book-formal-proof">§12.4 — NTK lazy-training regime: informal exposition, no in-book formal proof</h3>
+<ul>
+<li><strong>Textbook:</strong> §12 (with NTK material in §12.4) describes the
+  lazy-training regime — under which a wide neural network's gradient
+  flow is well-approximated by its linearization around initialization
+  — informally. The chapter cites Jacot et al. (2018) and Du et al.
+  (2019) for the underlying formal results.</li>
+<li><strong>Observation:</strong> Formalizing the "lazy training carrier" (the
+  statement that for sufficiently wide networks, the linearization
+  approximation holds uniformly over the optimization trajectory)
+  required bespoke clopen-bootstrap-on-trajectory infrastructure and
+  perturbation control of the empirical NTK well beyond Bach's
+  exposition. This is appropriate textbook style, but readers
+  attempting to verify the §12.4 claims rigorously will need to
+  follow the references rather than the chapter itself, and the
+  chapter does not flag the size of the verification gap.</li>
+<li><strong>Suggested clarification:</strong> Add a "for formal proofs see..." block
+  at the end of §12.4 explicitly pointing readers to Jacot et al.
+  (2018) Theorem 1, Du et al. (2019) Theorem 4.1, and noting that
+  the in-chapter exposition is intentionally informal.</li>
+<li><strong>Lean reference:</strong>
+  <code>LTFP/MathlibExt/Probability/NTKLazyCarrierFromTotalMovement.lean</code>
+  (<code>ntk_lazy_training_carrier_end_to_end</code>).</li>
+</ul>
+<h2 id="chapter-13-structured-prediction">Chapter 13 — Structured Prediction</h2>
+<p><em>No entries yet.</em></p>
+<h2 id="chapter-14-probabilistic-methods">Chapter 14 — Probabilistic Methods</h2>
+<h3 id="1442-mcallester-pac-bayes-bound-post-chernoff-inequality-is-unnumbered">§14.4.2 — McAllester PAC-Bayes bound: post-Chernoff inequality is unnumbered</h3>
+<ul>
+<li><strong>Textbook:</strong> §14.4.2 proves the McAllester-style PAC-Bayes bound in
+  three displayed equations: the per-θ Hoeffding MGF, the
+  Donsker-Varadhan-after-Chernoff joint-event MGF bound (numbered
+  Eq. 14.5), and the in-expectation Gibbs form (numbered Eq. 14.6).
+  The user-facing form — "with probability ≥ 1 − δ, for all
+  <code>ρ ∈ P(θ)</code>,
+  <code>∫ R dρ ≤ ∫ R̂ dρ + (1/s) D(ρ‖q) + (1/s) log(1/δ) + s ℓ∞² / (8n)</code>"
+  — appears in prose on p. 424, between Eq. 14.5 and Eq. 14.6, with no
+  equation number assigned.</li>
+<li><strong>Observation:</strong> External sources occasionally cite a non-existent
+  "Eq. 14.21" for this McAllester bound; verification against the
+  canonical PDF confirms Chapter 14 ends at Eq. (14.6) and that the
+  highest equation number in §14.4.2 is (14.6). The unnumbered
+  post-Chernoff inequality is the most-cited statement of the section,
+  yet has no stable label. This created downstream confusion in the
+  formalization workflow.</li>
+<li><strong>Suggested clarification:</strong> Assign an explicit equation number to
+  the post-Chernoff PAC-Bayes inequality in §14.4.2 (the in-prose
+  line just before "We thus get a bound on the average generalization
+  error..."), so it can be cited unambiguously alongside Eq. 14.5 and
+  Eq. 14.6.</li>
+<li><strong>Lean reference:</strong> <code>LTFP/Ch14_Probabilistic/PACBayes.lean</code>
+  (<code>pac_bayes_mcallester</code>, <code>pac_bayes_bach_eq_14_5_scalar</code>).</li>
+</ul>
+<h2 id="chapter-15-lower-bounds">Chapter 15 — Lower Bounds</h2>
+<h3 id="151-pinsker-and-bretagnolle-huber-inequalities-used-but-never-named">§15.1 — Pinsker and Bretagnolle-Huber inequalities used but never named</h3>
+<ul>
+<li><strong>Textbook:</strong> §15.1 proves Fano's inequality directly via KL
+  convexity (Proposition 15.1 / Corollary 15.1) and uses the scalar
+  step <code>1 + α ≤ exp(α)</code> silently within the derivation. The
+  classically-named inequalities "Pinsker"
+  (<code>tvDist(μ, ν)² ≤ (1/2) KL(μ ‖ ν)</code>) and "Bretagnolle-Huber"
+  (<code>tvDist(μ, ν) ≤ √(1 − exp(−KL(μ ‖ ν)))</code>) are used in spirit but
+  never introduced by name in Chapter 15. The reference for these
+  named results is given as Tsybakov (2008).</li>
+<li><strong>Observation:</strong> Readers searching the textbook index for "Pinsker"
+  or "Bretagnolle-Huber" will not find these inequalities in
+  Chapter 15. LTFP's concept registry imports the names from
+  Tsybakov 2008 because they are standard, and the formalization
+  exposes both inequalities as named theorems
+  (<code>tvDist_le_sqrt_klDiv</code>, <code>tvDist_le_sqrt_one_sub_exp_neg_klDiv</code>).
+  The naming asymmetry between book and standard practice is a
+  recurring source of confusion when teaching from the chapter.</li>
+<li><strong>Suggested clarification:</strong> Add explicit naming in §15.1 (e.g.,
+  "Lemma X — Pinsker's inequality (after Tsybakov 2008, §2.4)" and
+  "Lemma Y — Bretagnolle-Huber inequality") and index entries, so
+  the named results are discoverable from Chapter 15 directly without
+  routing through Tsybakov.</li>
+<li><strong>Lean reference:</strong> <code>LTFP/Ch15_LowerBounds/Statistical.lean</code>
+  (<code>tvDist_le_sqrt_klDiv</code>, <code>tvDist_le_sqrt_one_sub_exp_neg_klDiv</code>).</li>
+</ul>
+<hr />
+<h2 id="out-of-scope">Out of scope</h2>
+<p>The following are <strong>not</strong> errata against the textbook and should not be
+filed here:</p>
+<ul>
+<li>Places where Mathlib lacks the infrastructure needed for the
+  measure-theoretic formulation (e.g., matrix Lieb concavity,
+  continuous-time gradient flow). These are tracked separately in the
+  library as anchored algebraic cores; the textbook statement is
+  correct, the formalization gap is in Mathlib.</li>
+<li>Stylistic preferences in proof presentation.</li>
+<li>Differences between the textbook's notation and Lean's conventional
+  Mathlib notation.</li>
+</ul>
+<h2 id="contributing">Contributing</h2>
+<p>Found a discrepancy while reading the Lean files or the textbook? Open
+a pull request adding an entry under the appropriate chapter. Follow
+the entry format above. One entry per pull request keeps the review
+trivial.</p>
+<p>Periodic batches of accepted entries are forwarded to the textbook
+author for consideration in future editions.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
