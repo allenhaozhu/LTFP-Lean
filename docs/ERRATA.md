@@ -119,6 +119,74 @@ neutral and technical.
 - **Lean reference:** `LTFP/Ch01_Preliminaries/Concentration.lean`
   (`bernstein_inequality_of_mgf`).
 
+### §1.2.3 — Lemma 1.2.3(a) is the substantive MGF bound but not labelled
+
+- **Textbook:** §1.2.3 (pp. 14-15) presents the scalar Bernstein
+  derivation as one continuous proof. The substantive MGF inequality
+  `E[exp(s · Z)] ≤ exp((σ² / c²)(exp(s · c) − 1 − s · c))` (for
+  `|Z| ≤ c` a.s., `E[Z] = 0`) — and the Bach-specific Taylor-remainder
+  form `≤ exp(s² σ² / (2(1 − |s|c/3)))` derived from it — are presented
+  inline as steps inside the Bernstein proof, never assigned a separate
+  lemma number.
+- **Observation:** When formalizing the textbook-strict variant, this
+  per-summand MGF bound has to be extracted as a standalone Lean
+  theorem (`bach_taylor_mgf`) so that downstream callers (Bernstein
+  tail; PAC-Bayes; matrix Bernstein per-summand) can reuse it without
+  re-deriving the Taylor expansion. Readers who follow §1.2.3
+  line-by-line lose track of which step is the load-bearing inequality
+  reused elsewhere.
+- **Suggested clarification:** Label the per-summand Taylor-MGF bound
+  as a distinct displayed lemma (e.g., "Lemma 1.2.3(a)") in the text,
+  so it can be cited independently from the overall Bernstein tail
+  bound that follows from it.
+- **Lean reference:**
+  `LTFP/MathlibExt/Probability/Moments/BernsteinTextbook.lean`
+  (`bach_taylor_mgf`).
+
+### §1.2.3 — Proposition 1.7 matrix Bernstein cited to Tropp 2012 without proof-sketch pointer
+
+- **Textbook:** Proposition 1.7 states the matrix Bernstein bound and
+  cites Tropp 2012, Theorem 1.4. No proof sketch is given in §1.2.3.
+- **Observation:** The full formal derivation requires three load-
+  bearing pieces well beyond the scalar §1.2.3 development:
+  (i) Lieb 1973 joint concavity of the trace-exp functional (or the
+  Tropp 2012 unnormalized variational reformulation thereof);
+  (ii) the matrix MGF chain `tr exp(∑ Mᵢ) ≤ tr exp(∑ Eᵢ[Mᵢ])` derived
+  from it via Bochner integration; (iii) a per-summand
+  Bennett-Bernstein remainder lifted to Hermitian matrices via the
+  continuous functional calculus. Formalizing Proposition 1.7
+  end-to-end in LTFP required ~7,000 lines of MathlibExt
+  infrastructure. The "cite Tropp" approach is appropriate for a
+  textbook but leaves a substantial verification gap that the reader
+  cannot recover from the in-book exposition alone.
+- **Suggested clarification:** Add a one-paragraph proof sketch in
+  §1.2.3 listing the three load-bearing pieces (Lieb-1973 concavity →
+  matrix MGF subadditivity chain → per-summand Bennett-Bernstein
+  remainder), so a serious reader knows what the citation entails and
+  where to look in Tropp 2012 for each piece.
+- **Lean reference:**
+  `LTFP/MathlibExt/MatrixAnalysis/MatrixBernsteinFinal.lean`
+  (`Matrix.bernstein_full`).
+
+### §1.2.5 — Quadrature: two distinct theorems share the section without separate labels
+
+- **Textbook:** §1.2.5 discusses both the left-endpoint Riemann-sum
+  bound `L(b − a)² / (2n)` for `L`-Lipschitz integrands and the
+  trapezoidal-rule bound `L / (12 n²)` for `C²` integrands with
+  `|f''| ≤ L`. These are distinct theorems with different smoothness
+  hypotheses, presented in close prose.
+- **Observation:** When formalizing, only one variant gets the section's
+  identifier. LTFP's carrier `lipschitz_riemann_sum_error` proves the
+  left-endpoint Lipschitz variant; the trapezoidal-`C²` variant is a
+  different theorem with a faster rate and is not currently formalized.
+  Readers may conflate the two when citing "§1.2.5".
+- **Suggested clarification:** Label the two variants explicitly (e.g.,
+  "Proposition 1.10(a) — left-endpoint, Lipschitz" and
+  "Proposition 1.10(b) — trapezoidal, `C²`") so citations are
+  unambiguous and the rate-vs-smoothness tradeoff is visible.
+- **Lean reference:** `LTFP/Ch01_Preliminaries/Concentration.lean`
+  (`lipschitz_riemann_sum_error`).
+
 ## Chapter 2 — Supervised Learning
 
 ### §2.5 — Proposition 2.2 (No Free Lunch): class of algorithms `A` left implicit
@@ -235,6 +303,29 @@ neutral and technical.
   `LTFP/Ch03_LinearLeastSquares/FixedDesign.lean`
   (`mourtada_lower_bound`).
 
+### §3.7 — Mourtada-2022 Bayes-prior route uses an unstated Gaussian-KL identity
+
+- **Textbook:** §3.7 cites Mourtada (2022) for the OLS minimax lower
+  bound via a Bayesian-prior argument with `θ* ∼ N(0, (σ²/(λn)) · I)`,
+  the posterior identified with ridge regression, and the limit
+  `λ → 0` recovering the `σ² d / n` rate for invertible `Σ̂`.
+- **Observation:** The Mourtada-2022 derivation as cited implicitly
+  uses the closed-form Kullback-Leibler divergence between two
+  univariate Gaussians of equal variance,
+  `KL(N(μ₀, v) ‖ N(μ₁, v)) = (μ₀ − μ₁)² / (2v)`. This identity is
+  folklore but not stated in §3.7 nor in §15.1 — the formalization
+  could not invoke a named Mathlib lemma for it at the time of
+  writing, and LTFP's general-`d` carrier consequently routes through
+  a looser Le-Cam two-point estimate. A reader trying to reconstruct
+  the Mourtada-2022 proof will hit this gap.
+- **Suggested clarification:** Either state the Gaussian-vs-Gaussian
+  KL identity inline in §3.7 (one displayed equation), or add a
+  footnote citing the standard reference, so the Mourtada-2022 route
+  is self-contained within the textbook.
+- **Lean reference:**
+  `LTFP/Ch03_LinearLeastSquares/FixedDesign.lean`
+  (`ols_minimax_two_point_discharge_multivariate_via_bhattacharyya`).
+
 ## Chapter 4 — Empirical Risk Minimization
 
 _No entries yet._
@@ -257,7 +348,34 @@ _No entries yet._
 
 ## Chapter 9 — Neural Networks
 
-_No entries yet._
+### §9.3 — Universal approximation: two proof routes share the section without distinction
+
+- **Textbook:** §9.3 (with §9.3.1 + §9.3.4) develops universal
+  approximation for single-hidden-layer ReLU networks via the
+  constructive route: (a) exact CPA representation by ReLU using the
+  partition-of-unity identity `(1/(2R))(x + R)₊ + (1/(2R))(−x + R)₊ = 1`
+  on `[−R, R]`; (b) CPA dense in `C([−R, R])` (citing Rudin 1987);
+  (c) lift to ℝ^d via Fourier inversion plus a Barron-norm bound. The
+  chapter also notes in passing that "universal approximation results
+  exist as soon as the activation function is not a polynomial
+  (Leshno et al. 1993)" — which is a different, Stone-Weierstrass-style
+  / Hahn-Banach argument, not the constructive CPA route.
+- **Observation:** These are two distinct proof techniques for the
+  same theorem name, with different smoothness/regularity requirements
+  on the activation and different teaching trajectories. When
+  formalizing, LTFP's `cybenko_uat_ramp_unconditional` uses the
+  Stone-Weierstrass route (qualitative density), while a separate
+  carrier following the constructive CPA-by-ReLU route would have a
+  different signature (quantitative + Barron norm). A reader citing
+  "§9.3 universal approximation" cannot tell which proof technique is
+  being invoked.
+- **Suggested clarification:** Distinguish the two routes explicitly
+  in §9.3 (e.g., "Theorem 9.X — universal approximation via
+  Stone-Weierstrass / non-polynomial activation" vs "Theorem 9.Y —
+  constructive CPA-by-ReLU + Rudin density"), and note the different
+  smoothness hypotheses each requires.
+- **Lean reference:** `LTFP/MathlibExt/Topology/UAT.lean`
+  (`cybenko_uat_ramp_unconditional`).
 
 ## Chapter 10 — Ensemble Methods
 
@@ -269,7 +387,29 @@ _No entries yet._
 
 ## Chapter 12 — Overparameterized Models
 
-_No entries yet._
+### §12.4 — NTK lazy-training regime: informal exposition, no in-book formal proof
+
+- **Textbook:** §12 (with NTK material in §12.4) describes the
+  lazy-training regime — under which a wide neural network's gradient
+  flow is well-approximated by its linearization around initialization
+  — informally. The chapter cites Jacot et al. (2018) and Du et al.
+  (2019) for the underlying formal results.
+- **Observation:** Formalizing the "lazy training carrier" (the
+  statement that for sufficiently wide networks, the linearization
+  approximation holds uniformly over the optimization trajectory)
+  required bespoke clopen-bootstrap-on-trajectory infrastructure and
+  perturbation control of the empirical NTK well beyond Bach's
+  exposition. This is appropriate textbook style, but readers
+  attempting to verify the §12.4 claims rigorously will need to
+  follow the references rather than the chapter itself, and the
+  chapter does not flag the size of the verification gap.
+- **Suggested clarification:** Add a "for formal proofs see..." block
+  at the end of §12.4 explicitly pointing readers to Jacot et al.
+  (2018) Theorem 1, Du et al. (2019) Theorem 4.1, and noting that
+  the in-chapter exposition is intentionally informal.
+- **Lean reference:**
+  `LTFP/MathlibExt/Probability/NTKLazyCarrierFromTotalMovement.lean`
+  (`ntk_lazy_training_carrier_end_to_end`).
 
 ## Chapter 13 — Structured Prediction
 
@@ -277,11 +417,59 @@ _No entries yet._
 
 ## Chapter 14 — Probabilistic Methods
 
-_No entries yet._
+### §14.4.2 — McAllester PAC-Bayes bound: post-Chernoff inequality is unnumbered
+
+- **Textbook:** §14.4.2 proves the McAllester-style PAC-Bayes bound in
+  three displayed equations: the per-θ Hoeffding MGF, the
+  Donsker-Varadhan-after-Chernoff joint-event MGF bound (numbered
+  Eq. 14.5), and the in-expectation Gibbs form (numbered Eq. 14.6).
+  The user-facing form — "with probability ≥ 1 − δ, for all
+  `ρ ∈ P(θ)`,
+  `∫ R dρ ≤ ∫ R̂ dρ + (1/s) D(ρ‖q) + (1/s) log(1/δ) + s ℓ∞² / (8n)`"
+  — appears in prose on p. 424, between Eq. 14.5 and Eq. 14.6, with no
+  equation number assigned.
+- **Observation:** External sources occasionally cite a non-existent
+  "Eq. 14.21" for this McAllester bound; verification against the
+  canonical PDF confirms Chapter 14 ends at Eq. (14.6) and that the
+  highest equation number in §14.4.2 is (14.6). The unnumbered
+  post-Chernoff inequality is the most-cited statement of the section,
+  yet has no stable label. This created downstream confusion in the
+  formalization workflow.
+- **Suggested clarification:** Assign an explicit equation number to
+  the post-Chernoff PAC-Bayes inequality in §14.4.2 (the in-prose
+  line just before "We thus get a bound on the average generalization
+  error..."), so it can be cited unambiguously alongside Eq. 14.5 and
+  Eq. 14.6.
+- **Lean reference:** `LTFP/Ch14_Probabilistic/PACBayes.lean`
+  (`pac_bayes_mcallester`, `pac_bayes_bach_eq_14_5_scalar`).
 
 ## Chapter 15 — Lower Bounds
 
-_No entries yet._
+### §15.1 — Pinsker and Bretagnolle-Huber inequalities used but never named
+
+- **Textbook:** §15.1 proves Fano's inequality directly via KL
+  convexity (Proposition 15.1 / Corollary 15.1) and uses the scalar
+  step `1 + α ≤ exp(α)` silently within the derivation. The
+  classically-named inequalities "Pinsker"
+  (`tvDist(μ, ν)² ≤ (1/2) KL(μ ‖ ν)`) and "Bretagnolle-Huber"
+  (`tvDist(μ, ν) ≤ √(1 − exp(−KL(μ ‖ ν)))`) are used in spirit but
+  never introduced by name in Chapter 15. The reference for these
+  named results is given as Tsybakov (2008).
+- **Observation:** Readers searching the textbook index for "Pinsker"
+  or "Bretagnolle-Huber" will not find these inequalities in
+  Chapter 15. LTFP's concept registry imports the names from
+  Tsybakov 2008 because they are standard, and the formalization
+  exposes both inequalities as named theorems
+  (`tvDist_le_sqrt_klDiv`, `tvDist_le_sqrt_one_sub_exp_neg_klDiv`).
+  The naming asymmetry between book and standard practice is a
+  recurring source of confusion when teaching from the chapter.
+- **Suggested clarification:** Add explicit naming in §15.1 (e.g.,
+  "Lemma X — Pinsker's inequality (after Tsybakov 2008, §2.4)" and
+  "Lemma Y — Bretagnolle-Huber inequality") and index entries, so
+  the named results are discoverable from Chapter 15 directly without
+  routing through Tsybakov.
+- **Lean reference:** `LTFP/Ch15_LowerBounds/Statistical.lean`
+  (`tvDist_le_sqrt_klDiv`, `tvDist_le_sqrt_one_sub_exp_neg_klDiv`).
 
 ---
 
