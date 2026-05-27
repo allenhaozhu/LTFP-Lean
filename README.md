@@ -83,6 +83,17 @@ chapter directory; the top-level `LTFP.lean` re-exports every chapter
 hub plus `LTFP.Foundations` and `LTFP.MathlibExt`. So
 `import LTFP` gives you the whole library.
 
+## Teaching companion
+
+For classroom material, problem sets, walkthroughs, the 339-concept
+mini-wiki, and doc-gen4 HTML API documentation, see the live site at
+<https://allenhaozhu.github.io/LTFP-Lean/>. The site is built from
+the [`textbook-strict`](https://github.com/allenhaozhu/LTFP-Lean/tree/textbook-strict)
+branch and tagged
+[`v7.0.0-textbook-strict`](https://github.com/allenhaozhu/LTFP-Lean/releases/tag/v7.0.0-textbook-strict);
+the branch ships proofs that mirror Bach's textbook exposition
+step-by-step alongside the research-stable proofs on `main`.
+
 ## Errata
 
 Discrepancies, implicit hypotheses, and minor corrections noted during
