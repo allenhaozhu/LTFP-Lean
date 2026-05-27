@@ -72,6 +72,32 @@ chapter directory; the top-level `LTFP.lean` re-exports every chapter
 hub plus `LTFP.Foundations` and `LTFP.MathlibExt`. So
 `import LTFP` gives you the whole library.
 
+## For Students
+
+LTlib doubles as a Lean 4 companion to Bach (2024). Three worked
+examples in `LTFP/Examples/` walk through the textbook-strict proofs of
+Bernstein (§1.2.3), Pinsker-Bretagnolle-Huber (§15.1), and PAC-Bayes
+McAllester (§14.4.2); open them in VS Code with the Lean 4 extension
+and step through with the infoview.
+
+A 339-concept mini-wiki at `docs/wiki/` indexes every formalized result
+back to its Bach section, with cross-cutting views by chapter, tier,
+status, topic, and Mathlib dependency. See
+[`docs/TEACHING.md`](docs/TEACHING.md) for a guided starting point and
+[`docs/teaching/`](docs/teaching/) for narrative walkthroughs of the
+flagship examples.
+
+## For Teachers
+
+LTlib supports three classroom patterns: reading groups (use the
+Examples + wiki), mechanically-graded problem sets (5 starter stubs in
+`tasks/student-problems/`), and textbook companions (every chapter
+file's docstrings link back to Bach by section). See
+[`docs/TEACHING.md`](docs/TEACHING.md) for course-integration patterns,
+[`docs/teaching/problem-sets.md`](docs/teaching/problem-sets.md) for the
+per-problem grading rubric, and [`docs/ERRATA.md`](docs/ERRATA.md) for
+textbook-correction material useful as classroom discussion prompts.
+
 ## Errata
 
 Discrepancies, implicit hypotheses, and minor corrections noted during
