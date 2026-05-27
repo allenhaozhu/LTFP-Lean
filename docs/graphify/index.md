@@ -1,15 +1,20 @@
 # Interactive graph
 
-A navigable knowledge graph of the LTlib codebase: god nodes
-(most-connected core abstractions), communities (clusters of
-related concepts), and cross-cutting connections (semantic
-similarities that span chapters).
+A navigable knowledge graph of the **337 named theorems, lemmas, and
+definitions** in the LTlib wiki. Each node is one Bach result — click
+it and you land on the wiki concept page containing the verbatim Bach
+excerpt and the corresponding Lean theorem name.
 
-The graph below is built by the [graphify](https://pypi.org/project/graphifyy/)
-knowledge-graph extractor over the public LTlib corpus
-(`LTFP/`, `docs/wiki/`, `docs/teaching/`, errata).
-For a plain-language tour of the same data, see
-[Library overview](../library-overview.md).
+Edges:
+
+- **Structural** — explicit dependency or citation extracted from the
+  wiki pages
+- **Semantic** — inferred similarity (two results that solve the same
+  problem or share an assumption)
+
+Nodes are colored by community; communities cluster
+related results (e.g. PAC-Bayes / KL chain, OLS bias-variance,
+surrogate convexity).
 
 <iframe
   src="graph.html"
