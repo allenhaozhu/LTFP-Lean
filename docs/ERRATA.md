@@ -1,11 +1,23 @@
-# Errata for Bach (2024), *Learning Theory from First Principles*
+# Errata and formalization notes for Bach (2024), *Learning Theory from First Principles*
 
-This file collects discrepancies, ambiguities, and minor corrections
-encountered while formalizing the textbook in Lean 4. The intent is
-strictly constructive: a proof assistant forces every hypothesis to be
-made explicit, and the resulting type signatures occasionally surface
-implicit assumptions, off-by-one constants, or notation that could be
-clarified in a future edition. Genuine typos are also noted here.
+This file collects discrepancies, ambiguities, and clarifications
+surfaced while formalizing the textbook in Lean 4. The intent is
+strictly constructive — most entries are not "the book is wrong" but
+rather "the proof assistant made an implicit assumption explicit, or a
+named lemma got a label, or the formalization had to traverse a
+slightly different proof route." Entries fall into three categories:
+
+1. **Mathematical clarifications** — the stated theorem or proof needs
+   a tightening for a formal version to go through (e.g., a hypothesis
+   that was load-bearing but not written, a subtle measurability
+   assumption).
+2. **Formalization-required assumptions** — standardly implicit in
+   mathematical prose, but must be made explicit in Lean (e.g.,
+   integrability, symmetry of matrices, well-definedness of an
+   argmin).
+3. **Pedagogical and citation improvements** — unnamed lemmas that get
+   reused later and would benefit from a label, missing pointers to a
+   cited paper's proof structure, notational disambiguations.
 
 Entries are grouped by chapter. Each entry follows the format below.
 Contributions are welcome via pull request.
@@ -32,25 +44,31 @@ neutral and technical.
 
 ## Chapter 1 — Preliminaries
 
-### §1.2.3 — Proposition 1.7 matrix Bernstein: hypothesis on `M_i` is too weak
+### §1.2.3 — Proposition 1.7 matrix Bernstein: which Tropp variant the hypothesis matches
 
 - **Textbook:** "`M_i` symmetric, `E[M_i] = 0`, `λ_max(M_i) ≤ c` a.s.,
   `σ² = λ_max((1/n) ∑ E[M_i²])`"; concludes a tail bound on
   `λ_max((1/n) ∑ M_i)`.
-- **Observation:** The Tropp matrix-Bernstein MGF chain
-  (Tropp 2015, Theorem 6.1.1) requires a two-sided operator-norm bound
-  `‖M_i‖_op ≤ c` — equivalently `−c·I ≼ M_i ≼ c·I` — not just
-  `λ_max(M_i) ≤ c`. With `E[M_i] = 0` and only `λ_max(M_i) ≤ c`, the
-  smallest eigenvalue of `M_i` is unconstrained, so `E[exp(θ M_i)]`
-  need not be controlled by `σ² θ² / (1 − c θ / 3)` and the proof
-  step breaks down. When formalizing, the hypothesis had to be
-  silently strengthened.
-- **Suggested clarification:** Replace `λ_max(M_i) ≤ c` with
-  `‖M_i‖_op ≤ c`, or state both `λ_max(M_i) ≤ c` *and*
-  `λ_min(M_i) ≥ −c`, so the hypothesis matches the MGF lemma actually
-  used in the proof.
+- **Observation:** There are two standard Tropp variants. The
+  one-sided **maximum-eigenvalue** Bernstein tail bound (Tropp 2011,
+  *User-Friendly Tail Bounds for Sums of Random Matrices*,
+  Theorem 6.1) is stated under exactly the textbook's hypothesis
+  `λ_max(M_i) ≤ c`. The two-sided **operator-norm** Bernstein
+  (Tropp 2015 monograph, Theorem 6.1.1) requires `‖M_i‖_op ≤ c`,
+  equivalently `−c·I ≼ M_i ≼ c·I`. The LTFP-Lean formalization went
+  through the two-sided variant — chosen because Mathlib's matrix MGF
+  infrastructure was easier to compose with operator-norm bounds —
+  and so its statement reads `‖M_i‖_op ≤ c`. The textbook's
+  `λ_max(M_i) ≤ c` hypothesis is correct for the one-sided
+  λ_max-tail conclusion as stated.
+- **Suggested clarification:** none required if the intent is the
+  one-sided λ_max-tail bound; the textbook is consistent. If a future
+  edition wants to state both the one-sided and two-sided variants,
+  pairing each with its own hypothesis (one-sided `λ_max ≤ c` for the
+  λ_max-tail, `‖·‖_op ≤ c` for the spectral-norm tail) would help
+  formalization readers know which to port.
 - **Lean reference:** `LTFP/Ch01_Preliminaries/Concentration.lean`
-  (`matrix_bernstein_bound`, docstring and definition).
+  (`matrix_bernstein_bound`, docstring documents the variant chosen).
 
 ### §1.2.3 — Proposition 1.6 matrix Hoeffding: `C_i` symmetry left implicit
 
