@@ -83,9 +83,9 @@ practical necessity.
 
 | File | Bach section | What it shows |
 |---|---|---|
-| [`LTFP/Examples/Bernstein.lean`](../LTFP/Examples/Bernstein.lean) | §1.2.3 | Bernstein tail via Bach's Taylor-expansion MGF |
-| [`LTFP/Examples/PinskerBH.lean`](../LTFP/Examples/PinskerBH.lean) | §15.1 | Pinsker / Bretagnolle-Huber inequality for KL |
-| [`LTFP/Examples/PACBayesMcAllester.lean`](../LTFP/Examples/PACBayesMcAllester.lean) | §14.4.2 | McAllester PAC-Bayes via Hoeffding + DV + Chernoff |
+| [`LTFP/Examples/Bernstein.lean`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/LTFP/Examples/Bernstein.lean) | §1.2.3 | Bernstein tail via Bach's Taylor-expansion MGF |
+| [`LTFP/Examples/PinskerBH.lean`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/LTFP/Examples/PinskerBH.lean) | §15.1 | Pinsker / Bretagnolle-Huber inequality for KL |
+| [`LTFP/Examples/PACBayesMcAllester.lean`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/LTFP/Examples/PACBayesMcAllester.lean) | §14.4.2 | McAllester PAC-Bayes via Hoeffding + DV + Chernoff |
 
 Each file is sized for one ~1-hour reading session with a graduate
 audience: a textbook-strict carrier theorem at the top, then a series
@@ -129,7 +129,7 @@ without expecting students to write Lean themselves.
 
 **Pattern 2: Mechanically graded problem sets.** Assign one or more
 files from
-[`tasks/student-problems/`](../tasks/student-problems/). Students
+[`tasks/student-problems/`](https://github.com/allenhaozhu/LTFP-Lean/tree/textbook-strict/tasks/student-problems/). Students
 replace `sorry` with a proof; grading is `lake build LTFP.<module>`
 exit 0 plus a visual inspection (looking for `sorry`/`admit`/`#exit`
 escape hatches and confirming that `#print axioms` lists only the
@@ -254,9 +254,9 @@ and deviations are documented in
 ## Problem sets: starter pack
 
 The starter pack lives at
-[`tasks/student-problems/`](../tasks/student-problems/) and spans Bach
+[`tasks/student-problems/`](https://github.com/allenhaozhu/LTFP-Lean/tree/textbook-strict/tasks/student-problems/) and spans Bach
 Chapters 1, 5, 7, 14, and 15. See
-[`tasks/student-problems/README.md`](../tasks/student-problems/README.md)
+[`tasks/student-problems/README.md`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/tasks/student-problems/README.md)
 for the table of problems and the verification protocol. Brief summary:
 
 | # | Bach | File | Difficulty | Concept |
@@ -309,7 +309,7 @@ consideration in future editions.
 
 ## Contributing tutorials and problems back
 
-See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for the general contribution
+See [`CONTRIBUTING.md`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/CONTRIBUTING.md) for the general contribution
 workflow. For teaching-specific contributions:
 
 * **Tutorials.** Add a new file to `LTFP/Examples/` following the

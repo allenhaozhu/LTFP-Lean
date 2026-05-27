@@ -1,7 +1,7 @@
 # Problem-set curriculum guide
 
 This document is the teacher-facing companion to
-[`tasks/student-problems/README.md`](../../tasks/student-problems/README.md).
+[`tasks/student-problems/README.md`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/tasks/student-problems/README.md).
 It expands each problem with a per-problem rubric, suggested grading
 notes, and pointers to alternative proof routes.
 
@@ -52,7 +52,7 @@ for grading reference; the public repository contains stubs only.
 
 ## Problem 1 --- Bach §1.2.1 Bernstein/Hoeffding MGF warm-up
 
-**File.** [`tasks/student-problems/ch01-bernstein-warmup.lean`](../../tasks/student-problems/ch01-bernstein-warmup.lean)
+**File.** [`tasks/student-problems/ch01-bernstein-warmup.lean`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/tasks/student-problems/ch01-bernstein-warmup.lean)
 
 **Difficulty.** Easy.
 
@@ -105,7 +105,7 @@ Partial credit (50%): proof has a single substantive `sorry`-like gap
 
 ## Problem 2 --- Bach §5.1 GD canonical-step descent
 
-**File.** [`tasks/student-problems/ch05-gd-descent.lean`](../../tasks/student-problems/ch05-gd-descent.lean)
+**File.** [`tasks/student-problems/ch05-gd-descent.lean`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/tasks/student-problems/ch05-gd-descent.lean)
 
 **Difficulty.** Medium.
 
@@ -168,7 +168,7 @@ algebraic obligation cleanly.
 
 ## Problem 3 --- Bach §7.2 Representer theorem (minimizer form)
 
-**File.** [`tasks/student-problems/ch07-representer.lean`](../../tasks/student-problems/ch07-representer.lean)
+**File.** [`tasks/student-problems/ch07-representer.lean`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/tasks/student-problems/ch07-representer.lean)
 
 **Difficulty.** Medium.
 
@@ -217,7 +217,7 @@ parts of the carrier inline rather than invoking it.
 
 ## Problem 4 --- Bach §14.4.2 PAC-Bayes Step 1
 
-**File.** [`tasks/student-problems/ch14-pac-bayes-step1.lean`](../../tasks/student-problems/ch14-pac-bayes-step1.lean)
+**File.** [`tasks/student-problems/ch14-pac-bayes-step1.lean`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/tasks/student-problems/ch14-pac-bayes-step1.lean)
 
 **Difficulty.** Medium-Hard.
 
@@ -268,7 +268,7 @@ bound from scratch instead of invoking the carrier.
 
 ## Problem 5 --- Bach §15.1 Pinsker / Bretagnolle-Huber
 
-**File.** [`tasks/student-problems/ch15-pinsker-bh.lean`](../../tasks/student-problems/ch15-pinsker-bh.lean)
+**File.** [`tasks/student-problems/ch15-pinsker-bh.lean`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/tasks/student-problems/ch15-pinsker-bh.lean)
 
 **Difficulty.** Medium-Hard.
 

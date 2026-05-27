@@ -1,7 +1,7 @@
 # Walkthrough: Bach §1.2.3 Bernstein inequality (textbook-strict)
 
 This walkthrough re-tells the proof carried by
-[`LTFP/Examples/Bernstein.lean`](../../LTFP/Examples/Bernstein.lean) in
+[`LTFP/Examples/Bernstein.lean`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/LTFP/Examples/Bernstein.lean) in
 prose, with Lean code snippets interspersed. It is meant to be read
 **alongside** the Lean file: open the file in VS Code with the Lean 4
 extension and step through with the infoview while reading this

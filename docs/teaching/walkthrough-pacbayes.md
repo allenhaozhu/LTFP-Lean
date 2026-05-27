@@ -1,7 +1,7 @@
 # Walkthrough: Bach §14.4.2 McAllester PAC-Bayes (textbook-strict)
 
 This walkthrough re-tells the proof carried by
-[`LTFP/Examples/PACBayesMcAllester.lean`](../../LTFP/Examples/PACBayesMcAllester.lean)
+[`LTFP/Examples/PACBayesMcAllester.lean`](https://github.com/allenhaozhu/LTFP-Lean/blob/textbook-strict/LTFP/Examples/PACBayesMcAllester.lean)
 in prose, with Lean code snippets interspersed. It is meant to be read
 **alongside** the Lean file: open the file in VS Code with the Lean 4
 extension and step through with the infoview while reading this
