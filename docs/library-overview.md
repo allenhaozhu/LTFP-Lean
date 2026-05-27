@@ -13,6 +13,8 @@ Use this page as a map. If you're trying to understand how a single
 result fits into the larger fabric of Bach (2024), find its community
 below and follow the links from there.
 
+**Prefer an interactive view?** See the [interactive graph](graphify/) for a navigable D3 visualization of the same data.
+
 ## Core abstractions (most-connected nodes)
 
 The ten nodes with the highest edge count — these are the load-bearing
