@@ -1,0 +1,58 @@
+name: Deploy MkDocs site to Pages
+
+on:
+  push:
+    branches:
+      - textbook-strict
+  workflow_dispatch:
+
+permissions:
+  contents: write   # for gh-pages push
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout textbook-strict
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history needed for git-revision date plugins (future)
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install MkDocs + extensions
+        run: pip install -r requirements-docs.txt
+
+      - name: Build MkDocs site
+        run: mkdocs build --strict
+
+      # TODO Phase F: build doc-gen4 API HTML and copy into site/api/
+      # - name: Install elan + Lean toolchain
+      #   ...
+      # - name: Build doc-gen4 API HTML
+      #   run: lake -R -Kenv=dev build LTFP:docs
+      # - name: Copy doc-gen4 output into site/api/
+      #   run: |
+      #     mkdir -p site/api
+      #     cp -r .lake/build/doc/* site/api/
+
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages
+          force_orphan: true   # keep gh-pages branch as one-commit snapshot
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Deploy MkDocs site from ${{ github.sha }}'

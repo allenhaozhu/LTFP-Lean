@@ -1,0 +1,87 @@
+site_name: LTlib — Lean 4 Companion to Bach (2024)
+site_description: Machine-checked Learning Theory from First Principles
+site_url: https://allenhaozhu.github.io/LTFP-Lean/
+repo_url: https://github.com/allenhaozhu/LTFP-Lean
+repo_name: allenhaozhu/LTFP-Lean
+edit_uri: edit/textbook-strict/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+extra_javascript:
+  # arithmatex generic-mode renders LaTeX via MathJax 3.
+  # Lean code blocks are handled by Pygments (pymdownx.highlight) and
+  # do not collide with MathJax delimiters.
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - For Students & Teachers: TEACHING.md
+  - Wiki:
+      - Overview: wiki/README.md
+      - By chapter: wiki/indexes/by-chapter.md
+      - By tier (difficulty): wiki/indexes/by-tier.md
+      - By status (audit): wiki/indexes/by-status.md
+      - By topic: wiki/indexes/by-topic.md
+      - By Mathlib dependency: wiki/indexes/by-mathlib-dep.md
+      - Build log: wiki/BUILD_LOG.md
+  - Walkthroughs:
+      - Bernstein (Bach §1.2.3): teaching/walkthrough-bernstein.md
+      - PAC-Bayes (Bach §14.4.2): teaching/walkthrough-pacbayes.md
+      - Problem set guide: teaching/problem-sets.md
+  - Errata: ERRATA.md
+  # TODO Phase F: add API docs link once doc-gen4 output is wired in
+  # - API docs: api/index.html
