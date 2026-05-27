@@ -74,6 +74,11 @@ hub plus `LTFP.Foundations` and `LTFP.MathlibExt`. So
 
 ## For Students
 
+The canonical entry point for teaching content is the live site at
+<https://allenhaozhu.github.io/LTFP-Lean/>, which renders the
+mini-wiki, walkthroughs, and problem sets together with full doc-gen4
+HTML API documentation at `/api/`.
+
 LTlib doubles as a Lean 4 companion to Bach (2024). Three worked
 examples in `LTFP/Examples/` walk through the textbook-strict proofs of
 Bernstein (§1.2.3), Pinsker-Bretagnolle-Huber (§15.1), and PAC-Bayes
@@ -88,6 +93,11 @@ status, topic, and Mathlib dependency. See
 flagship examples.
 
 ## For Teachers
+
+Course material lives at <https://allenhaozhu.github.io/LTFP-Lean/>
+(MkDocs Material site, auto-deployed from the `textbook-strict`
+branch). The site is the recommended entry point for syllabi, links,
+and student-facing reading.
 
 LTlib supports three classroom patterns: reading groups (use the
 Examples + wiki), mechanically-graded problem sets (5 starter stubs in
