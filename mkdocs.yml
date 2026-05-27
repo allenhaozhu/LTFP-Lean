@@ -78,6 +78,7 @@ nav:
       - By topic: wiki/indexes/by-topic.md
       - By Mathlib dependency: wiki/indexes/by-mathlib-dep.md
       - Build log: wiki/BUILD_LOG.md
+      - 📊 Library overview: library-overview.md
   - Walkthroughs:
       - Bernstein (Bach §1.2.3): teaching/walkthrough-bernstein.md
       - PAC-Bayes (Bach §14.4.2): teaching/walkthrough-pacbayes.md
