@@ -36,15 +36,49 @@ jobs:
       - name: Build MkDocs site
         run: mkdocs build --strict
 
-      # TODO Phase F: build doc-gen4 API HTML and copy into site/api/
-      # - name: Install elan + Lean toolchain
-      #   ...
-      # - name: Build doc-gen4 API HTML
-      #   run: lake -R -Kenv=dev build LTFP:docs
-      # - name: Copy doc-gen4 output into site/api/
-      #   run: |
-      #     mkdir -p site/api
-      #     cp -r .lake/build/doc/* site/api/
+      # ---- Phase F: doc-gen4 API HTML for the LTFP namespace ----
+      # doc-gen4 is loaded only under -Kenv=dev (see lakefile.lean) so main-branch
+      # builds are unaffected. CI fetches it on demand here.
+
+      - name: Set up Lean toolchain
+        uses: leanprover/lean-action@v1
+        with:
+          use-mathlib-cache: true
+        continue-on-error: true
+
+      - name: Get Mathlib cache
+        run: lake exe cache get || true
+        continue-on-error: true
+
+      - name: Update Lake manifest with doc-gen4 (dev env)
+        run: lake -Kenv=dev update doc-gen4 || true
+        continue-on-error: true
+
+      - name: Build doc-gen4 API HTML
+        run: lake -Kenv=dev build LTFP:docs
+        timeout-minutes: 90
+        continue-on-error: true
+
+      - name: Copy doc-gen4 output into site/api/
+        run: |
+          mkdir -p site/api
+          if [ -d .lake/build/doc ]; then
+            cp -r .lake/build/doc/. site/api/
+            echo "API docs copied: $(find site/api -name '*.html' | wc -l) HTML files"
+          else
+            echo "WARNING: doc-gen4 output directory not found; deploying MkDocs site without API docs"
+            ls -la .lake/build/ 2>/dev/null || true
+            # Provide a minimal placeholder so the nav link doesn't 404
+            printf '%s\n' \
+              '<!doctype html><meta charset="utf-8"><title>API docs unavailable</title>' \
+              '<h1>API docs unavailable</h1>' \
+              '<p>The doc-gen4 build did not complete in this deployment.' \
+              'See <a href="https://github.com/allenhaozhu/LTFP-Lean">the repository</a> for source.</p>' \
+              > site/api/index.html
+          fi
+        continue-on-error: true
+
+      # ---- end Phase F ----
 
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4

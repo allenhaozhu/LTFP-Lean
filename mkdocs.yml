@@ -83,5 +83,4 @@ nav:
       - PAC-Bayes (Bach §14.4.2): teaching/walkthrough-pacbayes.md
       - Problem set guide: teaching/problem-sets.md
   - Errata: ERRATA.md
-  # TODO Phase F: add API docs link once doc-gen4 output is wired in
-  # - API docs: api/index.html
+  - API docs: https://allenhaozhu.github.io/LTFP-Lean/api/
