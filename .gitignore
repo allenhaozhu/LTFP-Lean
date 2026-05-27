@@ -17,7 +17,8 @@ __pycache__/
 
 # Internal development artifacts — not part of the public library
 /tools/
-/tasks/
+/tasks/*
+!/tasks/student-problems/
 /tests/
 /doc/concepts.yaml
 /doc/dag.json
