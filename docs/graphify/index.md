@@ -1,6 +1,6 @@
 # Interactive graph
 
-A navigable knowledge graph of the **337 named theorems, lemmas, and
+A navigable knowledge graph of the **336 named theorems, lemmas, and
 definitions** in the LTlib wiki. Each node is one Bach result — click
 it and you land on the wiki concept page containing the verbatim Bach
 excerpt and the corresponding Lean theorem name.
@@ -12,9 +12,10 @@ Edges:
 - **Semantic** — inferred similarity (two results that solve the same
   problem or share an assumption)
 
-Nodes are colored by community; communities cluster
-related results (e.g. PAC-Bayes / KL chain, OLS bias-variance,
-surrogate convexity).
+Nodes are colored by community and communities are **color-coded with
+semantic labels** (e.g. *Surrogate Φ Functions*, *OLS & Fixed Design*,
+*PAC-Bayes McAllester*, *|·| Triangle Inequalities*). Hover or click a
+node to see its community name in the side panel.
 
 <iframe
   src="graph.html"

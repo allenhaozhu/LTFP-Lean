@@ -50,18 +50,6 @@
   },
   "nodes": [
     {
-      "label": "Bach (2024) Learning Theory from First Principles",
-      "file_type": "paper",
-      "source_file": "docs/wiki/concepts/abs-expectation-bounded.md",
-      "source_location": "Source citation",
-      "source_url": "",
-      "captured_at": "",
-      "author": "Francis Bach",
-      "contributor": "",
-      "community": 0,
-      "id": "bach_2024_ltfp"
-    },
-    {
       "label": "Bounded RV: |X| <= B implies |E[X]| <= B",
       "file_type": "document",
       "source_file": "docs/wiki/concepts/abs-expectation-bounded.md",
@@ -70,7 +58,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 11,
       "id": "abs_expectation_bounded"
     },
     {
@@ -82,7 +70,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 11,
       "id": "abs_expectation_le_exp_abs"
     },
     {
@@ -94,7 +82,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 11,
       "id": "abs_neg_anchor"
     },
     {
@@ -106,7 +94,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 11,
       "id": "abs_nonneg_anchor"
     },
     {
@@ -118,7 +106,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 11,
       "id": "abs_triangle"
     },
     {
@@ -130,7 +118,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 11,
       "id": "abs_zero_eq_zero"
     },
     {
@@ -142,7 +130,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 11,
       "id": "add_risks_nonneg"
     },
     {
@@ -154,7 +142,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 50,
       "id": "all_zero_of_sum_sq_zero"
     },
     {
@@ -166,7 +154,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 42,
       "id": "approx_error_indep_fhat"
     },
     {
@@ -178,7 +166,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 42,
       "id": "approximation_error"
     },
     {
@@ -190,7 +178,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 26,
       "id": "average_le_sup_anchor"
     },
     {
@@ -202,7 +190,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 26,
       "id": "average_of_self"
     },
     {
@@ -214,7 +202,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 26,
       "id": "average_plus_half_le"
     },
     {
@@ -226,7 +214,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 26,
       "id": "average_three_self"
     },
     {
@@ -238,7 +226,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 27,
       "id": "bagging_const"
     },
     {
@@ -250,7 +238,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 27,
       "id": "bagging_index_anchor"
     },
     {
@@ -262,7 +250,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 27,
       "id": "bagging_predictor_zero"
     },
     {
@@ -274,7 +262,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 27,
       "id": "bagging_predictor"
     },
     {
@@ -286,7 +274,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 43,
       "id": "bandit_foundation"
     },
     {
@@ -298,7 +286,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 0,
+      "community": 43,
       "id": "bandit_gap"
     },
     {
@@ -310,7 +298,7 @@
       "captured_at": "",
       "author": "Boucheron, Lugosi, Massart",
       "contributor": "",
-      "community": 0,
+      "community": 11,
       "id": "boucheron_lugosi_massart_2013"
     },
     {
@@ -322,7 +310,7 @@
       "captured_at": "",
       "author": "Roman Vershynin",
       "contributor": "",
-      "community": 0,
+      "community": 11,
       "id": "vershynin_2018"
     },
     {
@@ -406,7 +394,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "bayes-predictor"
     },
     {
@@ -418,7 +406,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "bayes-risk-le-population-risk"
     },
     {
@@ -430,7 +418,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "bayes-risk-minimum"
     },
     {
@@ -442,7 +430,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "bayes-risk-nonneg"
     },
     {
@@ -454,7 +442,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 33,
+      "community": 35,
       "id": "bernoulli-at-half"
     },
     {
@@ -466,7 +454,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 33,
+      "community": 35,
       "id": "bernoulli-nll-correct-zero"
     },
     {
@@ -478,7 +466,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 33,
+      "community": 35,
       "id": "bernoulli-nll"
     },
     {
@@ -490,7 +478,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 8,
+      "community": 6,
       "id": "bernstein-inequality"
     },
     {
@@ -502,7 +490,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 45,
+      "community": 51,
       "id": "block-matrix-inversion"
     },
     {
@@ -514,7 +502,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 20,
+      "community": 19,
       "id": "boost-eq"
     },
     {
@@ -526,7 +514,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 20,
+      "community": 19,
       "id": "boost-one-step"
     },
     {
@@ -538,7 +526,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 20,
+      "community": 19,
       "id": "boost-zero-coeffs"
     },
     {
@@ -550,7 +538,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 20,
+      "community": 19,
       "id": "boost-zero-h"
     },
     {
@@ -562,7 +550,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 20,
+      "community": 19,
       "id": "boosted-add-coeff"
     },
     {
@@ -574,7 +562,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 20,
+      "community": 19,
       "id": "boosted-predictor"
     },
     {
@@ -586,7 +574,7 @@
       "captured_at": "",
       "author": "Bach",
       "contributor": "",
-      "community": 25,
+      "community": 28,
       "id": "bounded-difference-rademacher"
     },
     {
@@ -622,7 +610,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "population-risk"
     },
     {
@@ -634,7 +622,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "excess-risk-nonneg"
     },
     {
@@ -646,7 +634,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "approximation-error"
     },
     {
@@ -658,7 +646,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "pop-risk-nonneg"
     },
     {
@@ -670,7 +658,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 8,
+      "community": 6,
       "id": "hoeffding-lemma"
     },
     {
@@ -682,7 +670,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 8,
+      "community": 6,
       "id": "matrix-concentration"
     },
     {
@@ -694,7 +682,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-exponential"
     },
     {
@@ -706,7 +694,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 25,
+      "community": 28,
       "id": "rademacher-complexity-def"
     },
     {
@@ -718,7 +706,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 25,
+      "community": 28,
       "id": "rademacher-tail-bound-countable"
     },
     {
@@ -730,7 +718,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 40,
+      "community": 45,
       "id": "cauchy-schwarz-anchor"
     },
     {
@@ -742,7 +730,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "consistency"
     },
     {
@@ -754,7 +742,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 39,
+      "community": 44,
       "id": "convex-foundation"
     },
     {
@@ -766,7 +754,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 26,
+      "community": 29,
       "id": "cum-loss-const"
     },
     {
@@ -778,7 +766,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 26,
+      "community": 29,
       "id": "cum-loss-zero-fs"
     },
     {
@@ -790,7 +778,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 26,
+      "community": 29,
       "id": "cum-loss-zero-horizon"
     },
     {
@@ -802,7 +790,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 26,
+      "community": 29,
       "id": "cum-loss"
     },
     {
@@ -814,7 +802,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 39,
+      "community": 44,
       "id": "differential-calc-basics"
     },
     {
@@ -826,7 +814,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "double-descent-nonneg"
     },
     {
@@ -838,7 +826,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 40,
+      "community": 45,
       "id": "dudley-entropy-bound"
     },
     {
@@ -850,7 +838,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "emp-phi-risk-zero-sample"
     },
     {
@@ -862,7 +850,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "emp-risk-mono-pointwise"
     },
     {
@@ -874,7 +862,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "emp-risk-nonneg"
     },
     {
@@ -886,7 +874,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "emp-risk-zero-loss"
     },
     {
@@ -898,7 +886,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "empirical-phi-risk-nonneg"
     },
     {
@@ -910,7 +898,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "empirical-phi-risk"
     },
     {
@@ -922,7 +910,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "empirical-risk-zero-sample"
     },
     {
@@ -934,7 +922,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "empirical-risk"
     },
     {
@@ -946,7 +934,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "erm-def"
     },
     {
@@ -958,7 +946,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "erm-mem"
     },
     {
@@ -970,7 +958,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "erm-optimal"
     },
     {
@@ -982,7 +970,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 5,
+      "community": 3,
       "id": "estim-error-self-anchor"
     },
     {
@@ -994,7 +982,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "estimation-error"
     },
     {
@@ -1006,7 +994,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "excess-risk-decomposition"
     },
     {
@@ -1018,7 +1006,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "excess-risk-eq-approx-when-optimal"
     },
     {
@@ -1030,7 +1018,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "excess-risk-telescope"
     },
     {
@@ -1102,7 +1090,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-add"
     },
     {
@@ -1114,7 +1102,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-const"
     },
     {
@@ -1126,7 +1114,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-ge-const"
     },
     {
@@ -1138,7 +1126,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-in-interval"
     },
     {
@@ -1150,7 +1138,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-le-const"
     },
     {
@@ -1162,7 +1150,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-mono"
     },
     {
@@ -1174,7 +1162,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-neg"
     },
     {
@@ -1186,7 +1174,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-nonneg"
     },
     {
@@ -1198,7 +1186,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-smul-const"
     },
     {
@@ -1210,7 +1198,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-smul"
     },
     {
@@ -1222,7 +1210,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-sub"
     },
     {
@@ -1234,7 +1222,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-zero-fn"
     },
     {
@@ -1246,7 +1234,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 7,
+      "community": 4,
       "id": "expectation-zero-measure"
     },
     {
@@ -1426,7 +1414,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 9,
+      "community": 8,
       "id": "gd-descent-lemma"
     },
     {
@@ -1438,7 +1426,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 9,
+      "community": 8,
       "id": "gd-iterate-fixed-critical"
     },
     {
@@ -1450,7 +1438,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 9,
+      "community": 8,
       "id": "gd-iterate-succ"
     },
     {
@@ -1462,7 +1450,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 9,
+      "community": 8,
       "id": "gd-iterate-zero-step"
     },
     {
@@ -1474,7 +1462,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 9,
+      "community": 8,
       "id": "gd-iterate"
     },
     {
@@ -1486,7 +1474,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 9,
+      "community": 8,
       "id": "gd-step-eq"
     },
     {
@@ -1498,7 +1486,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 9,
+      "community": 8,
       "id": "gd-step-zero-step"
     },
     {
@@ -1510,7 +1498,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 9,
+      "community": 8,
       "id": "gradient-descent-foundation"
     },
     {
@@ -1522,7 +1510,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 10,
+      "community": 9,
       "id": "gram-matrix-diag"
     },
     {
@@ -1534,7 +1522,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 10,
+      "community": 9,
       "id": "gram-matrix-eq-kernel"
     },
     {
@@ -1546,7 +1534,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 10,
+      "community": 9,
       "id": "gram-matrix-symm"
     },
     {
@@ -1558,7 +1546,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 10,
+      "community": 9,
       "id": "gram-matrix-zero"
     },
     {
@@ -1570,7 +1558,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 10,
+      "community": 9,
       "id": "gram-matrix"
     },
     {
@@ -1582,7 +1570,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 10,
+      "community": 9,
       "id": "implicit-bias-add-y"
     },
     {
@@ -1594,7 +1582,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 10,
+      "community": 9,
       "id": "implicit-bias-full-rank"
     },
     {
@@ -1606,7 +1594,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 10,
+      "community": 9,
       "id": "implicit-bias-smul-y"
     },
     {
@@ -1618,7 +1606,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 10,
+      "community": 9,
       "id": "implicit-bias-sub-y"
     },
     {
@@ -1630,7 +1618,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 10,
+      "community": 9,
       "id": "implicit-bias-zero-labels"
     },
     {
@@ -1642,7 +1630,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 8,
+      "community": 6,
       "id": "infotheory-foundation"
     },
     {
@@ -1654,7 +1642,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 18,
+      "community": 52,
       "id": "is-argmax"
     },
     {
@@ -1666,7 +1654,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 18,
+      "community": 20,
       "id": "is-k-sparse-dim"
     },
     {
@@ -1678,7 +1666,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 18,
+      "community": 20,
       "id": "is-k-sparse-mono"
     },
     {
@@ -1690,7 +1678,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 18,
+      "community": 20,
       "id": "is-k-sparse-succ"
     },
     {
@@ -1702,7 +1690,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 18,
+      "community": 20,
       "id": "is-k-sparse-zero-any"
     },
     {
@@ -1714,7 +1702,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 18,
+      "community": 20,
       "id": "is-k-sparse-zero"
     },
     {
@@ -1726,7 +1714,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 18,
+      "community": 20,
       "id": "is-k-sparse"
     },
     {
@@ -1738,7 +1726,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 9,
+      "community": 8,
       "id": "is-l-smooth-const-any"
     },
     {
@@ -1750,7 +1738,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 9,
+      "community": 8,
       "id": "is-l-smooth-mono"
     },
     {
@@ -1762,7 +1750,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 53,
       "id": "is-l-smooth-zero"
     },
     {
@@ -1774,7 +1762,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "kernel-expansion-add"
     },
     {
@@ -1786,7 +1774,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "kernel-expansion-at-train-input"
     },
     {
@@ -1798,7 +1786,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "kernel-expansion-eq"
     },
     {
@@ -1810,7 +1798,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "kernel-expansion-smul"
     },
     {
@@ -1822,7 +1810,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "kernel-expansion"
     },
     {
@@ -1834,7 +1822,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "kernel-foundation"
     },
     {
@@ -1846,7 +1834,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 27,
+      "community": 30,
       "id": "kl-eq-top-iff"
     },
     {
@@ -1858,7 +1846,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 27,
+      "community": 30,
       "id": "kl-ne-top-iff"
     },
     {
@@ -1870,7 +1858,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 27,
+      "community": 30,
       "id": "kl-of-not-ac"
     },
     {
@@ -1882,7 +1870,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 27,
+      "community": 30,
       "id": "kl-zero-right"
     },
     {
@@ -1894,7 +1882,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "krr-coeffs-add-y"
     },
     {
@@ -1906,7 +1894,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "krr-coeffs-smul-y"
     },
     {
@@ -1918,7 +1906,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "krr-coeffs-zero-y"
     },
     {
@@ -1930,7 +1918,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "krr-coeffs"
     },
     {
@@ -1942,7 +1930,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "krr-predictor-add-y"
     },
     {
@@ -1954,7 +1942,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "krr-predictor-zero-kernel"
     },
     {
@@ -1966,7 +1954,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 6,
+      "community": 5,
       "id": "krr-predictor"
     },
     {
@@ -2086,7 +2074,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 46,
+      "community": 54,
       "id": "le-cam-average"
     },
     {
@@ -2098,7 +2086,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 11,
+      "community": 10,
       "id": "linear-kernel-add-left"
     },
     {
@@ -2110,7 +2098,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 11,
+      "community": 10,
       "id": "linear-kernel-add-right"
     },
     {
@@ -2122,7 +2110,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 11,
+      "community": 10,
       "id": "linear-kernel-self-nonneg"
     },
     {
@@ -2134,7 +2122,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 11,
+      "community": 10,
       "id": "linear-kernel-self"
     },
     {
@@ -2146,7 +2134,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 11,
+      "community": 10,
       "id": "linear-kernel-symm"
     },
     {
@@ -2158,7 +2146,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 11,
+      "community": 10,
       "id": "linear-kernel-zero-left"
     },
     {
@@ -2170,7 +2158,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 11,
+      "community": 10,
       "id": "linear-kernel-zero-right"
     },
     {
@@ -2182,7 +2170,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 11,
+      "community": 10,
       "id": "linear-kernel"
     },
     {
@@ -2194,7 +2182,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 11,
+      "community": 10,
       "id": "linear-predictor-l1-bound"
     },
     {
@@ -2206,7 +2194,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 11,
+      "community": 10,
       "id": "linear-predictor-l2-bound"
     },
     {
@@ -2290,7 +2278,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 34,
+      "community": 36,
       "id": "log-exp-alias"
     },
     {
@@ -2302,7 +2290,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 34,
+      "community": 36,
       "id": "log-nonneg-of-one-le"
     },
     {
@@ -2314,7 +2302,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 34,
+      "community": 36,
       "id": "log-one-alias"
     },
     {
@@ -2326,7 +2314,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 7,
       "id": "loss-function"
     },
     {
@@ -2338,7 +2326,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 7,
       "id": "margin-mono"
     },
     {
@@ -2350,7 +2338,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 7,
       "id": "margin-satisfied"
     },
     {
@@ -2362,7 +2350,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 8,
+      "community": 6,
       "id": "markov-inequality"
     },
     {
@@ -2374,7 +2362,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 8,
+      "community": 6,
       "id": "matrix-2x2-inverse"
     },
     {
@@ -2386,7 +2374,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 8,
+      "community": 6,
       "id": "max-eq-avg-equal"
     },
     {
@@ -2398,7 +2386,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 8,
+      "community": 6,
       "id": "max-expectation-bound"
     },
     {
@@ -2410,7 +2398,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 8,
+      "community": 6,
       "id": "max-self-anchor"
     },
     {
@@ -2422,7 +2410,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 8,
+      "community": 6,
       "id": "mcdiarmid-inequality"
     },
     {
@@ -2434,7 +2422,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 8,
+      "community": 6,
       "id": "min-le-average"
     },
     {
@@ -2446,7 +2434,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 8,
+      "community": 6,
       "id": "min-le-avg-le-max"
     },
     {
@@ -2458,7 +2446,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 7,
       "id": "mu-strongly-convex"
     },
     {
@@ -2470,7 +2458,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 7,
       "id": "multicat-loss-diag"
     },
     {
@@ -2482,7 +2470,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 7,
       "id": "multicat-loss-in-unit"
     },
     {
@@ -2494,7 +2482,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 7,
       "id": "multicat-zero-or-one"
     },
     {
@@ -2506,7 +2494,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 7,
       "id": "multicategory-eq-one-iff"
     },
     {
@@ -2518,7 +2506,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 7,
       "id": "multicategory-loss-le-one"
     },
     {
@@ -2530,7 +2518,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 7,
       "id": "multicategory-loss-symm"
     },
     {
@@ -2542,7 +2530,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 7,
       "id": "multicategory-loss"
     },
     {
@@ -2554,7 +2542,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 18,
       "id": "neural-net-foundation"
     },
     {
@@ -2566,7 +2554,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 18,
       "id": "nn-weights-localavg"
     },
     {
@@ -2578,7 +2566,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 18,
       "id": "nn-weights"
     },
     {
@@ -2590,7 +2578,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 18,
       "id": "nn-zero-a"
     },
     {
@@ -2602,7 +2590,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 18,
       "id": "nn-zero-bias-one-neuron"
     },
     {
@@ -2614,7 +2602,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 18,
       "id": "nn-zero-input"
     },
     {
@@ -2626,7 +2614,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 41,
+      "community": 55,
       "id": "no-free-lunch"
     },
     {
@@ -2638,7 +2626,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 3,
+      "community": 18,
       "id": "ntk-symmetry-anchor"
     },
     {
@@ -2722,7 +2710,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 42,
+      "community": 46,
       "id": "one-le-exp-nonneg"
     },
     {
@@ -2734,7 +2722,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 42,
+      "community": 46,
       "id": "one-plus-le-exp"
     },
     {
@@ -2746,7 +2734,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 41,
+      "community": 56,
       "id": "online-convex-foundation"
     },
     {
@@ -2758,7 +2746,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 28,
+      "community": 31,
       "id": "pac-bayes-kl-not-ac"
     },
     {
@@ -2770,7 +2758,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 28,
+      "community": 31,
       "id": "pac-bayes-kl"
     },
     {
@@ -2782,7 +2770,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 28,
+      "community": 31,
       "id": "pac-bayes-mcallester"
     },
     {
@@ -2794,7 +2782,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 28,
+      "community": 31,
       "id": "pac-bayes-zero-prior"
     },
     {
@@ -2806,7 +2794,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 35,
+      "community": 37,
       "id": "pacbayes-kl-def"
     },
     {
@@ -2818,7 +2806,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 35,
+      "community": 37,
       "id": "pacbayes-kl-eq-top-iff"
     },
     {
@@ -2830,7 +2818,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 35,
+      "community": 37,
       "id": "pacbayes-kl-ne-top-iff"
     },
     {
@@ -2842,7 +2830,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 29,
+      "community": 32,
       "id": "partition-weights"
     },
     {
@@ -2854,7 +2842,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 29,
+      "community": 32,
       "id": "penalized-add-pen"
     },
     {
@@ -2866,7 +2854,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 29,
+      "community": 32,
       "id": "penalized-empirical-risk"
     },
     {
@@ -2878,7 +2866,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 29,
+      "community": 32,
       "id": "penalized-zero-pen"
     },
     {
@@ -2890,7 +2878,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-exp-antitone"
     },
     {
@@ -2902,7 +2890,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-exp-le-one-of-nonneg"
     },
     {
@@ -2914,7 +2902,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-exp-zero"
     },
     {
@@ -2926,7 +2914,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-hinge-antitone"
     },
     {
@@ -2938,7 +2926,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-hinge-at-zero-anchor"
     },
     {
@@ -2950,7 +2938,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-hinge-eq-1-sub-of-le-one"
     },
     {
@@ -2962,7 +2950,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-hinge-zero-of-ge-one"
     },
     {
@@ -2974,7 +2962,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-hinge-zero"
     },
     {
@@ -2986,7 +2974,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-hinge"
     },
     {
@@ -2998,7 +2986,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-logistic-zero"
     },
     {
@@ -3010,7 +2998,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-logistic"
     },
     {
@@ -3022,7 +3010,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-square-1-lt-0"
     },
     {
@@ -3034,7 +3022,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-square-one"
     },
     {
@@ -3046,7 +3034,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-square-symm-around-1"
     },
     {
@@ -3058,7 +3046,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-square-zero-iff"
     },
     {
@@ -3070,7 +3058,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-square-zero"
     },
     {
@@ -3082,7 +3070,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-square"
     },
     {
@@ -3094,7 +3082,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-zero-one-le-hinge"
     },
     {
@@ -3106,7 +3094,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 1,
+      "community": 0,
       "id": "phi-zero-one"
     },
     {
@@ -3118,7 +3106,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 4,
+      "community": 57,
       "id": "pinsker-bretagnolle-huber"
     },
     {
@@ -3130,7 +3118,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "pop-risk-eq-integral"
     },
     {
@@ -3142,7 +3130,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "pop-risk-zero-measure"
     },
     {
@@ -3154,7 +3142,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 30,
+      "community": 38,
       "id": "pos-def-isunit"
     },
     {
@@ -3166,7 +3154,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 30,
+      "community": 38,
       "id": "pow-nonneg-anchor"
     },
     {
@@ -3178,7 +3166,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 30,
+      "community": 38,
       "id": "quadratic-form-min"
     },
     {
@@ -3190,7 +3178,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 30,
+      "community": 58,
       "id": "quadrature-expectation"
     },
     {
@@ -3202,7 +3190,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 25,
+      "community": 28,
       "id": "rademacher-tail-bound-separable"
     },
     {
@@ -3214,7 +3202,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 25,
+      "community": 59,
       "id": "random-projection-foundation"
     },
     {
@@ -3226,7 +3214,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 4,
+      "community": 1,
       "id": "regret-cumloss-diff"
     },
     {
@@ -3418,7 +3406,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 19,
+      "community": 60,
       "id": "risk-half-le-one"
     },
     {
@@ -3466,7 +3454,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 19,
+      "community": 61,
       "id": "score-loss"
     },
     {
@@ -3478,7 +3466,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 19,
+      "community": 25,
       "id": "sgd-add-g"
     },
     {
@@ -3490,7 +3478,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 19,
+      "community": 25,
       "id": "sgd-iterate-zero-step"
     },
     {
@@ -3502,7 +3490,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 19,
+      "community": 25,
       "id": "sgd-iterate"
     },
     {
@@ -3514,7 +3502,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 19,
+      "community": 25,
       "id": "sgd-step-eq"
     },
     {
@@ -3526,7 +3514,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 19,
+      "community": 25,
       "id": "sgd-step-zero-step"
     },
     {
@@ -3634,7 +3622,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 36,
+      "community": 39,
       "id": "soft-threshold-at-lam"
     },
     {
@@ -3646,7 +3634,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 36,
+      "community": 39,
       "id": "soft-threshold-zero-zero"
     },
     {
@@ -3658,7 +3646,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 36,
+      "community": 39,
       "id": "soft-threshold"
     },
     {
@@ -3802,7 +3790,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 37,
+      "community": 47,
       "id": "subgradient-add-const"
     },
     {
@@ -3814,7 +3802,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 37,
+      "community": 47,
       "id": "subgradient"
     },
     {
@@ -3826,7 +3814,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 2,
+      "community": 48,
       "id": "sum-gaps-nonneg"
     },
     {
@@ -3838,7 +3826,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 2,
+      "community": 48,
       "id": "sum-gaps-rewrite"
     },
     {
@@ -3874,7 +3862,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 31,
+      "community": 33,
       "id": "sup-singleton"
     },
     {
@@ -3886,7 +3874,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 31,
+      "community": 33,
       "id": "sup-zero-left"
     },
     {
@@ -3898,7 +3886,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 43,
+      "community": 62,
       "id": "svd"
     },
     {
@@ -3910,7 +3898,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 2,
+      "community": 40,
       "id": "symmetrization"
     },
     {
@@ -3922,7 +3910,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 32,
+      "community": 34,
       "id": "testing-error-diff-bound"
     },
     {
@@ -3934,7 +3922,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 32,
+      "community": 34,
       "id": "testing-error-le-one"
     },
     {
@@ -3946,7 +3934,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 32,
+      "community": 34,
       "id": "testing-error-nonneg"
     },
     {
@@ -3958,7 +3946,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 31,
+      "community": 33,
       "id": "three-point-average-le-max"
     },
     {
@@ -3970,7 +3958,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 37,
+      "community": 63,
       "id": "two-le-exp-1-plus-1"
     },
     {
@@ -3982,7 +3970,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 31,
+      "community": 33,
       "id": "two-point-sup-lb"
     },
     {
@@ -3994,7 +3982,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 32,
+      "community": 34,
       "id": "two-testing-errors-le-two"
     },
     {
@@ -4006,7 +3994,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 44,
+      "community": 49,
       "id": "ucb-bonus-nonneg"
     },
     {
@@ -4018,7 +4006,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 44,
+      "community": 49,
       "id": "ucb-bonus"
     },
     {
@@ -4030,7 +4018,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 2,
+      "community": 40,
       "id": "uniform-deviation-rademacher"
     },
     {
@@ -4042,7 +4030,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 2,
+      "community": 40,
       "id": "uniform-local-weights"
     },
     {
@@ -4054,7 +4042,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 43,
+      "community": 64,
       "id": "universal-approximation"
     },
     {
@@ -4066,7 +4054,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 38,
+      "community": 41,
       "id": "variance-nonneg-real"
     },
     {
@@ -4078,7 +4066,7 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 38,
+      "community": 41,
       "id": "zero-loss-nonneg"
     },
     {
@@ -4090,119 +4078,11 @@
       "captured_at": "",
       "author": "",
       "contributor": "",
-      "community": 38,
+      "community": 41,
       "id": "zero-loss"
     }
   ],
   "links": [
-    {
-      "relation": "cites",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/wiki/concepts/abs-expectation-bounded.md",
-      "source_location": "",
-      "weight": 1.0,
-      "_src": "bach_2024_ltfp",
-      "_tgt": "abs_expectation_bounded",
-      "source": "bach_2024_ltfp",
-      "target": "abs_expectation_bounded"
-    },
-    {
-      "relation": "cites",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/wiki/concepts/abs-expectation-le-exp-abs.md",
-      "source_location": "Proposition 5.1 (Jensen's inequality)",
-      "weight": 1.0,
-      "_src": "bach_2024_ltfp",
-      "_tgt": "abs_expectation_le_exp_abs",
-      "source": "bach_2024_ltfp",
-      "target": "abs_expectation_le_exp_abs"
-    },
-    {
-      "relation": "cites",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/wiki/concepts/add-risks-nonneg.md",
-      "source_location": "Bach Sec 15.1.2 p.430 Eq. 15.5",
-      "weight": 1.0,
-      "_src": "bach_2024_ltfp",
-      "_tgt": "add_risks_nonneg",
-      "source": "bach_2024_ltfp",
-      "target": "add_risks_nonneg"
-    },
-    {
-      "relation": "cites",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/wiki/concepts/all-zero-of-sum-sq-zero.md",
-      "source_location": "Bach Sec 3.3 Eq. 3.2 p.46; Sec 3.6 p.56",
-      "weight": 1.0,
-      "_src": "bach_2024_ltfp",
-      "_tgt": "all_zero_of_sum_sq_zero",
-      "source": "bach_2024_ltfp",
-      "target": "all_zero_of_sum_sq_zero"
-    },
-    {
-      "relation": "cites",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/wiki/concepts/approximation-error.md",
-      "source_location": "Bach Sec 4.3 p.84",
-      "weight": 1.0,
-      "_src": "bach_2024_ltfp",
-      "_tgt": "approximation_error",
-      "source": "bach_2024_ltfp",
-      "target": "approximation_error"
-    },
-    {
-      "relation": "cites",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/wiki/concepts/average-le-sup-anchor.md",
-      "source_location": "Bach Sec 15.1.4",
-      "weight": 1.0,
-      "_src": "bach_2024_ltfp",
-      "_tgt": "average_le_sup_anchor",
-      "source": "bach_2024_ltfp",
-      "target": "average_le_sup_anchor"
-    },
-    {
-      "relation": "cites",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/wiki/concepts/bagging-predictor.md",
-      "source_location": "Bach Sec 10.1.2",
-      "weight": 1.0,
-      "_src": "bach_2024_ltfp",
-      "_tgt": "bagging_predictor",
-      "source": "bach_2024_ltfp",
-      "target": "bagging_predictor"
-    },
-    {
-      "relation": "cites",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/wiki/concepts/bandit-foundation.md",
-      "source_location": "Bach F8b",
-      "weight": 1.0,
-      "_src": "bach_2024_ltfp",
-      "_tgt": "bandit_foundation",
-      "source": "bach_2024_ltfp",
-      "target": "bandit_foundation"
-    },
-    {
-      "relation": "cites",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/wiki/concepts/bandit-gap.md",
-      "source_location": "Bach Sec 11.3 p.333",
-      "weight": 1.0,
-      "_src": "bach_2024_ltfp",
-      "_tgt": "bandit_gap",
-      "source": "bach_2024_ltfp",
-      "target": "bandit_gap"
-    },
     {
       "relation": "references",
       "confidence": "EXTRACTED",
@@ -4888,18 +4768,6 @@
       "target": "pop-risk-zero-measure"
     },
     {
-      "relation": "semantically_similar_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.2,
-      "source_file": "docs/wiki/concepts/pinsker-bretagnolle-huber.md",
-      "source_location": "",
-      "weight": 0.2,
-      "_src": "population-risk",
-      "_tgt": "pinsker-bretagnolle-huber",
-      "source": "population-risk",
-      "target": "pinsker-bretagnolle-huber"
-    },
-    {
       "relation": "conceptually_related_to",
       "confidence": "INFERRED",
       "confidence_score": 0.65,
@@ -4958,18 +4826,6 @@
       "_tgt": "pop-risk-eq-integral",
       "source": "pop-risk-nonneg",
       "target": "pop-risk-eq-integral"
-    },
-    {
-      "relation": "semantically_similar_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.2,
-      "source_file": "docs/wiki/concepts/pow-nonneg-anchor.md",
-      "source_location": "",
-      "weight": 0.2,
-      "_src": "pop-risk-nonneg",
-      "_tgt": "pow-nonneg-anchor",
-      "source": "pop-risk-nonneg",
-      "target": "pow-nonneg-anchor"
     },
     {
       "relation": "conceptually_related_to",
@@ -5126,18 +4982,6 @@
       "_tgt": "rademacher-tail-bound-separable",
       "source": "rademacher-complexity-def",
       "target": "rademacher-tail-bound-separable"
-    },
-    {
-      "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.3,
-      "source_file": "tasks/random-projection-foundation/book_excerpt.md",
-      "source_location": "",
-      "weight": 1.0,
-      "_src": "rademacher-complexity-def",
-      "_tgt": "random-projection-foundation",
-      "source": "rademacher-complexity-def",
-      "target": "random-projection-foundation"
     },
     {
       "relation": "semantically_similar_to",
@@ -5666,18 +5510,6 @@
       "_tgt": "expectation-zero-measure",
       "source": "expectation-zero-fn",
       "target": "expectation-zero-measure"
-    },
-    {
-      "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.3,
-      "source_file": "docs/wiki/concepts/expectation-zero-measure.md",
-      "source_location": "",
-      "weight": 0.3,
-      "_src": "expectation-zero-measure",
-      "_tgt": "gaussian-nll-zero-disp",
-      "source": "expectation-zero-measure",
-      "target": "gaussian-nll-zero-disp"
     },
     {
       "relation": "conceptually_related_to",
@@ -6220,18 +6052,6 @@
       "target": "implicit-bias-sub-y"
     },
     {
-      "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.2,
-      "source_file": "docs/wiki/concepts/is-argmax.md",
-      "source_location": "",
-      "weight": 0.2,
-      "_src": "is-argmax",
-      "_tgt": "is-k-sparse",
-      "source": "is-argmax",
-      "target": "is-k-sparse"
-    },
-    {
       "relation": "references",
       "confidence": "INFERRED",
       "confidence_score": 0.9,
@@ -6326,18 +6146,6 @@
       "_tgt": "is-l-smooth-mono",
       "source": "is-l-smooth-const-any",
       "target": "is-l-smooth-mono"
-    },
-    {
-      "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.2,
-      "source_file": "docs/wiki/concepts/is-l-smooth-zero.md",
-      "source_location": "",
-      "weight": 1.0,
-      "_src": "is-l-smooth-zero",
-      "_tgt": "kernel-foundation",
-      "source": "is-l-smooth-zero",
-      "target": "kernel-foundation"
     },
     {
       "relation": "references",
@@ -7156,18 +6964,6 @@
       "target": "max-self-anchor"
     },
     {
-      "relation": "semantically_similar_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.2,
-      "source_file": "tasks/mu-strongly-convex/book_excerpt.md",
-      "source_location": "",
-      "weight": 0.2,
-      "_src": "mcdiarmid-inequality",
-      "_tgt": "mu-strongly-convex",
-      "source": "mcdiarmid-inequality",
-      "target": "mu-strongly-convex"
-    },
-    {
       "relation": "references",
       "confidence": "INFERRED",
       "confidence_score": 0.85,
@@ -7325,18 +7121,6 @@
     },
     {
       "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.3,
-      "source_file": "docs/wiki/concepts/",
-      "source_location": "",
-      "weight": 1.0,
-      "_src": "multicategory-loss",
-      "_tgt": "neural-net-foundation",
-      "source": "multicategory-loss",
-      "target": "neural-net-foundation"
-    },
-    {
-      "relation": "conceptually_related_to",
       "confidence": "INFERRED",
       "confidence_score": 0.85,
       "source_file": "docs/wiki/concepts/",
@@ -7454,18 +7238,6 @@
       "_tgt": "nn-zero-input",
       "source": "nn-zero-bias-one-neuron",
       "target": "nn-zero-input"
-    },
-    {
-      "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.3,
-      "source_file": "docs/wiki/concepts/",
-      "source_location": "",
-      "weight": 1.0,
-      "_src": "no-free-lunch",
-      "_tgt": "online-convex-foundation",
-      "source": "no-free-lunch",
-      "target": "online-convex-foundation"
     },
     {
       "relation": "conceptually_related_to",
@@ -7997,18 +7769,6 @@
     },
     {
       "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.2,
-      "source_file": ".graphify_chunk_29.txt",
-      "source_location": "",
-      "weight": 1.0,
-      "_src": "pinsker-bretagnolle-huber",
-      "_tgt": "pop-risk-eq-integral",
-      "source": "pinsker-bretagnolle-huber",
-      "target": "pop-risk-eq-integral"
-    },
-    {
-      "relation": "conceptually_related_to",
       "confidence": "INFERRED",
       "confidence_score": 0.7,
       "source_file": "tasks/quadratic-form-min/book_excerpt.md",
@@ -8030,18 +7790,6 @@
       "_tgt": "pow-nonneg-anchor",
       "source": "pos-def-isunit",
       "target": "pow-nonneg-anchor"
-    },
-    {
-      "relation": "semantically_similar_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.2,
-      "source_file": "docs/wiki/concepts/quadratic-form-min.md",
-      "source_location": "",
-      "weight": 0.2,
-      "_src": "quadratic-form-min",
-      "_tgt": "quadrature-expectation",
-      "source": "quadratic-form-min",
-      "target": "quadrature-expectation"
     },
     {
       "relation": "conceptually_related_to",
@@ -8296,18 +8044,6 @@
       "target": "ridge-zero-y"
     },
     {
-      "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.25,
-      "source_file": "tasks/sgd-add-g/book_excerpt.md",
-      "source_location": "",
-      "weight": 0.25,
-      "_src": "ridge-closed-form",
-      "_tgt": "sgd-add-g",
-      "source": "ridge-closed-form",
-      "target": "sgd-add-g"
-    },
-    {
       "relation": "semantically_similar_to",
       "confidence": "INFERRED",
       "confidence_score": 0.75,
@@ -8344,18 +8080,6 @@
       "target": "ridge-zero-y"
     },
     {
-      "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.3,
-      "source_file": "tasks/score-loss/book_excerpt.md",
-      "source_location": "",
-      "weight": 0.3,
-      "_src": "risk-half-le-one",
-      "_tgt": "score-loss",
-      "source": "risk-half-le-one",
-      "target": "score-loss"
-    },
-    {
       "relation": "references",
       "confidence": "INFERRED",
       "confidence_score": 0.9,
@@ -8390,18 +8114,6 @@
       "_tgt": "rkhs-kernel-self-nonneg",
       "source": "rkhs-kernel-def",
       "target": "rkhs-kernel-self-nonneg"
-    },
-    {
-      "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.25,
-      "source_file": "docs/wiki/concepts/score-loss.md",
-      "source_location": "",
-      "weight": 0.25,
-      "_src": "score-loss",
-      "_tgt": "sgd-step-eq",
-      "source": "score-loss",
-      "target": "sgd-step-eq"
     },
     {
       "relation": "conceptually_related_to",
@@ -8885,30 +8597,6 @@
     },
     {
       "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.3,
-      "source_file": "tasks/symmetrization/book_excerpt.md",
-      "source_location": "",
-      "weight": 0.3,
-      "_src": "stochastic-gd-foundation",
-      "_tgt": "symmetrization",
-      "source": "stochastic-gd-foundation",
-      "target": "symmetrization"
-    },
-    {
-      "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.3,
-      "source_file": "tasks/sub-nonneg-of-le/book_excerpt.md",
-      "source_location": "",
-      "weight": 0.3,
-      "_src": "sub-nonneg-of-le",
-      "_tgt": "sum-gaps-nonneg",
-      "source": "sub-nonneg-of-le",
-      "target": "sum-gaps-nonneg"
-    },
-    {
-      "relation": "conceptually_related_to",
       "confidence": "INFERRED",
       "confidence_score": 0.85,
       "source_file": "tasks/subgradient-add-const/book_excerpt.md",
@@ -8918,18 +8606,6 @@
       "_tgt": "subgradient",
       "source": "subgradient-add-const",
       "target": "subgradient"
-    },
-    {
-      "relation": "conceptually_related_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.2,
-      "source_file": "tasks/two-le-exp-1-plus-1/book_excerpt.md",
-      "source_location": "",
-      "weight": 0.2,
-      "_src": "subgradient",
-      "_tgt": "two-le-exp-1-plus-1",
-      "source": "subgradient",
-      "target": "two-le-exp-1-plus-1"
     },
     {
       "relation": "conceptually_related_to",
@@ -8978,30 +8654,6 @@
       "_tgt": "two-point-sup-lb",
       "source": "sup-singleton",
       "target": "two-point-sup-lb"
-    },
-    {
-      "relation": "semantically_similar_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.3,
-      "source_file": "docs/wiki/concepts/three-point-average-le-max.md",
-      "source_location": "",
-      "weight": 0.3,
-      "_src": "sup-zero-left",
-      "_tgt": "three-point-average-le-max",
-      "source": "sup-zero-left",
-      "target": "three-point-average-le-max"
-    },
-    {
-      "relation": "semantically_similar_to",
-      "confidence": "AMBIGUOUS",
-      "confidence_score": 0.2,
-      "source_file": "docs/wiki/concepts/svd.md",
-      "source_location": "",
-      "weight": 0.2,
-      "_src": "svd",
-      "_tgt": "universal-approximation",
-      "source": "svd",
-      "target": "universal-approximation"
     },
     {
       "relation": "conceptually_related_to",
@@ -9180,5 +8832,72 @@
       "confidence_score": 0.8,
       "source_file": "docs/wiki/concepts/"
     }
-  ]
+  ],
+  "community_labels": {
+    "0": "Surrogate \u03a6 Functions",
+    "1": "Excess Risk Decomposition",
+    "2": "Square Loss + ReLU",
+    "3": "Empirical Risk & ERM",
+    "4": "Expectation Algebra",
+    "5": "Kernel Ridge Regression",
+    "6": "Concentration Inequalities",
+    "7": "Margin & Multicategory Loss",
+    "8": "Gradient Descent Iterates",
+    "9": "Gram Matrix & Implicit Bias",
+    "10": "Linear Kernel & Predictor Bounds",
+    "11": "|\u00b7| Triangle Inequalities",
+    "12": "L1 Norm & Lasso",
+    "13": "ReLU Identities",
+    "14": "Ridge & RKHS",
+    "15": "Bandit Cumulative Regret",
+    "16": "Suboptimality Gaps",
+    "17": "Gaussian NLL",
+    "18": "Neural Nets & NTK",
+    "19": "Boosting Predictors",
+    "20": "K-Sparse Predicate",
+    "21": "Local Averaging Estimators",
+    "22": "OLS & Fixed Design",
+    "23": "Sketching Linearity",
+    "24": "Exponential Identities",
+    "25": "SGD Iterates",
+    "26": "Le Cam Averaging Lemmas",
+    "27": "Bagging Predictors",
+    "28": "Rademacher Uniform Deviation",
+    "29": "Cumulative Loss (Online)",
+    "30": "KL Divergence Edge Cases",
+    "31": "PAC-Bayes McAllester",
+    "32": "Penalized Empirical Risk",
+    "33": "Sup / Three-Point Bounds",
+    "34": "Testing Error Bounds",
+    "35": "Bernoulli NLL",
+    "36": "Log Identities",
+    "37": "PAC-Bayes KL Definition",
+    "38": "Positive Definite & Quadratic",
+    "39": "Soft Thresholding",
+    "40": "Symmetrization Lemmas",
+    "41": "Variance & Zero Loss",
+    "42": "Approximation Error Detail",
+    "43": "Bandit Foundation (Singleton)",
+    "44": "Convex & Calculus Foundations",
+    "45": "Cauchy-Schwarz / Dudley",
+    "46": "exp(x) Lower Bounds",
+    "47": "Subgradient",
+    "48": "Sum-of-Gaps Identities",
+    "49": "UCB Bonus",
+    "50": "Sum-Squared Residuals",
+    "51": "Block Matrix Inversion",
+    "52": "Argmax Predicate",
+    "53": "L-Smooth at Zero",
+    "54": "Le Cam Average (Singleton)",
+    "55": "No Free Lunch",
+    "56": "Online Convex Foundation",
+    "57": "Pinsker / Bretagnolle-Huber",
+    "58": "Quadrature Expectation",
+    "59": "Random Projection Foundation",
+    "60": "Risk \u2264 1 Bound",
+    "61": "Score Loss",
+    "62": "SVD",
+    "63": "2 \u2264 exp(1)+1",
+    "64": "Universal Approximation"
+  }
 }
