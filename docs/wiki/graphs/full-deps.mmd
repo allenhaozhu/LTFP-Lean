@@ -1,0 +1,663 @@
+# Full dependency graph
+
+Mermaid `graph TD` of the entire LTFP concept DAG (339 nodes, 317 edges). Open in any Markdown viewer with Mermaid support.
+
+```mermaid
+graph TD
+    n_hoeffding_lemma["hoeffding-lemma"]
+    n_mcdiarmid_inequality["mcdiarmid-inequality"]
+    n_max_expectation_bound["max-expectation-bound"]
+    n_rademacher_complexity_def["rademacher-complexity-def"]
+    n_symmetrization["symmetrization"]
+    n_bounded_difference_rademacher["bounded-difference-rademacher"]
+    n_uniform_deviation_rademacher["uniform-deviation-rademacher"]
+    n_rademacher_tail_bound_countable["rademacher-tail-bound-countable"]
+    n_rademacher_tail_bound_separable["rademacher-tail-bound-separable"]
+    n_linear_predictor_l2_bound["linear-predictor-l2-bound"]
+    n_linear_predictor_l1_bound["linear-predictor-l1-bound"]
+    n_dudley_entropy_bound["dudley-entropy-bound"]
+    n_convex_foundation["convex-foundation"]
+    n_gradient_descent_foundation["gradient-descent-foundation"]
+    n_stochastic_gd_foundation["stochastic-gd-foundation"]
+    n_kernel_foundation["kernel-foundation"]
+    n_rkhs_foundation["rkhs-foundation"]
+    n_infotheory_foundation["infotheory-foundation"]
+    n_neural_net_foundation["neural-net-foundation"]
+    n_random_projection_foundation["random-projection-foundation"]
+    n_online_convex_foundation["online-convex-foundation"]
+    n_bandit_foundation["bandit-foundation"]
+    n_phi_square["phi-square"]
+    n_phi_hinge["phi-hinge"]
+    n_phi_logistic["phi-logistic"]
+    n_phi_exponential["phi-exponential"]
+    n_approximation_error["approximation-error"]
+    n_estimation_error["estimation-error"]
+    n_excess_risk_decomposition["excess-risk-decomposition"]
+    n_penalized_empirical_risk["penalized-empirical-risk"]
+    n_uniform_local_weights["uniform-local-weights"]
+    n_partition_weights["partition-weights"]
+    n_local_avg_bias_term["local-avg-bias-term"]
+    n_l0_norm["l0-norm"]
+    n_l1_norm["l1-norm"]
+    n_soft_threshold["soft-threshold"]
+    n_lasso_kkt["lasso-kkt"]
+    n_multicategory_loss["multicategory-loss"]
+    n_is_argmax["is-argmax"]
+    n_score_loss["score-loss"]
+    n_gd_iterate["gd-iterate"]
+    n_subgradient["subgradient"]
+    n_sgd_iterate["sgd-iterate"]
+    n_kernel_expansion["kernel-expansion"]
+    n_representer_theorem["representer-theorem"]
+    n_gram_matrix["gram-matrix"]
+    n_krr_coeffs["krr-coeffs"]
+    n_krr_predictor["krr-predictor"]
+    n_gaussian_nll["gaussian-nll"]
+    n_pac_bayes_kl["pac-bayes-kl"]
+    n_testing_error_nonneg["testing-error-nonneg"]
+    n_two_point_sup_lb["two-point-sup-lb"]
+    n_single_hidden_relu["single-hidden-relu"]
+    n_sketch_linearity["sketch-linearity"]
+    n_boosted_predictor["boosted-predictor"]
+    n_bandit_gap["bandit-gap"]
+    n_bandit_regret_sum_gaps["bandit-regret-sum-gaps"]
+    n_implicit_bias_full_rank["implicit-bias-full-rank"]
+    n_phi_zero_one["phi-zero-one"]
+    n_phi_zero_one_le_hinge["phi-zero-one-le-hinge"]
+    n_empirical_phi_risk["empirical-phi-risk"]
+    n_gd_iterate_zero_step["gd-iterate-zero-step"]
+    n_kernel_expansion_add["kernel-expansion-add"]
+    n_single_hidden_relu_add_a["single-hidden-relu-add-a"]
+    n_nn_weights["nn-weights"]
+    n_nn_weights_localavg["nn-weights-localavg"]
+    n_l1_norm_nonneg["l1-norm-nonneg"]
+    n_l1_triangle["l1-triangle"]
+    n_ucb_bonus["ucb-bonus"]
+    n_ucb_bonus_nonneg["ucb-bonus-nonneg"]
+    n_ntk_symmetry_anchor["ntk-symmetry-anchor"]
+    n_ntk_concentration_scalar_hoeffding["ntk-concentration-scalar-hoeffding"]
+    n_lazy_training_linearization["lazy-training-linearization"]
+    n_margin_satisfied["margin-satisfied"]
+    n_bernoulli_nll["bernoulli-nll"]
+    n_le_cam_average["le-cam-average"]
+    n_relu_positive_homog["relu-positive-homog"]
+    n_relu_of_nonneg["relu-of-nonneg"]
+    n_sketch_zero_matrix["sketch-zero-matrix"]
+    n_cum_loss["cum-loss"]
+    n_regret_cumloss_diff["regret-cumloss-diff"]
+    n_boosted_add_coeff["boosted-add-coeff"]
+    n_emp_phi_risk_zero_sample["emp-phi-risk-zero-sample"]
+    n_sgd_iterate_zero_step["sgd-iterate-zero-step"]
+    n_phi_hinge_zero_of_ge_one["phi-hinge-zero-of-ge-one"]
+    n_phi_hinge_eq_1_sub_of_le_one["phi-hinge-eq-1-sub-of-le-one"]
+    n_subgradient_add_const["subgradient-add-const"]
+    n_bagging_predictor["bagging-predictor"]
+    n_bagging_predictor_zero["bagging-predictor-zero"]
+    n_explore_then_commit["explore-then-commit"]
+    n_average_le_sup_anchor["average-le-sup-anchor"]
+    n_mu_strongly_convex["mu-strongly-convex"]
+    n_linear_kernel["linear-kernel"]
+    n_linear_kernel_symm["linear-kernel-symm"]
+    n_kl_of_not_ac["kl-of-not-ac"]
+    n_kernel_expansion_smul["kernel-expansion-smul"]
+    n_quadratic_form_min["quadratic-form-min"]
+    n_matrix_2x2_inverse["matrix-2x2-inverse"]
+    n_block_matrix_inversion["block-matrix-inversion"]
+    n_svd["svd"]
+    n_differential_calc_basics["differential-calc-basics"]
+    n_bernstein_inequality["bernstein-inequality"]
+    n_quadrature_expectation["quadrature-expectation"]
+    n_matrix_concentration["matrix-concentration"]
+    n_operator_monotone_fn["operator-monotone-fn"]
+    n_lieb_concavity_joint["lieb-concavity-joint"]
+    n_loss_function["loss-function"]
+    n_population_risk["population-risk"]
+    n_bayes_predictor["bayes-predictor"]
+    n_bayes_risk_minimum["bayes-risk-minimum"]
+    n_empirical_risk["empirical-risk"]
+    n_erm_def["erm-def"]
+    n_local_averaging["local-averaging"]
+    n_consistency["consistency"]
+    n_no_free_lunch["no-free-lunch"]
+    n_ols_closed_form["ols-closed-form"]
+    n_ols_geometric["ols-geometric"]
+    n_ols_fixed_design_bias_variance["ols-fixed-design-bias-variance"]
+    n_ridge_closed_form["ridge-closed-form"]
+    n_ridge_bias_variance["ridge-bias-variance"]
+    n_ols_minimax_sup_ge_bayes["ols-minimax-sup-ge-bayes"]
+    n_gaussian_conjugate_posterior_mean["gaussian-conjugate-posterior-mean"]
+    n_gaussian_bayes_risk_ridge_trace["gaussian-bayes-risk-ridge-trace"]
+    n_matrix_trace_regularized_inv_limit["matrix-trace-regularized-inv-limit"]
+    n_ols_minimax_lower_bound["ols-minimax-lower-bound"]
+    n_phi_square_one["phi-square-one"]
+    n_phi_logistic_zero["phi-logistic-zero"]
+    n_phi_exp_zero["phi-exp-zero"]
+    n_is_k_sparse["is-k-sparse"]
+    n_is_k_sparse_zero["is-k-sparse-zero"]
+    n_is_k_sparse_mono["is-k-sparse-mono"]
+    n_multicategory_loss_symm["multicategory-loss-symm"]
+    n_multicategory_loss_le_one["multicategory-loss-le-one"]
+    n_pac_bayes_kl_not_ac["pac-bayes-kl-not-ac"]
+    n_square_loss["square-loss"]
+    n_square_loss_nonneg["square-loss-nonneg"]
+    n_square_loss_symm["square-loss-symm"]
+    n_localavg_add_y["localavg-add-y"]
+    n_localavg_smul_y["localavg-smul-y"]
+    n_bandit_regret_zero_horizon["bandit-regret-zero-horizon"]
+    n_double_descent_nonneg["double-descent-nonneg"]
+    n_relu_mono["relu-mono"]
+    n_pos_def_isunit["pos-def-isunit"]
+    n_boost_zero_coeffs["boost-zero-coeffs"]
+    n_margin_mono["margin-mono"]
+    n_gaussian_nll_symm["gaussian-nll-symm"]
+    n_gaussian_nll_self["gaussian-nll-self"]
+    n_empirical_phi_risk_nonneg["empirical-phi-risk-nonneg"]
+    n_is_k_sparse_dim["is-k-sparse-dim"]
+    n_is_l_smooth_zero["is-l-smooth-zero"]
+    n_krr_predictor_zero_kernel["krr-predictor-zero-kernel"]
+    n_relu_add_le["relu-add-le"]
+    n_cum_loss_zero_horizon["cum-loss-zero-horizon"]
+    n_testing_error_le_one["testing-error-le-one"]
+    n_three_point_average_le_max["three-point-average-le-max"]
+    n_ridge_zero_y["ridge-zero-y"]
+    n_ridge_smul_y["ridge-smul-y"]
+    n_l1_norm_neg["l1-norm-neg"]
+    n_bagging_const["bagging-const"]
+    n_implicit_bias_zero_labels["implicit-bias-zero-labels"]
+    n_approx_error_indep_fhat["approx-error-indep-fhat"]
+    n_gram_matrix_diag["gram-matrix-diag"]
+    n_gap_optimal["gap-optimal"]
+    n_sup_singleton["sup-singleton"]
+    n_phi_square_zero["phi-square-zero"]
+    n_phi_hinge_zero["phi-hinge-zero"]
+    n_linear_kernel_self["linear-kernel-self"]
+    n_is_l_smooth_mono["is-l-smooth-mono"]
+    n_gd_step_zero_step["gd-step-zero-step"]
+    n_sgd_step_zero_step["sgd-step-zero-step"]
+    n_rkhs_kernel_self_nonneg["rkhs-kernel-self-nonneg"]
+    n_bandit_regret_smul["bandit-regret-smul"]
+    n_square_loss_zero_iff["square-loss-zero-iff"]
+    n_square_loss_self["square-loss-self"]
+    n_localavg_bias_zero_fstar["localavg-bias-zero-fstar"]
+    n_multicat_loss_diag["multicat-loss-diag"]
+    n_sketch_one["sketch-one"]
+    n_kl_zero_right["kl-zero-right"]
+    n_pac_bayes_zero_prior["pac-bayes-zero-prior"]
+    n_gaussian_nll_eq_sqdisp["gaussian-nll-eq-sqdisp"]
+    n_penalized_zero_pen["penalized-zero-pen"]
+    n_boost_zero_h["boost-zero-h"]
+    n_implicit_bias_add_y["implicit-bias-add-y"]
+    n_relu_le_id_of_nonneg["relu-le-id-of-nonneg"]
+    n_relu_eq_self_of_nonneg["relu-eq-self-of-nonneg"]
+    n_linear_kernel_zero_left["linear-kernel-zero-left"]
+    n_linear_kernel_self_nonneg["linear-kernel-self-nonneg"]
+    n_phi_hinge_antitone["phi-hinge-antitone"]
+    n_phi_square_1_lt_0["phi-square-1-lt-0"]
+    n_l1_norm_eq_zero_of_zero["l1-norm-eq-zero-of-zero"]
+    n_ols_add_y["ols-add-y"]
+    n_ols_smul_y["ols-smul-y"]
+    n_is_k_sparse_zero_any["is-k-sparse-zero-any"]
+    n_gap_nonneg["gap-nonneg"]
+    n_risk_half_le_one["risk-half-le-one"]
+    n_kernel_expansion_at_train_input["kernel-expansion-at-train-input"]
+    n_nn_zero_bias_one_neuron["nn-zero-bias-one-neuron"]
+    n_multicat_zero_or_one["multicat-zero-or-one"]
+    n_boost_one_step["boost-one-step"]
+    n_implicit_bias_smul_y["implicit-bias-smul-y"]
+    n_gaussian_nll_sub_zero_nonneg["gaussian-nll-sub-zero-nonneg"]
+    n_sup_zero_left["sup-zero-left"]
+    n_average_of_self["average-of-self"]
+    n_relu_eq_relu["relu-eq-relu"]
+    n_relu_neg_eq_zero["relu-neg-eq-zero"]
+    n_bandit_regret_eq_rewrite["bandit-regret-eq-rewrite"]
+    n_cum_loss_zero_fs["cum-loss-zero-fs"]
+    n_phi_square_zero_iff["phi-square-zero-iff"]
+    n_phi_hinge_at_zero_anchor["phi-hinge-at-zero-anchor"]
+    n_sketch_add_matrix["sketch-add-matrix"]
+    n_kl_eq_top_iff["kl-eq-top-iff"]
+    n_sgd_add_g["sgd-add-g"]
+    n_localavg_neg_y["localavg-neg-y"]
+    n_bagging_index_anchor["bagging-index-anchor"]
+    n_add_risks_nonneg["add-risks-nonneg"]
+    n_square_loss_eq_sq_diff["square-loss-eq-sq-diff"]
+    n_square_loss_convex["square-loss-convex"]
+    n_multicategory_eq_one_iff["multicategory-eq-one-iff"]
+    n_bernoulli_at_half["bernoulli-at-half"]
+    n_penalized_add_pen["penalized-add-pen"]
+    n_empirical_risk_zero_sample["empirical-risk-zero-sample"]
+    n_erm_mem["erm-mem"]
+    n_erm_optimal["erm-optimal"]
+    n_linear_kernel_zero_right["linear-kernel-zero-right"]
+    n_relu_eq_zero_iff["relu-eq-zero-iff"]
+    n_soft_threshold_zero_zero["soft-threshold-zero-zero"]
+    n_estim_error_self_anchor["estim-error-self-anchor"]
+    n_gram_matrix_eq_kernel["gram-matrix-eq-kernel"]
+    n_max_eq_avg_equal["max-eq-avg-equal"]
+    n_testing_error_diff_bound["testing-error-diff-bound"]
+    n_gap_eq_diff["gap-eq-diff"]
+    n_sum_gaps_rewrite["sum-gaps-rewrite"]
+    n_expectation_const["expectation-const"]
+    n_expectation_smul["expectation-smul"]
+    n_expectation_nonneg["expectation-nonneg"]
+    n_expectation_add["expectation-add"]
+    n_cauchy_schwarz_anchor["cauchy-schwarz-anchor"]
+    n_exp_pos_alias["exp-pos-alias"]
+    n_log_exp_alias["log-exp-alias"]
+    n_one_plus_le_exp["one-plus-le-exp"]
+    n_pow_nonneg_anchor["pow-nonneg-anchor"]
+    n_abs_triangle["abs-triangle"]
+    n_sq_nonneg_alias["sq-nonneg-alias"]
+    n_sqrt_sq_eq_abs["sqrt-sq-eq-abs"]
+    n_expectation_mono["expectation-mono"]
+    n_expectation_sub["expectation-sub"]
+    n_expectation_neg["expectation-neg"]
+    n_expectation_zero_measure["expectation-zero-measure"]
+    n_exp_strict_mono["exp-strict-mono"]
+    n_log_one_alias["log-one-alias"]
+    n_exp_sub_1_sub_self["exp-sub-1-sub-self"]
+    n_one_le_exp_nonneg["one-le-exp-nonneg"]
+    n_two_le_exp_1_plus_1["two-le-exp-1-plus-1"]
+    n_log_nonneg_of_one_le["log-nonneg-of-one-le"]
+    n_expectation_zero_fn["expectation-zero-fn"]
+    n_expectation_smul_const["expectation-smul-const"]
+    n_exp_zero_eq_one["exp-zero-eq-one"]
+    n_exp_neg_eq_inv["exp-neg-eq-inv"]
+    n_sub_nonneg_of_le["sub-nonneg-of-le"]
+    n_abs_zero_eq_zero["abs-zero-eq-zero"]
+    n_abs_nonneg_anchor["abs-nonneg-anchor"]
+    n_abs_neg_anchor["abs-neg-anchor"]
+    n_bandit_regret_const_action["bandit-regret-const-action"]
+    n_cum_loss_const["cum-loss-const"]
+    n_sketch_add_mat["sketch-add-mat"]
+    n_sketch_smul_matrix["sketch-smul-matrix"]
+    n_is_l_smooth_const_any["is-l-smooth-const-any"]
+    n_linear_kernel_add_left["linear-kernel-add-left"]
+    n_linear_kernel_add_right["linear-kernel-add-right"]
+    n_gd_step_eq["gd-step-eq"]
+    n_sgd_step_eq["sgd-step-eq"]
+    n_rkhs_kernel_def["rkhs-kernel-def"]
+    n_excess_risk_telescope["excess-risk-telescope"]
+    n_max_self_anchor["max-self-anchor"]
+    n_two_testing_errors_le_two["two-testing-errors-le-two"]
+    n_gram_matrix_zero["gram-matrix-zero"]
+    n_gram_matrix_symm["gram-matrix-symm"]
+    n_bandit_regret_eq_sum_gaps_strong["bandit-regret-eq-sum-gaps-strong"]
+    n_boost_eq["boost-eq"]
+    n_is_k_sparse_succ["is-k-sparse-succ"]
+    n_implicit_bias_sub_y["implicit-bias-sub-y"]
+    n_multicat_loss_in_unit["multicat-loss-in-unit"]
+    n_phi_square_symm_around_1["phi-square-symm-around-1"]
+    n_phi_exp_antitone["phi-exp-antitone"]
+    n_phi_exp_le_one_of_nonneg["phi-exp-le-one-of-nonneg"]
+    n_zero_loss["zero-loss"]
+    n_zero_loss_nonneg["zero-loss-nonneg"]
+    n_ridge_sub_y["ridge-sub-y"]
+    n_l1_norm_fin_one["l1-norm-fin-one"]
+    n_kernel_expansion_eq["kernel-expansion-eq"]
+    n_gap_def["gap-def"]
+    n_kl_ne_top_iff["kl-ne-top-iff"]
+    n_abs_expectation_le_exp_abs["abs-expectation-le-exp-abs"]
+    n_expectation_le_const["expectation-le-const"]
+    n_abs_expectation_bounded["abs-expectation-bounded"]
+    n_expectation_ge_const["expectation-ge-const"]
+    n_expectation_in_interval["expectation-in-interval"]
+    n_pop_risk_eq_integral["pop-risk-eq-integral"]
+    n_pop_risk_zero_measure["pop-risk-zero-measure"]
+    n_pop_risk_nonneg["pop-risk-nonneg"]
+    n_markov_inequality["markov-inequality"]
+    n_variance_nonneg_real["variance-nonneg-real"]
+    n_bayes_risk_le_population_risk["bayes-risk-le-population-risk"]
+    n_bayes_risk_nonneg["bayes-risk-nonneg"]
+    n_excess_risk_nonneg["excess-risk-nonneg"]
+    n_excess_risk_eq_approx_when_optimal["excess-risk-eq-approx-when-optimal"]
+    n_emp_risk_nonneg["emp-risk-nonneg"]
+    n_emp_risk_zero_loss["emp-risk-zero-loss"]
+    n_emp_risk_mono_pointwise["emp-risk-mono-pointwise"]
+    n_sum_sq_residuals_nonneg["sum-sq-residuals-nonneg"]
+    n_sum_sq_residuals_zero["sum-sq-residuals-zero"]
+    n_all_zero_of_sum_sq_zero["all-zero-of-sum-sq-zero"]
+    n_gd_iterate_succ["gd-iterate-succ"]
+    n_gd_iterate_fixed_critical["gd-iterate-fixed-critical"]
+    n_krr_coeffs_add_y["krr-coeffs-add-y"]
+    n_krr_coeffs_smul_y["krr-coeffs-smul-y"]
+    n_krr_coeffs_zero_y["krr-coeffs-zero-y"]
+    n_krr_predictor_add_y["krr-predictor-add-y"]
+    n_nn_zero_input["nn-zero-input"]
+    n_nn_zero_a["nn-zero-a"]
+    n_l1_norm_triangle["l1-norm-triangle"]
+    n_soft_threshold_at_lam["soft-threshold-at-lam"]
+    n_pacbayes_kl_ne_top_iff["pacbayes-kl-ne-top-iff"]
+    n_pacbayes_kl_eq_top_iff["pacbayes-kl-eq-top-iff"]
+    n_pacbayes_kl_def["pacbayes-kl-def"]
+    n_bernoulli_nll_correct_zero["bernoulli-nll-correct-zero"]
+    n_gaussian_nll_zero_disp["gaussian-nll-zero-disp"]
+    n_gaussian_nll_le_iff_sq["gaussian-nll-le-iff-sq"]
+    n_average_plus_half_le["average-plus-half-le"]
+    n_average_three_self["average-three-self"]
+    n_min_le_average["min-le-average"]
+    n_min_le_avg_le_max["min-le-avg-le-max"]
+    n_gap_mono_mu_star["gap-mono-mu-star"]
+    n_gap_antitone_mu["gap-antitone-mu"]
+    n_pinsker_bretagnolle_huber["pinsker-bretagnolle-huber"]
+    n_sum_gaps_nonneg["sum-gaps-nonneg"]
+    n_gd_descent_lemma["gd-descent-lemma"]
+    n_pac_bayes_mcallester["pac-bayes-mcallester"]
+    n_universal_approximation["universal-approximation"]
+    n_hoeffding_lemma --> n_mcdiarmid_inequality
+    n_hoeffding_lemma --> n_max_expectation_bound
+    n_hoeffding_lemma --> n_ntk_concentration_scalar_hoeffding
+    n_hoeffding_lemma --> n_bernstein_inequality
+    n_mcdiarmid_inequality --> n_rademacher_tail_bound_countable
+    n_rademacher_complexity_def --> n_symmetrization
+    n_rademacher_complexity_def --> n_bounded_difference_rademacher
+    n_rademacher_complexity_def --> n_uniform_deviation_rademacher
+    n_rademacher_complexity_def --> n_dudley_entropy_bound
+    n_symmetrization --> n_uniform_deviation_rademacher
+    n_bounded_difference_rademacher --> n_rademacher_tail_bound_countable
+    n_uniform_deviation_rademacher --> n_rademacher_tail_bound_countable
+    n_rademacher_tail_bound_countable --> n_rademacher_tail_bound_separable
+    n_rademacher_tail_bound_separable --> n_linear_predictor_l2_bound
+    n_rademacher_tail_bound_separable --> n_linear_predictor_l1_bound
+    n_convex_foundation --> n_gradient_descent_foundation
+    n_convex_foundation --> n_online_convex_foundation
+    n_convex_foundation --> n_phi_square
+    n_convex_foundation --> n_phi_hinge
+    n_convex_foundation --> n_phi_logistic
+    n_convex_foundation --> n_phi_exponential
+    n_convex_foundation --> n_subgradient
+    n_convex_foundation --> n_mu_strongly_convex
+    n_convex_foundation --> n_is_l_smooth_zero
+    n_convex_foundation --> n_is_l_smooth_mono
+    n_convex_foundation --> n_is_l_smooth_const_any
+    n_gradient_descent_foundation --> n_stochastic_gd_foundation
+    n_gradient_descent_foundation --> n_gd_iterate
+    n_gradient_descent_foundation --> n_implicit_bias_full_rank
+    n_gradient_descent_foundation --> n_gd_step_zero_step
+    n_gradient_descent_foundation --> n_gd_step_eq
+    n_gradient_descent_foundation --> n_gd_descent_lemma
+    n_stochastic_gd_foundation --> n_sgd_iterate
+    n_stochastic_gd_foundation --> n_sgd_step_zero_step
+    n_stochastic_gd_foundation --> n_sgd_add_g
+    n_stochastic_gd_foundation --> n_sgd_step_eq
+    n_kernel_foundation --> n_rkhs_foundation
+    n_kernel_foundation --> n_kernel_expansion
+    n_kernel_foundation --> n_gram_matrix
+    n_kernel_foundation --> n_linear_kernel
+    n_rkhs_foundation --> n_representer_theorem
+    n_rkhs_foundation --> n_rkhs_kernel_self_nonneg
+    n_rkhs_foundation --> n_rkhs_kernel_def
+    n_infotheory_foundation --> n_pac_bayes_kl
+    n_infotheory_foundation --> n_testing_error_nonneg
+    n_infotheory_foundation --> n_kl_of_not_ac
+    n_infotheory_foundation --> n_kl_zero_right
+    n_infotheory_foundation --> n_kl_eq_top_iff
+    n_infotheory_foundation --> n_kl_ne_top_iff
+    n_infotheory_foundation --> n_markov_inequality
+    n_infotheory_foundation --> n_pinsker_bretagnolle_huber
+    n_neural_net_foundation --> n_single_hidden_relu
+    n_neural_net_foundation --> n_relu_positive_homog
+    n_neural_net_foundation --> n_relu_of_nonneg
+    n_neural_net_foundation --> n_relu_mono
+    n_neural_net_foundation --> n_relu_add_le
+    n_neural_net_foundation --> n_relu_le_id_of_nonneg
+    n_neural_net_foundation --> n_relu_eq_self_of_nonneg
+    n_neural_net_foundation --> n_relu_eq_relu
+    n_neural_net_foundation --> n_relu_neg_eq_zero
+    n_neural_net_foundation --> n_relu_eq_zero_iff
+    n_random_projection_foundation --> n_sketch_linearity
+    n_random_projection_foundation --> n_sketch_zero_matrix
+    n_random_projection_foundation --> n_sketch_one
+    n_random_projection_foundation --> n_sketch_add_matrix
+    n_random_projection_foundation --> n_sketch_add_mat
+    n_random_projection_foundation --> n_sketch_smul_matrix
+    n_online_convex_foundation --> n_cum_loss
+    n_bandit_foundation --> n_bandit_gap
+    n_bandit_foundation --> n_ucb_bonus
+    n_bandit_foundation --> n_explore_then_commit
+    n_bandit_foundation --> n_bandit_regret_zero_horizon
+    n_bandit_foundation --> n_bandit_regret_smul
+    n_bandit_foundation --> n_bandit_regret_eq_rewrite
+    n_bandit_foundation --> n_bandit_regret_const_action
+    n_phi_square --> n_phi_square_one
+    n_phi_square --> n_phi_square_zero
+    n_phi_square --> n_phi_square_1_lt_0
+    n_phi_square --> n_phi_square_zero_iff
+    n_phi_square --> n_phi_square_symm_around_1
+    n_phi_hinge --> n_phi_zero_one_le_hinge
+    n_phi_hinge --> n_empirical_phi_risk
+    n_phi_hinge --> n_phi_hinge_zero_of_ge_one
+    n_phi_hinge --> n_phi_hinge_eq_1_sub_of_le_one
+    n_phi_hinge --> n_phi_hinge_zero
+    n_phi_hinge --> n_phi_hinge_antitone
+    n_phi_hinge --> n_phi_hinge_at_zero_anchor
+    n_phi_logistic --> n_phi_logistic_zero
+    n_phi_exponential --> n_boosted_predictor
+    n_phi_exponential --> n_phi_exp_zero
+    n_phi_exponential --> n_phi_exp_antitone
+    n_phi_exponential --> n_phi_exp_le_one_of_nonneg
+    n_approximation_error --> n_excess_risk_decomposition
+    n_approximation_error --> n_approx_error_indep_fhat
+    n_approximation_error --> n_excess_risk_eq_approx_when_optimal
+    n_estimation_error --> n_excess_risk_decomposition
+    n_estimation_error --> n_estim_error_self_anchor
+    n_excess_risk_decomposition --> n_excess_risk_telescope
+    n_excess_risk_decomposition --> n_excess_risk_eq_approx_when_optimal
+    n_penalized_empirical_risk --> n_penalized_zero_pen
+    n_penalized_empirical_risk --> n_penalized_add_pen
+    n_uniform_local_weights --> n_local_avg_bias_term
+    n_local_avg_bias_term --> n_localavg_bias_zero_fstar
+    n_l0_norm --> n_is_k_sparse
+    n_l1_norm --> n_soft_threshold
+    n_l1_norm --> n_l1_norm_nonneg
+    n_l1_norm --> n_l1_triangle
+    n_l1_norm --> n_l1_norm_neg
+    n_l1_norm --> n_l1_norm_eq_zero_of_zero
+    n_l1_norm --> n_l1_norm_fin_one
+    n_l1_norm --> n_l1_norm_triangle
+    n_soft_threshold --> n_lasso_kkt
+    n_soft_threshold --> n_soft_threshold_zero_zero
+    n_soft_threshold --> n_soft_threshold_at_lam
+    n_multicategory_loss --> n_score_loss
+    n_multicategory_loss --> n_multicategory_loss_symm
+    n_multicategory_loss --> n_multicategory_loss_le_one
+    n_multicategory_loss --> n_multicat_loss_diag
+    n_multicategory_loss --> n_multicat_zero_or_one
+    n_multicategory_loss --> n_multicategory_eq_one_iff
+    n_multicategory_loss --> n_multicat_loss_in_unit
+    n_is_argmax --> n_score_loss
+    n_score_loss --> n_margin_satisfied
+    n_gd_iterate --> n_gd_iterate_zero_step
+    n_gd_iterate --> n_gd_iterate_succ
+    n_gd_iterate --> n_gd_iterate_fixed_critical
+    n_gd_iterate --> n_gd_descent_lemma
+    n_subgradient --> n_subgradient_add_const
+    n_sgd_iterate --> n_sgd_iterate_zero_step
+    n_kernel_expansion --> n_representer_theorem
+    n_kernel_expansion --> n_krr_predictor
+    n_kernel_expansion --> n_kernel_expansion_add
+    n_kernel_expansion --> n_kernel_expansion_smul
+    n_kernel_expansion --> n_kernel_expansion_at_train_input
+    n_kernel_expansion --> n_kernel_expansion_eq
+    n_gram_matrix --> n_krr_coeffs
+    n_gram_matrix --> n_gram_matrix_diag
+    n_gram_matrix --> n_gram_matrix_eq_kernel
+    n_gram_matrix --> n_gram_matrix_zero
+    n_gram_matrix --> n_gram_matrix_symm
+    n_krr_coeffs --> n_krr_predictor
+    n_krr_coeffs --> n_krr_coeffs_add_y
+    n_krr_coeffs --> n_krr_coeffs_smul_y
+    n_krr_coeffs --> n_krr_coeffs_zero_y
+    n_krr_predictor --> n_krr_predictor_zero_kernel
+    n_gaussian_nll --> n_gaussian_nll_symm
+    n_gaussian_nll --> n_gaussian_nll_self
+    n_gaussian_nll --> n_gaussian_nll_eq_sqdisp
+    n_gaussian_nll --> n_gaussian_nll_sub_zero_nonneg
+    n_gaussian_nll --> n_gaussian_nll_zero_disp
+    n_gaussian_nll --> n_gaussian_nll_le_iff_sq
+    n_pac_bayes_kl --> n_pac_bayes_kl_not_ac
+    n_pac_bayes_kl --> n_pac_bayes_zero_prior
+    n_pac_bayes_kl --> n_pacbayes_kl_ne_top_iff
+    n_pac_bayes_kl --> n_pacbayes_kl_eq_top_iff
+    n_pac_bayes_kl --> n_pacbayes_kl_def
+    n_pac_bayes_kl --> n_pac_bayes_mcallester
+    n_testing_error_nonneg --> n_two_point_sup_lb
+    n_testing_error_nonneg --> n_testing_error_le_one
+    n_testing_error_nonneg --> n_sup_singleton
+    n_testing_error_nonneg --> n_risk_half_le_one
+    n_testing_error_nonneg --> n_sup_zero_left
+    n_testing_error_nonneg --> n_add_risks_nonneg
+    n_testing_error_nonneg --> n_testing_error_diff_bound
+    n_testing_error_nonneg --> n_max_self_anchor
+    n_testing_error_nonneg --> n_two_testing_errors_le_two
+    n_two_point_sup_lb --> n_le_cam_average
+    n_single_hidden_relu --> n_single_hidden_relu_add_a
+    n_single_hidden_relu --> n_nn_zero_bias_one_neuron
+    n_single_hidden_relu --> n_nn_zero_input
+    n_single_hidden_relu --> n_nn_zero_a
+    n_single_hidden_relu --> n_universal_approximation
+    n_boosted_predictor --> n_boosted_add_coeff
+    n_boosted_predictor --> n_boost_zero_coeffs
+    n_boosted_predictor --> n_boost_zero_h
+    n_boosted_predictor --> n_boost_one_step
+    n_boosted_predictor --> n_boost_eq
+    n_bandit_gap --> n_bandit_regret_sum_gaps
+    n_bandit_gap --> n_gap_optimal
+    n_bandit_gap --> n_gap_nonneg
+    n_bandit_gap --> n_gap_eq_diff
+    n_bandit_gap --> n_sum_gaps_rewrite
+    n_bandit_gap --> n_bandit_regret_eq_sum_gaps_strong
+    n_bandit_gap --> n_gap_def
+    n_bandit_gap --> n_gap_mono_mu_star
+    n_bandit_gap --> n_gap_antitone_mu
+    n_bandit_gap --> n_sum_gaps_nonneg
+    n_bandit_regret_sum_gaps --> n_bandit_regret_eq_sum_gaps_strong
+    n_implicit_bias_full_rank --> n_ntk_symmetry_anchor
+    n_implicit_bias_full_rank --> n_double_descent_nonneg
+    n_implicit_bias_full_rank --> n_implicit_bias_zero_labels
+    n_implicit_bias_full_rank --> n_implicit_bias_add_y
+    n_implicit_bias_full_rank --> n_implicit_bias_smul_y
+    n_implicit_bias_full_rank --> n_implicit_bias_sub_y
+    n_phi_zero_one --> n_phi_zero_one_le_hinge
+    n_empirical_phi_risk --> n_emp_phi_risk_zero_sample
+    n_empirical_phi_risk --> n_empirical_phi_risk_nonneg
+    n_kernel_expansion_add --> n_krr_predictor_add_y
+    n_nn_weights --> n_nn_weights_localavg
+    n_ucb_bonus --> n_ucb_bonus_nonneg
+    n_ntk_symmetry_anchor --> n_ntk_concentration_scalar_hoeffding
+    n_ntk_concentration_scalar_hoeffding --> n_lazy_training_linearization
+    n_margin_satisfied --> n_margin_mono
+    n_bernoulli_nll --> n_bernoulli_at_half
+    n_bernoulli_nll --> n_bernoulli_nll_correct_zero
+    n_le_cam_average --> n_average_le_sup_anchor
+    n_le_cam_average --> n_three_point_average_le_max
+    n_le_cam_average --> n_average_of_self
+    n_le_cam_average --> n_max_eq_avg_equal
+    n_le_cam_average --> n_average_plus_half_le
+    n_le_cam_average --> n_min_le_average
+    n_le_cam_average --> n_min_le_avg_le_max
+    n_cum_loss --> n_regret_cumloss_diff
+    n_cum_loss --> n_cum_loss_zero_horizon
+    n_cum_loss --> n_cum_loss_zero_fs
+    n_cum_loss --> n_cum_loss_const
+    n_bagging_predictor --> n_bagging_predictor_zero
+    n_bagging_predictor --> n_bagging_const
+    n_bagging_predictor --> n_bagging_index_anchor
+    n_linear_kernel --> n_linear_kernel_symm
+    n_linear_kernel --> n_linear_kernel_self
+    n_linear_kernel --> n_linear_kernel_zero_left
+    n_linear_kernel --> n_linear_kernel_self_nonneg
+    n_linear_kernel --> n_linear_kernel_zero_right
+    n_linear_kernel --> n_linear_kernel_add_left
+    n_linear_kernel --> n_linear_kernel_add_right
+    n_kl_of_not_ac --> n_pac_bayes_kl_not_ac
+    n_quadratic_form_min --> n_ols_closed_form
+    n_quadratic_form_min --> n_pos_def_isunit
+    n_bernstein_inequality --> n_matrix_concentration
+    n_matrix_concentration --> n_operator_monotone_fn
+    n_operator_monotone_fn --> n_lieb_concavity_joint
+    n_loss_function --> n_population_risk
+    n_loss_function --> n_empirical_risk
+    n_loss_function --> n_square_loss
+    n_population_risk --> n_approximation_error
+    n_population_risk --> n_estimation_error
+    n_population_risk --> n_bayes_predictor
+    n_population_risk --> n_local_averaging
+    n_population_risk --> n_consistency
+    n_population_risk --> n_pop_risk_eq_integral
+    n_population_risk --> n_pop_risk_zero_measure
+    n_population_risk --> n_pop_risk_nonneg
+    n_population_risk --> n_bayes_risk_le_population_risk
+    n_bayes_predictor --> n_bayes_risk_minimum
+    n_bayes_predictor --> n_consistency
+    n_bayes_risk_minimum --> n_approximation_error
+    n_bayes_risk_minimum --> n_bayes_risk_le_population_risk
+    n_bayes_risk_minimum --> n_bayes_risk_nonneg
+    n_empirical_risk --> n_penalized_empirical_risk
+    n_empirical_risk --> n_erm_def
+    n_empirical_risk --> n_ols_closed_form
+    n_empirical_risk --> n_empirical_risk_zero_sample
+    n_empirical_risk --> n_emp_risk_nonneg
+    n_empirical_risk --> n_emp_risk_zero_loss
+    n_empirical_risk --> n_emp_risk_mono_pointwise
+    n_erm_def --> n_erm_mem
+    n_erm_def --> n_erm_optimal
+    n_local_averaging --> n_uniform_local_weights
+    n_local_averaging --> n_partition_weights
+    n_local_averaging --> n_local_avg_bias_term
+    n_local_averaging --> n_nn_weights
+    n_local_averaging --> n_localavg_add_y
+    n_local_averaging --> n_localavg_smul_y
+    n_local_averaging --> n_localavg_neg_y
+    n_consistency --> n_no_free_lunch
+    n_ols_closed_form --> n_implicit_bias_full_rank
+    n_ols_closed_form --> n_ols_geometric
+    n_ols_closed_form --> n_ols_fixed_design_bias_variance
+    n_ols_closed_form --> n_ridge_closed_form
+    n_ols_closed_form --> n_ols_add_y
+    n_ols_closed_form --> n_ols_smul_y
+    n_ols_fixed_design_bias_variance --> n_ridge_bias_variance
+    n_ridge_closed_form --> n_krr_coeffs
+    n_ridge_closed_form --> n_ridge_bias_variance
+    n_ridge_closed_form --> n_ridge_zero_y
+    n_ridge_closed_form --> n_ridge_smul_y
+    n_ridge_closed_form --> n_ridge_sub_y
+    n_ridge_bias_variance --> n_ols_minimax_sup_ge_bayes
+    n_ridge_bias_variance --> n_gaussian_conjugate_posterior_mean
+    n_ridge_bias_variance --> n_gaussian_bayes_risk_ridge_trace
+    n_ridge_bias_variance --> n_matrix_trace_regularized_inv_limit
+    n_ols_minimax_sup_ge_bayes --> n_ols_minimax_lower_bound
+    n_gaussian_conjugate_posterior_mean --> n_gaussian_bayes_risk_ridge_trace
+    n_gaussian_conjugate_posterior_mean --> n_ols_minimax_lower_bound
+    n_gaussian_bayes_risk_ridge_trace --> n_ols_minimax_lower_bound
+    n_matrix_trace_regularized_inv_limit --> n_ols_minimax_lower_bound
+    n_is_k_sparse --> n_is_k_sparse_zero
+    n_is_k_sparse --> n_is_k_sparse_mono
+    n_is_k_sparse --> n_is_k_sparse_dim
+    n_is_k_sparse --> n_is_k_sparse_zero_any
+    n_is_k_sparse --> n_is_k_sparse_succ
+    n_square_loss --> n_square_loss_nonneg
+    n_square_loss --> n_square_loss_symm
+    n_square_loss --> n_square_loss_zero_iff
+    n_square_loss --> n_square_loss_self
+    n_square_loss --> n_square_loss_eq_sq_diff
+    n_square_loss --> n_square_loss_convex
+    n_kl_zero_right --> n_pac_bayes_zero_prior
+    n_gap_nonneg --> n_sum_gaps_nonneg
+    n_kl_eq_top_iff --> n_pacbayes_kl_eq_top_iff
+    n_expectation_const --> n_expectation_le_const
+    n_expectation_const --> n_expectation_ge_const
+    n_expectation_nonneg --> n_abs_expectation_le_exp_abs
+    n_expectation_nonneg --> n_pop_risk_nonneg
+    n_expectation_mono --> n_expectation_le_const
+    n_expectation_mono --> n_expectation_ge_const
+    n_zero_loss --> n_zero_loss_nonneg
+    n_kl_ne_top_iff --> n_pacbayes_kl_ne_top_iff
+    n_abs_expectation_le_exp_abs --> n_abs_expectation_bounded
+    n_expectation_le_const --> n_abs_expectation_bounded
+    n_expectation_le_const --> n_expectation_in_interval
+    n_expectation_ge_const --> n_expectation_in_interval
+    n_pop_risk_nonneg --> n_bayes_risk_nonneg
+    n_bayes_risk_le_population_risk --> n_excess_risk_nonneg
+    n_krr_coeffs_add_y --> n_krr_predictor_add_y
+    n_min_le_average --> n_min_le_avg_le_max
+```

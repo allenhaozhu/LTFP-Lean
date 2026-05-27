@@ -1,0 +1,358 @@
+# Index — by status (honesty audit)
+
+Audit classification from `PROGRESS.md §10`:
+
+- **A** — Real discharge. Theorem genuinely proves the named result using Mathlib primitives.
+- **A-leaning** — Real math wrapping a single substantive Mathlib theorem.
+- **B** — Parametrized abstraction. Holds modulo a named hypothesis that remains the open gap.
+- **Deferred** — known multi-week Mathlib gap; carrier uses an algebraic anchor.
+- **(unaudited)** — registered `done` in `concepts.yaml` but not explicitly rated in PROGRESS.md §10.
+
+## A — 2 concepts
+
+- Ch01 · [`quadrature-expectation`](../concepts/quadrature-expectation.md) — Estimation of expectations through quadrature (♦♦)
+- Ch02 · [`no-free-lunch`](../concepts/no-free-lunch.md) — No-Free-Lunch theorem (♦)
+
+## A-leaning — 2 concepts
+
+- Ch01 · [`bernstein-inequality`](../concepts/bernstein-inequality.md) — Bernstein's inequality (♦)
+- Ch09 · [`universal-approximation`](../concepts/universal-approximation.md) — Universal approximation theorem (Cybenko/Hornik) (♦)
+
+## B — 6 concepts
+
+- Ch03 · [`ols-minimax-lower-bound`](../concepts/ols-minimax-lower-bound.md) — Minimax lower bound for least-squares (♦) — umbrella
+- Ch05 · [`gd-descent-lemma`](../concepts/gd-descent-lemma.md) — GD descent lemma: f(x − η ∇f(x)) ≤ f(x) − η(1 − Lη/2) ‖∇f(x)‖²
+- Ch07 · [`representer-theorem`](../concepts/representer-theorem.md) — Representer theorem (orthogonal-projection core)
+- Ch08 · [`lasso-kkt`](../concepts/lasso-kkt.md) — Scalar Lasso KKT (soft-thresholding minimizer)
+- Ch14 · [`pac-bayes-mcallester`](../concepts/pac-bayes-mcallester.md) — McAllester PAC-Bayes bound (algebraic core anchor)
+- Ch15 · [`pinsker-bretagnolle-huber`](../concepts/pinsker-bretagnolle-huber.md) — Pinsker / Bretagnolle–Huber inequality (algebraic core anchor)
+
+## Deferred — 1 concepts
+
+- Ch01 · [`matrix-concentration`](../concepts/matrix-concentration.md) — Matrix Bernstein / matrix concentration (♦♦)
+
+## (unaudited) — 322 concepts
+
+- Ch01 · [`abs-neg-anchor`](../concepts/abs-neg-anchor.md) — |-x| = |x|
+- Ch01 · [`abs-nonneg-anchor`](../concepts/abs-nonneg-anchor.md) — |x| ≥ 0
+- Ch01 · [`abs-triangle`](../concepts/abs-triangle.md) — Absolute-value triangle inequality
+- Ch01 · [`abs-zero-eq-zero`](../concepts/abs-zero-eq-zero.md) — |0| = 0
+- Ch01 · [`block-matrix-inversion`](../concepts/block-matrix-inversion.md) — Block matrix inversion (Schur complement / Woodbury)
+- Ch01 · [`differential-calc-basics`](../concepts/differential-calc-basics.md) — Gradient, Hessian, chain rule
+- Ch01 · [`exp-neg-eq-inv`](../concepts/exp-neg-eq-inv.md) — exp(-x) = (exp x)⁻¹
+- Ch01 · [`exp-pos-alias`](../concepts/exp-pos-alias.md) — Real.exp is positive (alias)
+- Ch01 · [`exp-strict-mono`](../concepts/exp-strict-mono.md) — Real.exp is strictly monotone
+- Ch01 · [`exp-sub-1-sub-self`](../concepts/exp-sub-1-sub-self.md) — exp x - 1 - x ≥ 0
+- Ch01 · [`exp-zero-eq-one`](../concepts/exp-zero-eq-one.md) — exp 0 = 1
+- Ch01 · [`hoeffding-lemma`](../concepts/hoeffding-lemma.md) — Hoeffding's lemma (MGF bound for bounded variables)
+- Ch01 · [`log-exp-alias`](../concepts/log-exp-alias.md) — log(exp x) = x (alias)
+- Ch01 · [`log-nonneg-of-one-le`](../concepts/log-nonneg-of-one-le.md) — log x ≥ 0 for x ≥ 1
+- Ch01 · [`log-one-alias`](../concepts/log-one-alias.md) — log 1 = 0 (alias)
+- Ch01 · [`markov-inequality`](../concepts/markov-inequality.md) — Markov's inequality (real probabilistic statement)
+- Ch01 · [`matrix-2x2-inverse`](../concepts/matrix-2x2-inverse.md) — Inverting a 2×2 matrix
+- Ch01 · [`max-expectation-bound`](../concepts/max-expectation-bound.md) — Expected maximum of sub-Gaussian variables ≤ √(2 σ² log n)
+- Ch01 · [`mcdiarmid-inequality`](../concepts/mcdiarmid-inequality.md) — McDiarmid's bounded-differences inequality
+- Ch01 · [`one-le-exp-nonneg`](../concepts/one-le-exp-nonneg.md) — 1 ≤ exp x for x ≥ 0
+- Ch01 · [`one-plus-le-exp`](../concepts/one-plus-le-exp.md) — 1 + α ≤ exp α (alias)
+- Ch01 · [`pos-def-isunit`](../concepts/pos-def-isunit.md) — Positive-definite matrix is invertible
+- Ch01 · [`pow-nonneg-anchor`](../concepts/pow-nonneg-anchor.md) — x^n ≥ 0 from nonneg base
+- Ch01 · [`quadratic-form-min`](../concepts/quadratic-form-min.md) — Minimization of a positive-definite quadratic form
+- Ch01 · [`sq-nonneg-alias`](../concepts/sq-nonneg-alias.md) — Squared real is nonneg (alias)
+- Ch01 · [`sqrt-sq-eq-abs`](../concepts/sqrt-sq-eq-abs.md) — sqrt(x²) = |x| (alias)
+- Ch01 · [`sub-nonneg-of-le`](../concepts/sub-nonneg-of-le.md) — 0 ≤ b - a from a ≤ b
+- Ch01 · [`svd`](../concepts/svd.md) — Singular value decomposition
+- Ch01 · [`two-le-exp-1-plus-1`](../concepts/two-le-exp-1-plus-1.md) — 2 ≤ exp 1 + 1
+- Ch01 · [`variance-nonneg-real`](../concepts/variance-nonneg-real.md) — Variance is nonneg (real probabilistic statement)
+- Ch02 · [`bayes-predictor`](../concepts/bayes-predictor.md) — Bayes predictor f⋆ — minimizer of population risk
+- Ch02 · [`bayes-risk-le-population-risk`](../concepts/bayes-risk-le-population-risk.md) — Bayes risk ≤ any specific population risk
+- Ch02 · [`bayes-risk-minimum`](../concepts/bayes-risk-minimum.md) — Bayes risk equals the infimum of population risk
+- Ch02 · [`bayes-risk-nonneg`](../concepts/bayes-risk-nonneg.md) — Bayes risk is nonneg under nonneg loss
+- Ch02 · [`consistency`](../concepts/consistency.md) — Universal consistency of a learning algorithm
+- Ch02 · [`emp-risk-mono-pointwise`](../concepts/emp-risk-mono-pointwise.md) — Empirical risk is pointwise-monotone
+- Ch02 · [`emp-risk-nonneg`](../concepts/emp-risk-nonneg.md) — Empirical risk of nonneg loss is nonneg
+- Ch02 · [`emp-risk-zero-loss`](../concepts/emp-risk-zero-loss.md) — Empirical risk = 0 when all losses are 0
+- Ch02 · [`empirical-risk`](../concepts/empirical-risk.md) — Empirical risk R̂_n(f)
+- Ch02 · [`empirical-risk-zero-sample`](../concepts/empirical-risk-zero-sample.md) — Empirical risk on empty sample = 0
+- Ch02 · [`erm-def`](../concepts/erm-def.md) — Empirical risk minimizer over a hypothesis class
+- Ch02 · [`erm-mem`](../concepts/erm-mem.md) — ERM is in the hypothesis class
+- Ch02 · [`erm-optimal`](../concepts/erm-optimal.md) — ERM optimality property
+- Ch02 · [`excess-risk-nonneg`](../concepts/excess-risk-nonneg.md) — Excess risk is nonneg under nonneg loss
+- Ch02 · [`local-averaging`](../concepts/local-averaging.md) — Local averaging predictors (k-NN, partition, kernel)
+- Ch02 · [`loss-function`](../concepts/loss-function.md) — Loss function ℓ : 𝒴 × 𝒴 → ℝ
+- Ch02 · [`pop-risk-eq-integral`](../concepts/pop-risk-eq-integral.md) — populationRisk = ∫ ℓ ∂D (Mathlib bridge)
+- Ch02 · [`pop-risk-nonneg`](../concepts/pop-risk-nonneg.md) — populationRisk of nonneg loss is nonneg
+- Ch02 · [`pop-risk-zero-measure`](../concepts/pop-risk-zero-measure.md) — populationRisk under zero measure = 0
+- Ch02 · [`population-risk`](../concepts/population-risk.md) — Population risk R(f) = E[ℓ(f(x), y)]
+- Ch02 · [`square-loss`](../concepts/square-loss.md) — Squared loss ℓ(z, y) = (z − y)²
+- Ch02 · [`square-loss-convex`](../concepts/square-loss-convex.md) — squareLoss midpoint convexity (algebraic core)
+- Ch02 · [`square-loss-eq-sq-diff`](../concepts/square-loss-eq-sq-diff.md) — squareLoss as (z-y)² (definitional anchor)
+- Ch02 · [`square-loss-nonneg`](../concepts/square-loss-nonneg.md) — Squared loss is nonnegative
+- Ch02 · [`square-loss-self`](../concepts/square-loss-self.md) — squareLoss y y = 0
+- Ch02 · [`square-loss-symm`](../concepts/square-loss-symm.md) — Squared loss is symmetric
+- Ch02 · [`square-loss-zero-iff`](../concepts/square-loss-zero-iff.md) — squareLoss z y = 0 ↔ z = y
+- Ch02 · [`zero-loss`](../concepts/zero-loss.md) — Zero loss function
+- Ch02 · [`zero-loss-nonneg`](../concepts/zero-loss-nonneg.md) — Zero loss is nonneg
+- Ch03 · [`all-zero-of-sum-sq-zero`](../concepts/all-zero-of-sum-sq-zero.md) — Sum of squared residuals = 0 ⇒ each residual = 0
+- Ch03 · [`matrix-trace-regularized-inv-limit`](../concepts/matrix-trace-regularized-inv-limit.md) — Bach §3.7 Node 4: tr((Σ̂+λI)⁻¹ Σ̂) → d as λ → 0 (full-rank Σ̂)
+- Ch03 · [`ols-add-y`](../concepts/ols-add-y.md) — OLS linear in labels
+- Ch03 · [`ols-closed-form`](../concepts/ols-closed-form.md) — OLS closed form: β̂ = (XᵀX)⁻¹Xᵀy
+- Ch03 · [`ols-fixed-design-bias-variance`](../concepts/ols-fixed-design-bias-variance.md) — Fixed-design OLS bias-variance decomposition
+- Ch03 · [`ols-geometric`](../concepts/ols-geometric.md) — OLS as orthogonal projection onto col(X)
+- Ch03 · [`ols-minimax-sup-ge-bayes`](../concepts/ols-minimax-sup-ge-bayes.md) — Bach §3.7 Node 1: sup-over-θ ≥ Bayes-average (finite-grid pigeonhole)
+- Ch03 · [`ols-smul-y`](../concepts/ols-smul-y.md) — OLS homogeneous in labels
+- Ch03 · [`ridge-bias-variance`](../concepts/ridge-bias-variance.md) — Ridge bias-variance trade-off (fixed design)
+- Ch03 · [`ridge-closed-form`](../concepts/ridge-closed-form.md) — Ridge closed form: β̂_λ = (XᵀX + nλI)⁻¹Xᵀy
+- Ch03 · [`ridge-smul-y`](../concepts/ridge-smul-y.md) — Ridge homogeneous in labels
+- Ch03 · [`ridge-sub-y`](../concepts/ridge-sub-y.md) — Ridge subtracts in labels
+- Ch03 · [`ridge-zero-y`](../concepts/ridge-zero-y.md) — Ridge with zero labels = 0
+- Ch03 · [`sum-sq-residuals-nonneg`](../concepts/sum-sq-residuals-nonneg.md) — Sum of squared residuals is nonneg
+- Ch03 · [`sum-sq-residuals-zero`](../concepts/sum-sq-residuals-zero.md) — Zero residual ⇒ zero sum of squares
+- Ch04 · [`approx-error-indep-fhat`](../concepts/approx-error-indep-fhat.md) — Approximation error independent of specific predictor
+- Ch04 · [`approximation-error`](../concepts/approximation-error.md) — Approximation error: best-in-class − Bayes risk
+- Ch04 · [`bounded-difference-rademacher`](../concepts/bounded-difference-rademacher.md) — Bounded-differences for the uniform deviation
+- Ch04 · [`dudley-entropy-bound`](../concepts/dudley-entropy-bound.md) — Dudley entropy integral bound for Rademacher complexity
+- Ch04 · [`emp-phi-risk-zero-sample`](../concepts/emp-phi-risk-zero-sample.md) — Empirical Φ-risk vanishes on empty sample
+- Ch04 · [`empirical-phi-risk`](../concepts/empirical-phi-risk.md) — Empirical Φ-risk R̂_Φ_n(g) = (1/n) ∑ᵢ Φ(yᵢ · g(xᵢ))
+- Ch04 · [`empirical-phi-risk-nonneg`](../concepts/empirical-phi-risk-nonneg.md) — Empirical Φ-risk is nonneg under nonneg surrogate
+- Ch04 · [`estim-error-self-anchor`](../concepts/estim-error-self-anchor.md) — Estimation error of fhat against itself = 0
+- Ch04 · [`estimation-error`](../concepts/estimation-error.md) — Estimation error: predictor risk − best-in-class risk
+- Ch04 · [`excess-risk-decomposition`](../concepts/excess-risk-decomposition.md) — Excess risk = approximation + estimation
+- Ch04 · [`excess-risk-eq-approx-when-optimal`](../concepts/excess-risk-eq-approx-when-optimal.md) — Optimal predictor in H ⇒ excess risk = approximation error
+- Ch04 · [`excess-risk-telescope`](../concepts/excess-risk-telescope.md) — Excess risk telescope: a-c = (a-b)+(b-c)
+- Ch04 · [`linear-predictor-l2-bound`](../concepts/linear-predictor-l2-bound.md) — Generalization bound for L²-regularized linear predictors (ridge)
+- Ch04 · [`penalized-add-pen`](../concepts/penalized-add-pen.md) — Penalized risk additive in penalty
+- Ch04 · [`penalized-empirical-risk`](../concepts/penalized-empirical-risk.md) — Penalized empirical risk for SRM (♦)
+- Ch04 · [`penalized-zero-pen`](../concepts/penalized-zero-pen.md) — Penalized risk with zero penalty = empirical risk
+- Ch04 · [`phi-exp-antitone`](../concepts/phi-exp-antitone.md) — phiExp is antitone
+- Ch04 · [`phi-exp-le-one-of-nonneg`](../concepts/phi-exp-le-one-of-nonneg.md) — phiExp ≤ 1 for nonneg margin
+- Ch04 · [`phi-exp-zero`](../concepts/phi-exp-zero.md) — phiExponential 0 = 1
+- Ch04 · [`phi-exponential`](../concepts/phi-exponential.md) — Exponential surrogate Φ(u) = exp(-u) — yields AdaBoost
+- Ch04 · [`phi-hinge`](../concepts/phi-hinge.md) — Hinge surrogate Φ(u) = max(1-u, 0) — yields SVM
+- Ch04 · [`phi-hinge-antitone`](../concepts/phi-hinge-antitone.md) — Hinge surrogate antitone
+- Ch04 · [`phi-hinge-at-zero-anchor`](../concepts/phi-hinge-at-zero-anchor.md) — phiHinge 0 = 1 (alias)
+- Ch04 · [`phi-hinge-eq-1-sub-of-le-one`](../concepts/phi-hinge-eq-1-sub-of-le-one.md) — Hinge equals 1 - u on u ≤ 1
+- Ch04 · [`phi-hinge-zero`](../concepts/phi-hinge-zero.md) — phiHinge 0 = 1
+- Ch04 · [`phi-hinge-zero-of-ge-one`](../concepts/phi-hinge-zero-of-ge-one.md) — Hinge surrogate vanishes on margin ≥ 1
+- Ch04 · [`phi-logistic`](../concepts/phi-logistic.md) — Logistic surrogate Φ(u) = log(1 + exp(-u))
+- Ch04 · [`phi-logistic-zero`](../concepts/phi-logistic-zero.md) — phiLogistic 0 = log 2
+- Ch04 · [`phi-square`](../concepts/phi-square.md) — Square surrogate Φ(u) = (u-1)²
+- Ch04 · [`phi-square-1-lt-0`](../concepts/phi-square-1-lt-0.md) — phiSquare 1 < phiSquare 0
+- Ch04 · [`phi-square-one`](../concepts/phi-square-one.md) — phiSquare 1 = 0 (well-classified zero)
+- Ch04 · [`phi-square-symm-around-1`](../concepts/phi-square-symm-around-1.md) — phiSquare symmetric around u = 1
+- Ch04 · [`phi-square-zero`](../concepts/phi-square-zero.md) — phiSquare 0 = 1
+- Ch04 · [`phi-square-zero-iff`](../concepts/phi-square-zero-iff.md) — phiSquare u = 0 ↔ u = 1
+- Ch04 · [`phi-zero-one`](../concepts/phi-zero-one.md) — Margin-based 0-1 surrogate Φ_{0-1}(u) = 1[u ≤ 0]
+- Ch04 · [`phi-zero-one-le-hinge`](../concepts/phi-zero-one-le-hinge.md) — Hinge upper-bounds 0-1 surrogate (margin bound)
+- Ch04 · [`rademacher-complexity-def`](../concepts/rademacher-complexity-def.md) — Empirical and expected Rademacher complexity
+- Ch04 · [`rademacher-tail-bound-countable`](../concepts/rademacher-tail-bound-countable.md) — Tail bound on uniform deviation, countable hypothesis class
+- Ch04 · [`rademacher-tail-bound-separable`](../concepts/rademacher-tail-bound-separable.md) — Tail bound on uniform deviation, separable hypothesis class
+- Ch04 · [`symmetrization`](../concepts/symmetrization.md) — Symmetrization argument
+- Ch04 · [`uniform-deviation-rademacher`](../concepts/uniform-deviation-rademacher.md) — E[uniform deviation] ≤ 2 · Rademacher complexity
+- Ch05 · [`abs-expectation-bounded`](../concepts/abs-expectation-bounded.md) — Bounded RV: |X| ≤ B ⇒ |E[X]| ≤ B
+- Ch05 · [`abs-expectation-le-exp-abs`](../concepts/abs-expectation-le-exp-abs.md) — Triangle inequality for expectation |E[X]| ≤ E[|X|]
+- Ch05 · [`cauchy-schwarz-anchor`](../concepts/cauchy-schwarz-anchor.md) — Cauchy-Schwarz reflexive anchor (a·a = a²)
+- Ch05 · [`convex-foundation`](../concepts/convex-foundation.md) — Convex analysis foundation: L-smooth alias + Mathlib re-exports
+- Ch05 · [`expectation-add`](../concepts/expectation-add.md) — E[X + Y] = E[X] + E[Y]
+- Ch05 · [`expectation-const`](../concepts/expectation-const.md) — E[c] = c under probability measure
+- Ch05 · [`expectation-ge-const`](../concepts/expectation-ge-const.md) — Lower bound: m ≤ X ⇒ m ≤ E[X]
+- Ch05 · [`expectation-in-interval`](../concepts/expectation-in-interval.md) — m ≤ X ≤ M ⇒ m ≤ E[X] ≤ M
+- Ch05 · [`expectation-le-const`](../concepts/expectation-le-const.md) — Expectation bounded by a sup constant
+- Ch05 · [`expectation-mono`](../concepts/expectation-mono.md) — Expectation is monotone
+- Ch05 · [`expectation-neg`](../concepts/expectation-neg.md) — E[-X] = -E[X]
+- Ch05 · [`expectation-nonneg`](../concepts/expectation-nonneg.md) — Expectation of nonneg function is nonneg
+- Ch05 · [`expectation-smul`](../concepts/expectation-smul.md) — E[c·X] = c·E[X] (linearity in scalar)
+- Ch05 · [`expectation-smul-const`](../concepts/expectation-smul-const.md) — E[c·0] = 0
+- Ch05 · [`expectation-sub`](../concepts/expectation-sub.md) — E[X - Y] = E[X] - E[Y]
+- Ch05 · [`expectation-zero-fn`](../concepts/expectation-zero-fn.md) — E[0] = 0
+- Ch05 · [`expectation-zero-measure`](../concepts/expectation-zero-measure.md) — Expectation under zero measure is zero
+- Ch05 · [`gd-iterate`](../concepts/gd-iterate.md) — Multi-step gradient-descent iterate
+- Ch05 · [`gd-iterate-fixed-critical`](../concepts/gd-iterate-fixed-critical.md) — GD fixed at critical point (∇f = 0)
+- Ch05 · [`gd-iterate-succ`](../concepts/gd-iterate-succ.md) — GD one-step closed form: x_{t+1} = x_t - γ ∇f(x_t)
+- Ch05 · [`gd-iterate-zero-step`](../concepts/gd-iterate-zero-step.md) — GD with zero step size is a no-op
+- Ch05 · [`gd-step-eq`](../concepts/gd-step-eq.md) — GD update increment formula (definitional)
+- Ch05 · [`gd-step-zero-step`](../concepts/gd-step-zero-step.md) — GD step with zero step is no-op (any function)
+- Ch05 · [`gradient-descent-foundation`](../concepts/gradient-descent-foundation.md) — Gradient descent foundation: gdStep update map
+- Ch05 · [`is-l-smooth-const-any`](../concepts/is-l-smooth-const-any.md) — Constant is L-smooth for any L
+- Ch05 · [`is-l-smooth-mono`](../concepts/is-l-smooth-mono.md) — L-smoothness monotone in L
+- Ch05 · [`is-l-smooth-zero`](../concepts/is-l-smooth-zero.md) — Function with zero gradient is 0-smooth
+- Ch05 · [`mu-strongly-convex`](../concepts/mu-strongly-convex.md) — μ-strongly-convex predicate
+- Ch05 · [`sgd-add-g`](../concepts/sgd-add-g.md) — SGD with sum-of-estimators algebraic rewrite
+- Ch05 · [`sgd-iterate`](../concepts/sgd-iterate.md) — Multi-step SGD iterate
+- Ch05 · [`sgd-iterate-zero-step`](../concepts/sgd-iterate-zero-step.md) — SGD with zero step size is a no-op
+- Ch05 · [`sgd-step-eq`](../concepts/sgd-step-eq.md) — SGD update increment formula (definitional)
+- Ch05 · [`sgd-step-zero-step`](../concepts/sgd-step-zero-step.md) — SGD step with zero step is no-op (any estimator)
+- Ch05 · [`stochastic-gd-foundation`](../concepts/stochastic-gd-foundation.md) — Stochastic gradient descent foundation: sgdStep
+- Ch05 · [`subgradient`](../concepts/subgradient.md) — Subgradient predicate IsSubgradient
+- Ch05 · [`subgradient-add-const`](../concepts/subgradient-add-const.md) — Subgradient is invariant under additive constants
+- Ch06 · [`local-avg-bias-term`](../concepts/local-avg-bias-term.md) — Pointwise bias term of a local-averaging estimator
+- Ch06 · [`localavg-add-y`](../concepts/localavg-add-y.md) — localAvg is linear in labels Y
+- Ch06 · [`localavg-bias-zero-fstar`](../concepts/localavg-bias-zero-fstar.md) — localAvgBiasTerm vanishes when fstar = 0
+- Ch06 · [`localavg-neg-y`](../concepts/localavg-neg-y.md) — localAvg(-Y) = -localAvg(Y)
+- Ch06 · [`localavg-smul-y`](../concepts/localavg-smul-y.md) — localAvg is homogeneous in labels
+- Ch06 · [`nn-weights`](../concepts/nn-weights.md) — Nearest-neighbour indicator weights (1-NN)
+- Ch06 · [`nn-weights-localavg`](../concepts/nn-weights-localavg.md) — 1-NN local average evaluates to label at witness index
+- Ch06 · [`partition-weights`](../concepts/partition-weights.md) — Partition-based weights (histogram estimator)
+- Ch06 · [`uniform-local-weights`](../concepts/uniform-local-weights.md) — Uniform local-averaging weights wᵢ(x) = 1/n
+- Ch07 · [`gram-matrix`](../concepts/gram-matrix.md) — Gram matrix Kᵢⱼ = k(xᵢ, xⱼ)
+- Ch07 · [`gram-matrix-diag`](../concepts/gram-matrix-diag.md) — Gram matrix diagonal: K i i = k(xᵢ, xᵢ)
+- Ch07 · [`gram-matrix-eq-kernel`](../concepts/gram-matrix-eq-kernel.md) — Gram matrix entry equals kernel evaluation
+- Ch07 · [`gram-matrix-symm`](../concepts/gram-matrix-symm.md) — Gram matrix is symmetric for symmetric kernel
+- Ch07 · [`gram-matrix-zero`](../concepts/gram-matrix-zero.md) — Gram matrix of zero kernel = 0
+- Ch07 · [`kernel-expansion`](../concepts/kernel-expansion.md) — Kernel-expansion predictor f(x) = ∑ᵢ αᵢ k(x, xᵢ)
+- Ch07 · [`kernel-expansion-add`](../concepts/kernel-expansion-add.md) — Kernel expansion is linear in coefficients
+- Ch07 · [`kernel-expansion-at-train-input`](../concepts/kernel-expansion-at-train-input.md) — Kernel expansion at training input
+- Ch07 · [`kernel-expansion-eq`](../concepts/kernel-expansion-eq.md) — Kernel expansion definitional
+- Ch07 · [`kernel-expansion-smul`](../concepts/kernel-expansion-smul.md) — Kernel expansion is homogeneous in coefficients
+- Ch07 · [`kernel-foundation`](../concepts/kernel-foundation.md) — Positive-definite kernel foundation: IsPSDKernel
+- Ch07 · [`krr-coeffs`](../concepts/krr-coeffs.md) — Kernel ridge regression coefficient α̂_λ = (K + nλI)⁻¹ y
+- Ch07 · [`krr-coeffs-add-y`](../concepts/krr-coeffs-add-y.md) — KRR coefficients linear in labels
+- Ch07 · [`krr-coeffs-smul-y`](../concepts/krr-coeffs-smul-y.md) — KRR coefficients homogeneous in labels
+- Ch07 · [`krr-coeffs-zero-y`](../concepts/krr-coeffs-zero-y.md) — KRR coefficients with zero labels = 0
+- Ch07 · [`krr-predictor`](../concepts/krr-predictor.md) — Kernel ridge regression predictor
+- Ch07 · [`krr-predictor-add-y`](../concepts/krr-predictor-add-y.md) — KRR predictor linear in labels (composition)
+- Ch07 · [`krr-predictor-zero-kernel`](../concepts/krr-predictor-zero-kernel.md) — KRR with zero kernel yields zero predictor
+- Ch07 · [`linear-kernel`](../concepts/linear-kernel.md) — Linear kernel k(x,y) = ⟨x, y⟩ on ℝᵈ
+- Ch07 · [`linear-kernel-add-left`](../concepts/linear-kernel-add-left.md) — Linear kernel additivity in left arg
+- Ch07 · [`linear-kernel-add-right`](../concepts/linear-kernel-add-right.md) — Linear kernel additivity in right arg
+- Ch07 · [`linear-kernel-self`](../concepts/linear-kernel-self.md) — Linear kernel self-evaluation = squared norm
+- Ch07 · [`linear-kernel-self-nonneg`](../concepts/linear-kernel-self-nonneg.md) — Linear kernel self-eval is nonneg
+- Ch07 · [`linear-kernel-symm`](../concepts/linear-kernel-symm.md) — Linear kernel symmetry
+- Ch07 · [`linear-kernel-zero-left`](../concepts/linear-kernel-zero-left.md) — Linear kernel with zero left arg = 0
+- Ch07 · [`linear-kernel-zero-right`](../concepts/linear-kernel-zero-right.md) — Linear kernel with zero right arg = 0
+- Ch07 · [`rkhs-foundation`](../concepts/rkhs-foundation.md) — RKHS foundation: real Hilbert space + feature map
+- Ch07 · [`rkhs-kernel-def`](../concepts/rkhs-kernel-def.md) — RKHS kernel extensional definition
+- Ch07 · [`rkhs-kernel-self-nonneg`](../concepts/rkhs-kernel-self-nonneg.md) — RKHS kernel self-evaluation is nonneg
+- Ch08 · [`is-k-sparse`](../concepts/is-k-sparse.md) — k-sparsity predicate IsKSparse
+- Ch08 · [`is-k-sparse-dim`](../concepts/is-k-sparse-dim.md) — Every vector is d-sparse (trivial upper bound)
+- Ch08 · [`is-k-sparse-mono`](../concepts/is-k-sparse-mono.md) — k-sparsity is monotone in k
+- Ch08 · [`is-k-sparse-succ`](../concepts/is-k-sparse-succ.md) — k-sparsity then (k+1)-sparsity
+- Ch08 · [`is-k-sparse-zero`](../concepts/is-k-sparse-zero.md) — Zero vector is 0-sparse
+- Ch08 · [`is-k-sparse-zero-any`](../concepts/is-k-sparse-zero-any.md) — Zero vector is k-sparse for any k
+- Ch08 · [`l0-norm`](../concepts/l0-norm.md) — ℓ₀ 'norm': count of non-zero coordinates
+- Ch08 · [`l1-norm`](../concepts/l1-norm.md) — ℓ₁ norm: sum of absolute values
+- Ch08 · [`l1-norm-eq-zero-of-zero`](../concepts/l1-norm-eq-zero-of-zero.md) — ℓ₁ of zero vector = 0
+- Ch08 · [`l1-norm-fin-one`](../concepts/l1-norm-fin-one.md) — ℓ₁ norm on Fin 1 is |z 0|
+- Ch08 · [`l1-norm-neg`](../concepts/l1-norm-neg.md) — ℓ₁ norm is invariant under negation
+- Ch08 · [`l1-norm-nonneg`](../concepts/l1-norm-nonneg.md) — ℓ₁ norm is nonnegative
+- Ch08 · [`l1-norm-triangle`](../concepts/l1-norm-triangle.md) — ℓ₁ norm triangle inequality (alias)
+- Ch08 · [`l1-triangle`](../concepts/l1-triangle.md) — ℓ₁ norm satisfies the triangle inequality
+- Ch08 · [`linear-predictor-l1-bound`](../concepts/linear-predictor-l1-bound.md) — Generalization bound for L¹-regularized linear predictors (Lasso)
+- Ch08 · [`soft-threshold`](../concepts/soft-threshold.md) — Soft-thresholding operator (closed form for 1-D Lasso)
+- Ch08 · [`soft-threshold-at-lam`](../concepts/soft-threshold-at-lam.md) — Soft threshold at level lam = 0 at z = lam
+- Ch08 · [`soft-threshold-zero-zero`](../concepts/soft-threshold-zero-zero.md) — Soft threshold of 0 at level 0 = 0
+- Ch09 · [`neural-net-foundation`](../concepts/neural-net-foundation.md) — Neural-network foundation: ReLU activation
+- Ch09 · [`nn-zero-a`](../concepts/nn-zero-a.md) — NN with zero output weights = 0
+- Ch09 · [`nn-zero-bias-one-neuron`](../concepts/nn-zero-bias-one-neuron.md) — NN with zero bias, 1 neuron
+- Ch09 · [`nn-zero-input`](../concepts/nn-zero-input.md) — NN on zero input = ∑ a · relu(b)
+- Ch09 · [`relu-add-le`](../concepts/relu-add-le.md) — ReLU subadditivity: relu(x+y) ≤ relu x + relu y
+- Ch09 · [`relu-eq-relu`](../concepts/relu-eq-relu.md) — ReLU equals itself (reflexivity anchor)
+- Ch09 · [`relu-eq-self-of-nonneg`](../concepts/relu-eq-self-of-nonneg.md) — relu z = z when z ≥ 0
+- Ch09 · [`relu-eq-zero-iff`](../concepts/relu-eq-zero-iff.md) — ReLU(z) = 0 ↔ z ≤ 0
+- Ch09 · [`relu-le-id-of-nonneg`](../concepts/relu-le-id-of-nonneg.md) — relu z ≤ z when z ≥ 0
+- Ch09 · [`relu-mono`](../concepts/relu-mono.md) — ReLU is monotone
+- Ch09 · [`relu-neg-eq-zero`](../concepts/relu-neg-eq-zero.md) — ReLU at strictly negative is zero
+- Ch09 · [`relu-of-nonneg`](../concepts/relu-of-nonneg.md) — ReLU is identity on nonneg inputs
+- Ch09 · [`relu-positive-homog`](../concepts/relu-positive-homog.md) — ReLU positive homogeneity: relu(c·z) = c·relu(z) for c ≥ 0
+- Ch09 · [`single-hidden-relu`](../concepts/single-hidden-relu.md) — Single-hidden-layer ReLU neural network
+- Ch09 · [`single-hidden-relu-add-a`](../concepts/single-hidden-relu-add-a.md) — Single-hidden ReLU NN is linear in output weights
+- Ch10 · [`bagging-const`](../concepts/bagging-const.md) — Bagging a constant predictor yields the same constant
+- Ch10 · [`bagging-index-anchor`](../concepts/bagging-index-anchor.md) — Bagging index reflexivity anchor
+- Ch10 · [`bagging-predictor`](../concepts/bagging-predictor.md) — Bagging: average of B sub-predictors
+- Ch10 · [`bagging-predictor-zero`](../concepts/bagging-predictor-zero.md) — Bagging zero predictors yields zero
+- Ch10 · [`boost-eq`](../concepts/boost-eq.md) — Boosted predictor = sum α t · h t x (definitional)
+- Ch10 · [`boost-one-step`](../concepts/boost-one-step.md) — Boosting with single weak learner
+- Ch10 · [`boost-zero-coeffs`](../concepts/boost-zero-coeffs.md) — Boosting with zero coefficients gives zero predictions
+- Ch10 · [`boost-zero-h`](../concepts/boost-zero-h.md) — Boosting with zero weak learners gives zero
+- Ch10 · [`boosted-add-coeff`](../concepts/boosted-add-coeff.md) — Boosted predictor linear in coefficients α
+- Ch10 · [`boosted-predictor`](../concepts/boosted-predictor.md) — Boosted predictor: weighted sum of weak learners
+- Ch10 · [`random-projection-foundation`](../concepts/random-projection-foundation.md) — Random-projection foundation: sketch matrix application
+- Ch10 · [`sketch-add-mat`](../concepts/sketch-add-mat.md) — Sketching is linear in matrix
+- Ch10 · [`sketch-add-matrix`](../concepts/sketch-add-matrix.md) — Sketch is linear in matrix
+- Ch10 · [`sketch-linearity`](../concepts/sketch-linearity.md) — Random projection sketch is linear in input
+- Ch10 · [`sketch-one`](../concepts/sketch-one.md) — Sketching by identity is identity
+- Ch10 · [`sketch-smul-matrix`](../concepts/sketch-smul-matrix.md) — Sketching scales the matrix
+- Ch10 · [`sketch-zero-matrix`](../concepts/sketch-zero-matrix.md) — Sketching with the zero matrix annihilates input
+- Ch11 · [`bandit-foundation`](../concepts/bandit-foundation.md) — Multi-armed bandit foundation: cumulative regret
+- Ch11 · [`bandit-gap`](../concepts/bandit-gap.md) — Suboptimality gap of an arm
+- Ch11 · [`bandit-regret-const-action`](../concepts/bandit-regret-const-action.md) — Bandit regret with constant action
+- Ch11 · [`bandit-regret-eq-rewrite`](../concepts/bandit-regret-eq-rewrite.md) — Bandit regret = T·μ⋆ − ∑t μ_{a_t}
+- Ch11 · [`bandit-regret-eq-sum-gaps-strong`](../concepts/bandit-regret-eq-sum-gaps-strong.md) — Bandit regret = sum of gaps (strong)
+- Ch11 · [`bandit-regret-smul`](../concepts/bandit-regret-smul.md) — Bandit regret rewriting in scaled mu_star
+- Ch11 · [`bandit-regret-sum-gaps`](../concepts/bandit-regret-sum-gaps.md) — Bandit regret = sum of per-step gaps
+- Ch11 · [`bandit-regret-zero-horizon`](../concepts/bandit-regret-zero-horizon.md) — Bandit regret is zero on empty horizon
+- Ch11 · [`cum-loss`](../concepts/cum-loss.md) — OCO cumulative loss L_T(x) = ∑_t f_t(x)
+- Ch11 · [`cum-loss-const`](../concepts/cum-loss-const.md) — OCO cumulative loss with constant function = T·c
+- Ch11 · [`cum-loss-zero-fs`](../concepts/cum-loss-zero-fs.md) — OCO cumulative loss with all-zero loss functions = 0
+- Ch11 · [`cum-loss-zero-horizon`](../concepts/cum-loss-zero-horizon.md) — OCO cumulative loss vanishes on empty horizon
+- Ch11 · [`explore-then-commit`](../concepts/explore-then-commit.md) — Explore-then-commit exploration phase predicate
+- Ch11 · [`gap-antitone-mu`](../concepts/gap-antitone-mu.md) — Bandit gap antitone in arm value
+- Ch11 · [`gap-def`](../concepts/gap-def.md) — Bandit gap definitional
+- Ch11 · [`gap-eq-diff`](../concepts/gap-eq-diff.md) — Bandit gap = μ⋆ - μ a
+- Ch11 · [`gap-mono-mu-star`](../concepts/gap-mono-mu-star.md) — Bandit gap monotone in optimal mean
+- Ch11 · [`gap-nonneg`](../concepts/gap-nonneg.md) — Bandit gap nonneg under μ a ≤ μ⋆
+- Ch11 · [`gap-optimal`](../concepts/gap-optimal.md) — Gap of optimal arm is zero
+- Ch11 · [`online-convex-foundation`](../concepts/online-convex-foundation.md) — Online-convex foundation: regret definition
+- Ch11 · [`regret-cumloss-diff`](../concepts/regret-cumloss-diff.md) — Regret as difference of cumulative losses
+- Ch11 · [`sum-gaps-nonneg`](../concepts/sum-gaps-nonneg.md) — Sum of nonneg gaps is nonneg
+- Ch11 · [`sum-gaps-rewrite`](../concepts/sum-gaps-rewrite.md) — ∑ gap = T·μ⋆ − ∑ μ_a
+- Ch11 · [`ucb-bonus`](../concepts/ucb-bonus.md) — UCB confidence bonus √(2 log t / n)
+- Ch11 · [`ucb-bonus-nonneg`](../concepts/ucb-bonus-nonneg.md) — UCB bonus is nonnegative
+- Ch12 · [`double-descent-nonneg`](../concepts/double-descent-nonneg.md) — Double-descent excess risk nonnegativity anchor
+- Ch12 · [`implicit-bias-add-y`](../concepts/implicit-bias-add-y.md) — Implicit bias linear in labels
+- Ch12 · [`implicit-bias-full-rank`](../concepts/implicit-bias-full-rank.md) — Implicit bias of GD = OLS (full-rank case)
+- Ch12 · [`implicit-bias-smul-y`](../concepts/implicit-bias-smul-y.md) — Implicit bias homogeneous in labels
+- Ch12 · [`implicit-bias-sub-y`](../concepts/implicit-bias-sub-y.md) — Implicit bias on subtraction
+- Ch12 · [`implicit-bias-zero-labels`](../concepts/implicit-bias-zero-labels.md) — OLS with zero labels yields zero estimator
+- Ch12 · [`ntk-symmetry-anchor`](../concepts/ntk-symmetry-anchor.md) — NTK kernel symmetry algebraic anchor
+- Ch13 · [`is-argmax`](../concepts/is-argmax.md) — Argmax predicate for a score vector
+- Ch13 · [`margin-mono`](../concepts/margin-mono.md) — Margin satisfaction monotone in γ
+- Ch13 · [`margin-satisfied`](../concepts/margin-satisfied.md) — Max-margin (structured SVM): MarginSatisfied predicate
+- Ch13 · [`multicat-loss-diag`](../concepts/multicat-loss-diag.md) — multicategoryLoss y y = 0
+- Ch13 · [`multicat-loss-in-unit`](../concepts/multicat-loss-in-unit.md) — Multicat loss in 0-1 unit interval
+- Ch13 · [`multicat-zero-or-one`](../concepts/multicat-zero-or-one.md) — Multicat loss is 0 or 1
+- Ch13 · [`multicategory-eq-one-iff`](../concepts/multicategory-eq-one-iff.md) — Multicat loss = 1 iff prediction wrong
+- Ch13 · [`multicategory-loss`](../concepts/multicategory-loss.md) — Multicategory 0-1 loss for k classes
+- Ch13 · [`multicategory-loss-le-one`](../concepts/multicategory-loss-le-one.md) — Multicategory loss is bounded by 1
+- Ch13 · [`multicategory-loss-symm`](../concepts/multicategory-loss-symm.md) — Multicategory loss is symmetric
+- Ch13 · [`score-loss`](../concepts/score-loss.md) — Score-vector loss via witnessed argmax
+- Ch14 · [`bernoulli-at-half`](../concepts/bernoulli-at-half.md) — Bernoulli NLL at p = 1/2 = log 2
+- Ch14 · [`bernoulli-nll`](../concepts/bernoulli-nll.md) — Bernoulli negative log-likelihood (logistic loss in disguise)
+- Ch14 · [`bernoulli-nll-correct-zero`](../concepts/bernoulli-nll-correct-zero.md) — Bernoulli NLL at p=0, y=0 is 0
+- Ch14 · [`gaussian-nll`](../concepts/gaussian-nll.md) — Gaussian negative log-likelihood (square loss + const)
+- Ch14 · [`gaussian-nll-eq-sqdisp`](../concepts/gaussian-nll-eq-sqdisp.md) — Gaussian NLL = (y - μ)² / 2 (definitional)
+- Ch14 · [`gaussian-nll-le-iff-sq`](../concepts/gaussian-nll-le-iff-sq.md) — Gaussian NLL monotone in (y-μ)²
+- Ch14 · [`gaussian-nll-self`](../concepts/gaussian-nll-self.md) — Gaussian NLL vanishes when prediction = truth
+- Ch14 · [`gaussian-nll-sub-zero-nonneg`](../concepts/gaussian-nll-sub-zero-nonneg.md) — Gaussian NLL minus 0 is nonneg
+- Ch14 · [`gaussian-nll-symm`](../concepts/gaussian-nll-symm.md) — Gaussian NLL symmetric in (μ, y)
+- Ch14 · [`gaussian-nll-zero-disp`](../concepts/gaussian-nll-zero-disp.md) — Gaussian NLL at zero displacement = 0
+- Ch14 · [`infotheory-foundation`](../concepts/infotheory-foundation.md) — Information-theory foundation: KL divergence wrapper
+- Ch14 · [`kl-eq-top-iff`](../concepts/kl-eq-top-iff.md) — KL = ∞ iff non-AC or non-integrable
+- Ch14 · [`kl-ne-top-iff`](../concepts/kl-ne-top-iff.md) — KL ≠ ∞ iff absolutely continuous and integrable
+- Ch14 · [`kl-of-not-ac`](../concepts/kl-of-not-ac.md) — KL divergence is ∞ when not absolutely continuous
+- Ch14 · [`kl-zero-right`](../concepts/kl-zero-right.md) — KL with zero right measure is ∞
+- Ch14 · [`pac-bayes-kl`](../concepts/pac-bayes-kl.md) — PAC-Bayes KL divergence wrapper
+- Ch14 · [`pac-bayes-kl-not-ac`](../concepts/pac-bayes-kl-not-ac.md) — PAC-Bayes KL = ∞ when posterior not absolutely continuous
+- Ch14 · [`pac-bayes-zero-prior`](../concepts/pac-bayes-zero-prior.md) — PAC-Bayes with zero prior is ∞
+- Ch14 · [`pacbayes-kl-def`](../concepts/pacbayes-kl-def.md) — PAC-Bayes KL definition unfolded
+- Ch14 · [`pacbayes-kl-eq-top-iff`](../concepts/pacbayes-kl-eq-top-iff.md) — PAC-Bayes KL = ∞ iff non-AC or non-integrable
+- Ch14 · [`pacbayes-kl-ne-top-iff`](../concepts/pacbayes-kl-ne-top-iff.md) — PAC-Bayes KL non-top iff AC + integrable
+- Ch15 · [`add-risks-nonneg`](../concepts/add-risks-nonneg.md) — Sum of nonneg risks is nonneg
+- Ch15 · [`average-le-sup-anchor`](../concepts/average-le-sup-anchor.md) — Average ≤ sup minimax anchor (alias of leCam)
+- Ch15 · [`average-of-self`](../concepts/average-of-self.md) — Average of identical risks = the risk
+- Ch15 · [`average-plus-half-le`](../concepts/average-plus-half-le.md) — (R₁+R₂)/2 + R₃/2 ≤ max(R₁,R₂) + R₃/2
+- Ch15 · [`average-three-self`](../concepts/average-three-self.md) — Average of three identical risks = R
+- Ch15 · [`le-cam-average`](../concepts/le-cam-average.md) — Le Cam-style average ≤ max two-point inequality
+- Ch15 · [`max-eq-avg-equal`](../concepts/max-eq-avg-equal.md) — max R R = average R R
+- Ch15 · [`max-self-anchor`](../concepts/max-self-anchor.md) — max R R = R (anchor)
+- Ch15 · [`min-le-average`](../concepts/min-le-average.md) — Min ≤ average for two-point risks
+- Ch15 · [`min-le-avg-le-max`](../concepts/min-le-avg-le-max.md) — Min ≤ average ≤ max sandwich
+- Ch15 · [`risk-half-le-one`](../concepts/risk-half-le-one.md) — Risk ≤ 1/2 implies risk ≤ 1
+- Ch15 · [`sup-singleton`](../concepts/sup-singleton.md) — Sup of single-element risk = element
+- Ch15 · [`sup-zero-left`](../concepts/sup-zero-left.md) — max(0, R) = R when R ≥ 0
+- Ch15 · [`testing-error-diff-bound`](../concepts/testing-error-diff-bound.md) — Testing error difference ≤ 1
+- Ch15 · [`testing-error-le-one`](../concepts/testing-error-le-one.md) — Testing error rate is at most 1
+- Ch15 · [`testing-error-nonneg`](../concepts/testing-error-nonneg.md) — Statistical lower-bound anchor: testing error nonneg
+- Ch15 · [`three-point-average-le-max`](../concepts/three-point-average-le-max.md) — Three-point Le Cam: average ≤ max
+- Ch15 · [`two-point-sup-lb`](../concepts/two-point-sup-lb.md) — Two-point lower-bound template (sup ≥ min)
+- Ch15 · [`two-testing-errors-le-two`](../concepts/two-testing-errors-le-two.md) — Sum of two testing errors ≤ 2
+

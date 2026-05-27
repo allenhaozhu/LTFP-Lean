@@ -30,4 +30,10 @@ __pycache__/
 /CLAUDE.md
 /PROGRESS.md
 /.claude/
-/docs/wiki/
+# Wiki: public on textbook-strict branch; internal-only files stay gitignored
+/docs/wiki/AUDIT_REPORT.md
+/docs/wiki/B4_DECOMPOSITION_PLAN.md
+/docs/wiki/B6_DECOMPOSITION_PLAN.md
+/docs/wiki/B8_DECOMPOSITION_PLAN.md
+/docs/wiki/B8_N4_STATEMENT.md
+/docs/wiki/BOUNDARY_EXTRACTION_PR_QUEUE.md
