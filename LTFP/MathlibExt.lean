@@ -18,6 +18,7 @@ import LTFP.MathlibExt.Analysis.InnerProductSpace.RKHS
 import LTFP.MathlibExt.Analysis.ParamL2
 import LTFP.MathlibExt.Calculus.FDerivInnerGradient
 import LTFP.MathlibExt.Calculus.FullNetworkContDiff2Smooth
+import LTFP.MathlibExt.Calculus.FullNetworkHessianL2Bound
 import LTFP.MathlibExt.Calculus.FullNetworkHessianSoftplusExplicit
 import LTFP.MathlibExt.Calculus.FullNetworkL2
 import LTFP.MathlibExt.Calculus.FunctionMovementAlongCurve
