@@ -22,6 +22,7 @@ import LTFP.MathlibExt.Calculus.FullNetworkHessianClosedForm
 import LTFP.MathlibExt.Calculus.FullNetworkHessianL2Bound
 import LTFP.MathlibExt.Calculus.FullNetworkHessianSoftplusExplicit
 import LTFP.MathlibExt.Calculus.FullNetworkL2
+import LTFP.MathlibExt.Calculus.FullNetworkSecondFrechet
 import LTFP.MathlibExt.Calculus.FunctionMovementAlongCurve
 import LTFP.MathlibExt.Calculus.GradientFlow
 import LTFP.MathlibExt.Calculus.GradientFlowMovementBound
@@ -105,6 +106,7 @@ import LTFP.MathlibExt.Probability.NTKChizatBachShell
 import LTFP.MathlibExt.Probability.NTKWidthIndependentMovement
 import LTFP.MathlibExt.Probability.NTKWidthIndependentMovementL2
 import LTFP.MathlibExt.Probability.ChizatBachEnergyMovementL2
+import LTFP.MathlibExt.Probability.ChizatBachAnalyticalL2
 import LTFP.MathlibExt.Probability.ChizatBachTaylorScale
 import LTFP.MathlibExt.Probability.ChizatBachAnalytical
 import LTFP.MathlibExt.Probability.NTKBootstrapRadius
