@@ -105,6 +105,7 @@ import LTFP.MathlibExt.Probability.NTKLazyTrainingEndToEnd
 import LTFP.MathlibExt.Probability.NTKAntisymmetricInit
 import LTFP.MathlibExt.Probability.NTKBernsteinRegularity
 import LTFP.MathlibExt.Probability.NTKInitCoercivityWhp
+import LTFP.MathlibExt.Probability.NTKLazyTrainingWhp
 import LTFP.MathlibExt.Probability.NTKLinearizedRKHS
 import LTFP.MathlibExt.Probability.NTKInterpolatingLimit
 import LTFP.MathlibExt.Probability.NTKTrainingSetBound
