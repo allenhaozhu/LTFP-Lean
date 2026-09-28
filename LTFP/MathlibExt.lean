@@ -99,6 +99,8 @@ import LTFP.MathlibExt.Probability.MovementFromResidualDecay
 import LTFP.MathlibExt.Probability.ResidualGronwallDecay
 import LTFP.MathlibExt.Probability.ResidualODE
 import LTFP.MathlibExt.Probability.NTKGradientFlowResidual
+import LTFP.MathlibExt.Probability.NTKGradientFlowDecay
+import LTFP.MathlibExt.Probability.NTKGradientFlowBootstrap
 import LTFP.MathlibExt.Probability.NTKLazyTrainingEndToEnd
 import LTFP.MathlibExt.Probability.NTKLinearizedRKHS
 import LTFP.MathlibExt.Probability.NTKInterpolatingLimit
