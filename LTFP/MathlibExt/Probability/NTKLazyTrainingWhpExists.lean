@@ -28,6 +28,8 @@ that event.
   the good event: existence, uniqueness and decay.
 * `fullNet_gradient_flow_lazy_training_whp_exists` — the high-probability
   guarantee including existence of the flow.
+* `fullNet_gradient_flow_lazy_training_whp_exists_uniform` — the same with one
+  event valid for every horizon `T`.
 -/
 
 open scoped MatrixOrder Matrix.Norms.L2Operator
@@ -202,6 +204,57 @@ theorem fullNet_gradient_flow_lazy_training_whp_exists
                 Real.exp (-(lam₀ / 2 * t))) := by
   refine ⟨_, measurableSet_setOf_antisymInit_coercive hσ.continuous
     hσ'_lip.continuous xs (lam₀ / 2), ?_, fun ω hω => ?_⟩
+  · exact fullTrainingKernel_antisymInit_coercive_whp hk hσ.continuous hM hσ_bdd
+      hσ'_lip.continuous hM' hσ'_bdd xs hX_pos hX hlam hpop hδ hWσ hWσ'
+  · exact fullNet_gradient_flow_on_antisymInit_coercive hk σ hσ hσ_bdd hσ'_bdd hσ'_lip y xs
+      hX hlam hW₁ hW₂ T ω hω
+
+/-- **Uniform-in-time version.** The good event of
+`fullNet_gradient_flow_lazy_training_whp_exists` does not depend on the horizon,
+so a single measurable event of probability at least `1 - δ` works for every
+`T` simultaneously. -/
+theorem fullNet_gradient_flow_lazy_training_whp_exists_uniform
+    {n k : ℕ} [Nonempty (Fin n)] (hk : 0 < k)
+    (σ : ℝ → ℝ) (hσ : Differentiable ℝ σ)
+    {M M' : ℝ} (hM : 0 < M) (hM' : 0 < M')
+    (hσ_bdd : ∀ z, |σ z| ≤ M) (hσ'_bdd : ∀ z, |deriv σ z| ≤ M')
+    {Lσ' : NNReal} (hσ'_lip : LipschitzWith Lσ' (deriv σ))
+    (y : Fin n → ℝ) (xs : Fin n → EuclideanSpace ℝ (Fin d))
+    {X : ℝ} (hX_pos : 0 < X) (hX : ∀ i, ‖xs i‖ ≤ X)
+    {ν : Measure (EuclideanSpace ℝ (Fin d) × ℝ)} [IsProbabilityMeasure ν]
+    {lam₀ : ℝ} (hlam : 0 < lam₀)
+    (hpop : lam₀ • (1 : Matrix (Fin n) (Fin n) ℝ) ≤ populationFullNTK σ (deriv σ) xs ν)
+    {δ : ℝ} (hδ : 0 < δ)
+    (hWσ : ntkBernsteinWidth n (M ^ 2) (lam₀ / 4) δ ≤ k)
+    (hWσ' : ntkBernsteinWidth n (M' ^ 2 * X ^ 2) (lam₀ / 4) δ ≤ k)
+    (hW₁ : gfMovementBound n (k + k) (lam₀ / 2) M M' X
+      ‖(EuclideanSpace.equiv (Fin n) ℝ).symm y‖ < 1)
+    (hW₂ : (n : ℝ) * gfDriftConst M M' Lσ' X *
+      gfMovementBound n (k + k) (lam₀ / 2) M M' X
+        ‖(EuclideanSpace.equiv (Fin n) ℝ).symm y‖ < lam₀ / 4) :
+    ∃ G : Set (Fin k → EuclideanSpace ℝ (Fin d) × ℝ), MeasurableSet G ∧
+      1 - δ ≤ (Measure.pi (fun _ : Fin k => ν)).real G ∧
+      ∀ ω ∈ G, ∀ T : ℝ,
+        (∃ θ : ℝ → Param d (k + k), θ 0 = antisymInitParam ω ∧ ContinuousOn θ (Icc 0 T) ∧
+          ∀ t ∈ Ico 0 T, HasDerivWithinAt θ
+            (gfFieldFullNet σ (antisymInitBias ω) y xs (θ t)) (Ici t) t) ∧
+        (∀ θ θ' : ℝ → Param d (k + k), θ 0 = antisymInitParam ω →
+          θ' 0 = antisymInitParam ω → ContinuousOn θ (Icc 0 T) →
+          ContinuousOn θ' (Icc 0 T) →
+          (∀ t ∈ Ico 0 T, HasDerivWithinAt θ
+            (gfFieldFullNet σ (antisymInitBias ω) y xs (θ t)) (Ici t) t) →
+          (∀ t ∈ Ico 0 T, HasDerivWithinAt θ'
+            (gfFieldFullNet σ (antisymInitBias ω) y xs (θ' t)) (Ici t) t) →
+          EqOn θ θ' (Icc 0 T)) ∧
+        (∀ θ : ℝ → Param d (k + k), θ 0 = antisymInitParam ω → ContinuousOn θ (Icc 0 T) →
+          (∀ t ∈ Ico 0 T, HasDerivWithinAt θ
+            (gfFieldFullNet σ (antisymInitBias ω) y xs (θ t)) (Ici t) t) →
+          ∀ t ∈ Icc 0 T,
+            ‖residualFullNet σ (antisymInitBias ω) y xs (θ t)‖ ^ 2 ≤
+              ‖(EuclideanSpace.equiv (Fin n) ℝ).symm y‖ ^ 2 *
+                Real.exp (-(lam₀ / 2 * t))) := by
+  refine ⟨_, measurableSet_setOf_antisymInit_coercive hσ.continuous
+    hσ'_lip.continuous xs (lam₀ / 2), ?_, fun ω hω T => ?_⟩
   · exact fullTrainingKernel_antisymInit_coercive_whp hk hσ.continuous hM hσ_bdd
       hσ'_lip.continuous hM' hσ'_bdd xs hX_pos hX hlam hpop hδ hWσ hWσ'
   · exact fullNet_gradient_flow_on_antisymInit_coercive hk σ hσ hσ_bdd hσ'_bdd hσ'_lip y xs
