@@ -101,6 +101,7 @@ import LTFP.MathlibExt.Probability.ResidualODE
 import LTFP.MathlibExt.Probability.NTKGradientFlowResidual
 import LTFP.MathlibExt.Probability.NTKGradientFlowDecay
 import LTFP.MathlibExt.Probability.NTKGradientFlowBootstrap
+import LTFP.MathlibExt.Probability.NTKGradientFieldLipschitz
 import LTFP.MathlibExt.Probability.NTKLazyTrainingEndToEnd
 import LTFP.MathlibExt.Probability.NTKAntisymmetricInit
 import LTFP.MathlibExt.Probability.NTKBernsteinRegularity
